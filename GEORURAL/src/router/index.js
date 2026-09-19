@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import IngestaoFontes from '../views/IngestaoFontes.vue'
+import VerificarDadosExistentes from '../views/VerificarDadosExistentes.vue'
 
 
 const router = createRouter({
@@ -10,6 +11,11 @@ const router = createRouter({
       name: 'IngestaoFontes',
       component: IngestaoFontes,
     },
+    {
+      path: '/verificar-dados-existentes',
+      name: 'VerificarDadosExistentes',
+      component: VerificarDadosExistentes,
+    }
   ],
 })
 
