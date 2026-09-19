@@ -10,14 +10,53 @@ const router = useRouter()
 const mostrarModal = ref(false)
 const mostrarArquivos = ref(false)
 const arquivos = ref([])
+const mensagemErro = ref('')
+
+const EXTENSOES_ACEITAS = ['.zip', '.gpkg', '.geojson']
+
+function obterExtensao(nomeArquivo) {
+  const partes = nomeArquivo.toLowerCase().split('.')
+  return '.' + partes[partes.length - 1]
+}
 
 function handleArquivoSelecionado(event) {
   const arquivosDoInput = event.target.files
   if (!arquivosDoInput.length) return
 
-  const arquivosSelecionados = Array.from(arquivosDoInput).map((arquivo) => ({
+  mensagemErro.value = ''
+
+  const arquivosValidos = []
+  const arquivosInvalidos = []
+
+  Array.from(arquivosDoInput).forEach((arquivo) => {
+    const extensao = obterExtensao(arquivo.name)
+    if (EXTENSOES_ACEITAS.includes(extensao)) {
+      arquivosValidos.push(arquivo)
+    } else {
+      arquivosInvalidos.push(arquivo.name)
+    }
+  })
+
+  if (arquivosInvalidos.length) {
+    mensagemErro.value = arquivosInvalidos.length === 1
+      ? `O arquivo "${arquivosInvalidos[0]}" não é um formato aceito. Envie Shapefile (.zip), GeoPackage (.gpkg) ou GeoJSON.`
+      : `Os arquivos ${arquivosInvalidos.map((n) => `"${n}"`).join(', ')} não são formatos aceitos. Envie Shapefile (.zip), GeoPackage (.gpkg) ou GeoJSON.`
+  }
+
+  if (!arquivosValidos.length) {
+    event.target.value = ''
+    return
+  }
+
+  const arquivosSelecionados = arquivosValidos.map((arquivo) => ({
     nome: arquivo.name,
+    fonte: 'Upload manual',
     recebido: new Date().toLocaleString('pt-BR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
     }).replace(',', ''),
     tamanho: formatarTamanho(arquivo.size),
     situacao: 'PENDENTE',
@@ -25,6 +64,7 @@ function handleArquivoSelecionado(event) {
 
   arquivos.value = [...arquivosSelecionados, ...arquivos.value].slice(0, 8)
   mostrarModal.value = true
+  event.target.value = ''
 }
 
 function formatarTamanho(bytes) {
@@ -75,6 +115,7 @@ function handleProcessamentoFinalizado() {
       </p>
       <input type="file" accept=".zip,.gpkg,.geojson" hidden multiple @change="handleArquivoSelecionado" />
     </label>
+    <p v-if="mensagemErro" class="mensagem-erro">{{ mensagemErro }}</p>
 
     <hr/>
 
@@ -248,6 +289,16 @@ function handleProcessamentoFinalizado() {
 .Card-Enviar-Arquivos-Icone {
   display: block;
   margin: 0 auto 18px;
+}
+
+.mensagem-erro {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-top: 12px;
 }
 
 hr {
