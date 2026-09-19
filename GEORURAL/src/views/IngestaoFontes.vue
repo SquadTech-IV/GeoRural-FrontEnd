@@ -1,9 +1,13 @@
 <script setup>
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useRouter } from 'vue-router'
+import ModalProcessamento from '../components/ModalProcessamento.vue'
 import IconDocumentation from '../components/icons/IconDocumentation.vue'
 import IconUpload from '../components/icons/IconUpload.vue'
 
+const router = useRouter()
+const mostrarModal = ref(false)
 const mostrarArquivos = ref(false)
 const arquivos = ref([])
 
@@ -20,12 +24,18 @@ function handleArquivoSelecionado(event) {
   }))
 
   arquivos.value = [...arquivosSelecionados, ...arquivos.value].slice(0, 8)
+  mostrarModal.value = true
 }
 
 function formatarTamanho(bytes) {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function handleProcessamentoFinalizado() {
+  mostrarModal.value = false
+  router.push({ name: 'Resultado' })
 }
 </script>
 
@@ -96,6 +106,10 @@ function formatarTamanho(bytes) {
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <div v-if="mostrarModal" class="overlay">
+    <ModalProcessamento @finalizado="handleProcessamentoFinalizado" />
   </div>
 </template>
 
