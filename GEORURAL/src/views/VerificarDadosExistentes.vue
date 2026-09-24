@@ -1,8 +1,13 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import IconEye from '../components/icons/IconEye.vue'
 import IconProcess from '../components/icons/IconProcess.vue'
+import ModalProcessamento from '../components/ModalProcessamento.vue'
+
+const router = useRouter()
+const mostrarModal = ref(false)
 
 const dadosCadastrados = ref([
   {
@@ -16,8 +21,13 @@ function visualizarDados(dado) {
   console.log('Visualizar:', dado)
 }
 
-function processarDados(dado) {
-  console.log('Processar:', dado)
+function processarDados() {
+  mostrarModal.value = true
+}
+
+function handleProcessamentoFinalizado() {
+  mostrarModal.value = false
+  router.push({ name: 'Resultado' })
 }
 </script>
 
@@ -30,7 +40,7 @@ function processarDados(dado) {
 
   <div class="Dados-Cadastrados">
     <div class="Dados-Cadastrados-Titulo">
-      <IconDocumentation />
+
       <h2>Dados Cadastrados</h2>
     </div>
 
@@ -53,7 +63,7 @@ function processarDados(dado) {
             </button>
           </td>
           <td>
-            <button class="botao-icone" @click="processarDados(dado)" aria-label="Processar arquivo">
+            <button class="botao-icone" @click="processarDados" aria-label="Processar arquivo">
               <IconProcess />
             </button>
           </td>
@@ -61,9 +71,24 @@ function processarDados(dado) {
       </tbody>
     </table>
   </div>
+
+  <div v-if="mostrarModal" class="overlay">
+    <ModalProcessamento @finalizado="handleProcessamentoFinalizado" />
+  </div>
 </template>
 
 <style scoped>
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
 .Conteudo {
   padding: 32px 24px 16px;
   max-width: 900px;
