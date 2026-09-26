@@ -6,6 +6,7 @@ import BarraNavegacao from '../components/BarraNavegacao.vue'
 import IconDocumentation from '../components/icons/IconDocumentation.vue'
 import IconUpload from '../components/icons/IconUpload.vue'
 
+
 const router = useRouter()
 const mostrarModal = ref(false)
 const mostrarArquivos = ref(false)
@@ -73,7 +74,7 @@ function formatarTamanho(bytes) {
 
 function handleProcessamentoFinalizado() {
   mostrarModal.value = false
-  router.push({ name: 'Resultado' })
+  router.push({ name: 'mapa-resultados' })
 }
 </script>
 
@@ -167,10 +168,11 @@ function handleProcessamentoFinalizado() {
 
 .Conteudo p {
   color: #9ca3af;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.5;
   margin: 0 auto;
   white-space: nowrap;
+  font-family: 'Chakra Petch', sans-serif;
 }
 
 .Card-Upload-Arquivos {
