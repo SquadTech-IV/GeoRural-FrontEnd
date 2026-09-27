@@ -1,33 +1,57 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import IconEye from '../components/icons/IconEye.vue'
 import IconProcess from '../components/icons/IconProcess.vue'
 import ModalProcessamento from '../components/ModalProcessamento.vue'
+import { arquivoService } from '../services/arquivoService'
+import ModalVisualizacaoCSV from '../components/ModalVisualizacaoCSV.vue'
 
 const router = useRouter()
 const mostrarModal = ref(false)
+const mostrarModalVisualizacao = ref(false)
+const dadosCSV = ref([])
 
-const dadosCadastrados = ref([
-  {
-    id: 1,
-    nome: 'CAR',
-    dataCadastro: '13-09-2026',
-  },
-])
+const dadosCadastrados = ref([])
+const arquivoSelecionadoParaProcessar = ref(null)
 
-function visualizarDados(dado) {
-  console.log('Visualizar:', dado)
+onMounted(async () => {
+  try {
+    const dados = await arquivoService.listar()
+    dadosCadastrados.value = dados
+  } catch (error) {
+    console.error('Erro ao carregar arquivos', error)
+  }
+})
+
+async function visualizarDados(dado) {
+  try {
+    const detalhe = await arquivoService.detalhe(dado.id)
+    console.log('Detalhes do arquivo:', detalhe)
+    dadosCSV.value = detalhe.dados || []
+    mostrarModalVisualizacao.value = true
+  } catch (error) {
+    console.error('Erro ao buscar detalhes do arquivo:', error)
+  }
 }
 
-function processarDados() {
+function processarDados(dado) {
+  arquivoSelecionadoParaProcessar.value = dado.id
   mostrarModal.value = true
 }
 
-function handleProcessamentoFinalizado() {
-  mostrarModal.value = false
-  router.push({ name: 'Resultado' })
+async function handleProcessamentoFinalizado() {
+  try {
+    if (arquivoSelecionadoParaProcessar.value) {
+      await arquivoService.processar(arquivoSelecionadoParaProcessar.value)
+    }
+  } catch (error) {
+    console.error('Erro ao enviar arquivo para processamento:', error)
+  } finally {
+    mostrarModal.value = false
+    router.push({ name: 'mapa-resultados' })
+  }
 }
 </script>
 
@@ -54,6 +78,9 @@ function handleProcessamentoFinalizado() {
         </tr>
       </thead>
       <tbody>
+        <tr v-if="dadosCadastrados.length === 0">
+          <td colspan="4" class="vazio">Nenhum arquivo encontrado.</td>
+        </tr>
         <tr v-for="dado in dadosCadastrados" :key="dado.id">
           <td>{{ dado.nome }}</td>
           <td>{{ dado.dataCadastro }}</td>
@@ -70,6 +97,10 @@ function handleProcessamentoFinalizado() {
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <div v-if="mostrarModalVisualizacao" class="overlay">
+    <ModalVisualizacaoCSV :dados="dadosCSV" @fechar="mostrarModalVisualizacao = false" />
   </div>
 
   <div v-if="mostrarModal" class="overlay">

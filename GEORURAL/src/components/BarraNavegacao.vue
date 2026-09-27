@@ -62,11 +62,12 @@ import { RouterLink } from 'vue-router'
   align-items: center;
   height: 100%;
   padding: 0 4px;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 500;
   color: #9ca3af;
   text-decoration: none;
   border-bottom: 2px solid transparent;
+  font-family: 'Chakra Petch', sans-serif;
 }
 
 .Barra-Navegacao-item--ativo {
