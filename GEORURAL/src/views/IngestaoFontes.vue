@@ -13,13 +13,14 @@ const arquivos = ref([])
 const mensagemErro = ref('')
 
 const EXTENSOES_ACEITAS = ['.zip', '.gpkg', '.geojson']
+const API_UPLOAD = 'http://localhost:8080/api/ingestao/upload'
 
 function obterExtensao(nomeArquivo) {
   const partes = nomeArquivo.toLowerCase().split('.')
   return '.' + partes[partes.length - 1]
 }
 
-function handleArquivoSelecionado(event) {
+async function handleArquivoSelecionado(event) {
   const arquivosDoInput = event.target.files
   if (!arquivosDoInput.length) return
 
@@ -43,26 +44,37 @@ function handleArquivoSelecionado(event) {
       : `Os arquivos ${arquivosInvalidos.map((n) => `"${n}"`).join(', ')} não são formatos aceitos. Envie Shapefile (.zip), GeoPackage (.gpkg) ou GeoJSON.`
   }
 
-  if (!arquivosValidos.length) {
-    event.target.value = ''
-    return
-  }
-
-  const arquivosSelecionados = arquivosValidos.map((arquivo) => ({
-    nome: arquivo.name,
-    fonte: 'Upload manual',
-    recebido: new Date().toLocaleString('pt-BR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).replace(',', ''),
-    tamanho: formatarTamanho(arquivo.size),
-    situacao: 'PENDENTE',
-  }))
-
-  arquivos.value = [...arquivosSelecionados, ...arquivos.value].slice(0, 8)
-  mostrarModal.value = true
   event.target.value = ''
+  if (!arquivosValidos.length) return
+
+  mostrarModal.value = true
+
+  try {
+    const formData = new FormData()
+    arquivosValidos.forEach((arquivo) => formData.append('files', arquivo))
+
+    const resp = await fetch(API_UPLOAD, { method: 'POST', body: formData })
+    if (!resp.ok) throw new Error('Falha ao enviar os arquivos')
+
+    const arquivosSelecionados = arquivosValidos.map((arquivo) => ({
+      nome: arquivo.name,
+      fonte: 'Upload manual',
+      recebido: new Date().toLocaleString('pt-BR', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      }).replace(',', ''),
+      tamanho: formatarTamanho(arquivo.size),
+      situacao: 'PENDENTE',
+    }))
+
+    arquivos.value = [...arquivosSelecionados, ...arquivos.value].slice(0, 8)
+  } catch {
+    mostrarModal.value = false
+    mensagemErro.value = 'Não foi possível enviar os arquivos ao servidor. Tente novamente.'
+  }
 }
 
 function formatarTamanho(bytes) {
