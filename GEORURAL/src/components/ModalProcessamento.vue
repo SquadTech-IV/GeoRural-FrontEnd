@@ -1,7 +1,12 @@
 <script setup>
-import { onMounted, onUnmounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 
-const emit = defineEmits(['finalizado'])
+const props = defineProps({
+  concluido: { type: Boolean, default: false },
+  erro: { type: String, default: null },
+})
+
+const emit = defineEmits(['finalizado', 'fechar'])
 
 const etapas = ref([
   {
@@ -16,11 +21,11 @@ const etapas = ref([
   },
   {
     titulo: 'Calculando interseções e áreas',
-    subtitulo: 'Reserva Legal, vegetação e perímetro',
+    subtitulo: 'Compara a área do imóvel com os embargos ambientais',
     status: 'pendente',
   },
   {
-    titulo: 'Calculando o IRL',
+    titulo: 'Calculando o IAE',
     subtitulo: 'Compara a RL declarada com o mínimo do bioma',
     status: 'pendente',
   },
@@ -28,25 +33,51 @@ const etapas = ref([
 
 let ativo = true
 
+// resolve quando o pai avisa que o upload terminou ou falhou
+let resolverDesfecho
+const desfecho = new Promise((resolve) => {
+  resolverDesfecho = resolve
+})
+
+watch(
+  () => [props.concluido, props.erro],
+  ([concluido, erro]) => {
+    if (concluido || erro) resolverDesfecho()
+  },
+  { immediate: true },
+)
+
 function aguardar(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 async function animarEtapas() {
-  for (const etapa of etapas.value) {
-    if (!ativo) return
+  const ultima = etapas.value.length - 1
 
+  for (let i = 0; i <= ultima; i++) {
+    if (!ativo || props.erro) return
+
+    const etapa = etapas.value[i]
     etapa.status = 'carregando'
-    await aguardar(900)
+
+    if (i < ultima) {
+      await aguardar(900)
+    } else {
+      // a última etapa espera o backend responder
+      await desfecho
+    }
 
     if (!ativo) return
+
+    if (props.erro) {
+      etapa.status = 'falha'
+      return
+    }
 
     etapa.status = 'concluido'
   }
 
-  if (ativo) {
-    emit('finalizado')
-  }
+  emit('finalizado')
 }
 
 onMounted(animarEtapas)
@@ -82,6 +113,8 @@ onUnmounted(() => {
             class="spinner"
           ></span>
 
+          <span v-else-if="etapa.status === 'falha'" class="falha">✕</span>
+
           <span v-else class="check">✓</span>
         </span>
 
@@ -91,6 +124,13 @@ onUnmounted(() => {
         </div>
       </li>
     </ul>
+
+    <div v-if="erro" class="bloco-erro">
+      <p class="erro">{{ erro }}</p>
+      <button type="button" class="btn-fechar" @click="emit('fechar')">
+        Fechar
+      </button>
+    </div>
   </div>
 </template>
 
@@ -181,6 +221,18 @@ h2 {
   font-size: 12px;
 }
 
+.falha {
+  width: 22px;
+  height: 22px;
+  background: #f87171;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
 .etapa-titulo {
   margin: 0;
   font-size: 14px;
@@ -191,5 +243,25 @@ h2 {
   margin: 2px 0 0;
   font-size: 12px;
   color: #9ca3af;
+}
+
+.bloco-erro {
+  margin-top: 16px;
+}
+
+.erro {
+  color: #f87171;
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+.btn-fechar {
+  background: transparent;
+  color: #fff;
+  border: 1px solid #b829f7;
+  border-radius: 8px;
+  padding: 8px 20px;
+  cursor: pointer;
+  font-family: inherit;
 }
 </style>
