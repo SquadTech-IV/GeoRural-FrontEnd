@@ -7,6 +7,7 @@ import IconUpload from '../components/icons/IconUpload.vue'
 import ModalProcessamento from '../components/ModalProcessamento.vue'
 import { arquivoService } from '../services/arquivoService'
 
+
 const router = useRouter()
 
 const mostrarArquivos = ref(false)
@@ -127,6 +128,7 @@ async function handleProcessamentoFinalizado() {
   }
 
   await router.push({ name: 'Resultado' })
+
 }
 
 onMounted(carregarArquivos)
