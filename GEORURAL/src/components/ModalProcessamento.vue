@@ -1,39 +1,90 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 
 const emit = defineEmits(['finalizado'])
 
 const etapas = ref([
-  { titulo: 'Validando geometrias', subtitulo: 'checando se os polígonos são válidos', status: 'pendente' },
-  { titulo: 'Reprojetando para área equivalente', subtitulo: 'projeção adequada para medir hectares', status: 'pendente' },
-  { titulo: 'Calculando interseções e áreas', subtitulo: 'Reserva Legal, vegetação e perímetro', status: 'pendente' },
-  { titulo: 'Calculando o IRL', subtitulo: 'compara a RL declarada com o mínimo do bioma', status: 'pendente' },
+  {
+    titulo: 'Validando geometrias',
+    subtitulo: 'Checando se os polígonos são válidos',
+    status: 'pendente',
+  },
+  {
+    titulo: 'Reprojetando para área equivalente',
+    subtitulo: 'Projeção adequada para medir hectares',
+    status: 'pendente',
+  },
+  {
+    titulo: 'Calculando interseções e áreas',
+    subtitulo: 'Reserva Legal, vegetação e perímetro',
+    status: 'pendente',
+  },
+  {
+    titulo: 'Calculando o IRL',
+    subtitulo: 'Compara a RL declarada com o mínimo do bioma',
+    status: 'pendente',
+  },
 ])
 
-async function processar() {
-  for (let i = 0; i < etapas.value.length; i++) {
-    etapas.value[i].status = 'carregando'
-    await new Promise((resolve) => setTimeout(resolve, 900))
-    etapas.value[i].status = 'concluido'
-  }
-   emit('finalizado')
+let ativo = true
+
+function aguardar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-onMounted(processar)
+async function animarEtapas() {
+  for (const etapa of etapas.value) {
+    if (!ativo) return
+
+    etapa.status = 'carregando'
+    await aguardar(900)
+
+    if (!ativo) return
+
+    etapa.status = 'concluido'
+  }
+
+  if (ativo) {
+    emit('finalizado')
+  }
+}
+
+onMounted(animarEtapas)
+
+onUnmounted(() => {
+  ativo = false
+})
 </script>
 
 <template>
-  <div class="modal-processamento">
+  <div class="modal-processamento" role="dialog" aria-modal="true">
     <h2>Processando o imóvel</h2>
-    <p class="subtitulo">O núcleo geoespacial está transformando as geometrias em números.</p>
+
+    <p class="subtitulo">
+      O núcleo geoespacial está transformando as geometrias em números.
+    </p>
 
     <ul class="lista-etapas">
-      <li v-for="(etapa, i) in etapas" :key="i" class="etapa" :class="{ ativa: etapa.status !== 'pendente' }">
+      <li
+        v-for="(etapa, i) in etapas"
+        :key="i"
+        class="etapa"
+        :class="{ ativa: etapa.status !== 'pendente' }"
+      >
         <span class="icone">
-          <span v-if="etapa.status === 'pendente'" class="circulo-vazio"></span>
-          <span v-else-if="etapa.status === 'carregando'" class="spinner"></span>
+          <span
+            v-if="etapa.status === 'pendente'"
+            class="circulo-vazio"
+          ></span>
+
+          <span
+            v-else-if="etapa.status === 'carregando'"
+            class="spinner"
+          ></span>
+
           <span v-else class="check">✓</span>
         </span>
+
         <div class="texto">
           <p class="etapa-titulo">{{ etapa.titulo }}</p>
           <p class="etapa-subtitulo">{{ etapa.subtitulo }}</p>
@@ -41,21 +92,18 @@ onMounted(processar)
       </li>
     </ul>
   </div>
-
-    <div v-if="mostrarResultados" class="overlay">
-    <ModalProcessamento @finalizado="handleProcessamentoFinalizado" />
-  </div>
 </template>
 
 <style scoped>
 .modal-processamento {
-  background: #0A0A0A ;
+  background: #0a0a0a;
+  border: 1px solid #b829f7;
   border-radius: 16px;
   padding: 32px;
-  max-width: 500px;
+  width: min(500px, calc(100vw - 32px));
   margin: 0 auto;
   text-align: center;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
   font-family: 'Chakra Petch', sans-serif;
 }
 
@@ -83,7 +131,7 @@ h2 {
   align-items: flex-start;
   gap: 12px;
   padding: 16px 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #333;
 }
 
 .etapa:last-child {
@@ -137,7 +185,6 @@ h2 {
   margin: 0;
   font-size: 14px;
   color: #fff;
-  transition: color 0.2s, font-weight 0.2s;
 }
 
 .etapa-subtitulo {

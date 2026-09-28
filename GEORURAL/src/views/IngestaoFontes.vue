@@ -1,15 +1,18 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import IconDocumentation from '../components/icons/IconDocumentation.vue'
 import IconUpload from '../components/icons/IconUpload.vue'
-import api from '../services/api'
+import ModalProcessamento from '../components/ModalProcessamento.vue'
 import { arquivoService } from '../services/arquivoService'
 
+const router = useRouter()
+
 const mostrarArquivos = ref(false)
+const mostrarModal = ref(false)
 const arquivos = ref([])
 const mensagemErro = ref('')
-const mensagemSucesso = ref('')
 const enviando = ref(false)
 
 const EXTENSOES_ACEITAS = ['.zip', '.gpkg', '.geojson']
@@ -55,7 +58,6 @@ async function handleArquivoSelecionado(event) {
   if (!selecionados.length || enviando.value) return
 
   mensagemErro.value = ''
-  mensagemSucesso.value = ''
 
   const validos = selecionados.filter((arquivo) =>
     EXTENSOES_ACEITAS.includes(obterExtensao(arquivo.name))
@@ -73,27 +75,13 @@ async function handleArquivoSelecionado(event) {
 
   if (!validos.length) return
 
-  const formData = new FormData()
-  validos.forEach((arquivo) => formData.append('files', arquivo))
-
   enviando.value = true
 
   try {
-    const { data: resultados } = await api.post(
-      '/api/ingestao/upload',
-      formData
-    )
+    const resultados = await arquivoService.enviar(validos)
 
     const aceitos = resultados.filter((resultado) => resultado.aceito)
     const rejeitados = resultados.filter((resultado) => !resultado.aceito)
-
-    if (aceitos.length) {
-      mensagemSucesso.value =
-        `${aceitos.length} arquivo(s) recebido(s) e encaminhado(s) para processamento.`
-
-      mostrarArquivos.value = true
-      await carregarArquivos()
-    }
 
     if (rejeitados.length) {
       const nomes = rejeitados
@@ -107,6 +95,16 @@ async function handleArquivoSelecionado(event) {
         .filter(Boolean)
         .join(' ')
     }
+
+    if (aceitos.length) {
+      mostrarArquivos.value = true
+      await carregarArquivos()
+
+      // Abre o modal após o backend aceitar o arquivo.
+      mostrarModal.value = true
+    } else if (!mensagemErro.value) {
+      mensagemErro.value = 'O servidor não aceitou os arquivos enviados.'
+    }
   } catch (erro) {
     console.error('Erro no upload:', erro)
 
@@ -117,6 +115,18 @@ async function handleArquivoSelecionado(event) {
   } finally {
     enviando.value = false
   }
+}
+
+async function handleProcessamentoFinalizado() {
+  mostrarModal.value = false
+
+  if (!router.hasRoute('Resultado')) {
+    mensagemErro.value =
+      ''
+    return
+  }
+
+  await router.push({ name: 'Resultado' })
 }
 
 onMounted(carregarArquivos)
@@ -137,7 +147,7 @@ onMounted(carregarArquivos)
 
     <label
       class="Card-Enviar-Arquivos"
-      :class="{ 'Card-Enviar-Arquivos--desabilitado': enviando }"
+      :class="{ desabilitado: enviando }"
     >
       <p class="Card-Enviar-Arquivos-Titulo">
         <IconUpload class="Card-Enviar-Arquivos-Icone" />
@@ -166,18 +176,14 @@ onMounted(carregarArquivos)
       {{ mensagemErro }}
     </p>
 
-    <p v-if="mensagemSucesso" class="mensagem-sucesso">
-      {{ mensagemSucesso }}
-    </p>
-
     <hr />
 
     <div
       class="recent-files"
       @click="mostrarArquivos = !mostrarArquivos"
     >
-      <span class="icon"></span>
       <span>Arquivos recentes</span>
+
       <span
         class="arrow"
         :class="{ 'arrow--open': mostrarArquivos }"
@@ -217,6 +223,12 @@ onMounted(carregarArquivos)
       </p>
     </template>
   </div>
+
+  <div v-if="mostrarModal" class="overlay">
+    <ModalProcessamento
+      @finalizado="handleProcessamentoFinalizado"
+    />
+  </div>
 </template>
 
 <style scoped>
@@ -224,10 +236,18 @@ onMounted(carregarArquivos)
   box-sizing: border-box;
 }
 
-:global(body) {
-  background: #000000;
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
   align-items: center;
   justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+}
+
+:global(body) {
+  background: #000;
   margin: 0;
 }
 
@@ -276,7 +296,7 @@ onMounted(carregarArquivos)
   display: block;
 }
 
-.Card-Enviar-Arquivos--desabilitado {
+.desabilitado {
   opacity: 0.6;
   cursor: wait;
 }
@@ -314,16 +334,6 @@ onMounted(carregarArquivos)
   margin-top: 12px;
 }
 
-.mensagem-sucesso {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.1);
-  border: 1px solid rgba(74, 222, 128, 0.4);
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 13px;
-  margin-top: 12px;
-}
-
 hr {
   border: none;
   border-top: 1px solid #2a2a35;
@@ -355,7 +365,7 @@ hr {
   font-size: 13px;
 }
 
-.tabela-arquivos thead th {
+.tabela-arquivos th {
   text-align: left;
   color: #9ca3af;
   font-weight: 500;
@@ -363,7 +373,7 @@ hr {
   border-bottom: 1px solid #2a2a35;
 }
 
-.tabela-arquivos tbody td {
+.tabela-arquivos td {
   padding: 12px;
   border-bottom: 1px solid #1a1a22;
   color: #fff;
@@ -385,20 +395,17 @@ hr {
 .badge--aceito {
   color: #4ade80;
   background: rgba(74, 222, 128, 0.1);
-  border: 1px solid rgba(74, 222, 128, 0.4);
 }
 
 .badge--rejeitado {
   color: #f87171;
   background: rgba(248, 113, 113, 0.1);
-  border: 1px solid rgba(248, 113, 113, 0.4);
 }
 
 .badge--pendente,
 .badge--aguardando {
   color: #facc15;
   background: rgba(250, 204, 21, 0.1);
-  border: 1px solid rgba(250, 204, 21, 0.4);
 }
 
 .lista-vazia {
