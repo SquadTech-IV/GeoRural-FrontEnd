@@ -16,6 +16,10 @@ const dadosCSV = ref([])
 const dadosCadastrados = ref([])
 const arquivoSelecionadoParaProcessar = ref(null)
 
+// controle do modal de processamento
+const processamentoConcluido = ref(false)
+const processamentoErro = ref(null)
+
 onMounted(async () => {
   try {
     const dados = await arquivoService.listar()
@@ -27,31 +31,45 @@ onMounted(async () => {
 
 async function visualizarDados(dado) {
   try {
+    console.log('Arquivo selecionado:', dado)
+
     const detalhe = await arquivoService.detalhe(dado.id)
-    console.log('Detalhes do arquivo:', detalhe)
-    dadosCSV.value = detalhe.dados || []
+    console.log('Resposta do endpoint de detalhe:', detalhe)
+
+    dadosCSV.value = detalhe
     mostrarModalVisualizacao.value = true
   } catch (error) {
     console.error('Erro ao buscar detalhes do arquivo:', error)
   }
 }
 
-function processarDados(dado) {
+// clicar em processar: abre o modal E dispara o processamento
+async function processarDados(dado) {
   arquivoSelecionadoParaProcessar.value = dado.id
+  processamentoConcluido.value = false
+  processamentoErro.value = null
   mostrarModal.value = true
+
+  try {
+    await arquivoService.processar(dado.id)
+    // avisa o modal que terminou -> ele conclui a última etapa
+    processamentoConcluido.value = true
+  } catch (error) {
+    console.error('Erro ao processar:', error)
+    processamentoErro.value =
+      error.response?.data?.mensagem ||
+      'Não foi possível processar o arquivo. Verifique o formato (shapefile .zip) e tente novamente.'
+  }
 }
 
-async function handleProcessamentoFinalizado() {
-  try {
-    if (arquivoSelecionadoParaProcessar.value) {
-      await arquivoService.processar(arquivoSelecionadoParaProcessar.value)
-    }
-  } catch (error) {
-    console.error('Erro ao enviar arquivo para processamento:', error)
-  } finally {
-    mostrarModal.value = false
-    router.push({ name: 'Imoveis' })
-  }
+// o modal terminou a animação (após o backend responder) -> vai pra lista
+function handleProcessamentoFinalizado() {
+  mostrarModal.value = false
+  router.push({ name: 'Imoveis' })
+}
+
+function fecharModalErro() {
+  mostrarModal.value = false
 }
 </script>
 
@@ -64,7 +82,6 @@ async function handleProcessamentoFinalizado() {
 
   <div class="Dados-Cadastrados">
     <div class="Dados-Cadastrados-Titulo">
-
       <h2>Dados Cadastrados</h2>
     </div>
 
@@ -83,7 +100,7 @@ async function handleProcessamentoFinalizado() {
         </tr>
         <tr v-for="dado in dadosCadastrados" :key="dado.id">
           <td>{{ dado.nome }}</td>
-          <td>{{ dado.dataCadastro }}</td>
+          <td>{{ dado.recebidoEm }}</td>
           <td>
             <button class="botao-icone" @click="visualizarDados(dado)" aria-label="Visualizar arquivo">
               <IconEye />
@@ -91,8 +108,8 @@ async function handleProcessamentoFinalizado() {
           </td>
           <td>
             <button class="botao-icone" aria-label="Processar arquivo" @click="processarDados(dado)">
-  <IconProcess />
-</button>
+              <IconProcess />
+            </button>
           </td>
         </tr>
       </tbody>
@@ -104,12 +121,16 @@ async function handleProcessamentoFinalizado() {
   </div>
 
   <div v-if="mostrarModal" class="overlay">
-    <ModalProcessamento @finalizado="handleProcessamentoFinalizado" />
+    <ModalProcessamento
+      :concluido="processamentoConcluido"
+      :erro="processamentoErro"
+      @finalizado="handleProcessamentoFinalizado"
+      @fechar="fecharModalErro"
+    />
   </div>
 </template>
 
 <style scoped>
-
 .overlay {
   position: fixed;
   inset: 0;

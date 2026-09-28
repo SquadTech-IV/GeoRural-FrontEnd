@@ -5,11 +5,15 @@ import 'leaflet/dist/leaflet.css'
 import {LMap,LTileLayer,LGeoJson,LControlScale,} from '@vue-leaflet/vue-leaflet'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import { imovelService } from '../services/imovelService'
+import { useRoute } from 'vue-router'
+import api from '../services/api'
 
 const props = defineProps({
   car: { type: String, required: true },
   resultado: { type: Object, default: null },
 })
+
+const route = useRoute()
 
 const ESRI_TILE_URL =
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
@@ -89,6 +93,15 @@ async function carregarImovel() {
   centro.value = null
 
   try {
+    const id = route.query.id
+    if (id) {
+      try {
+        await api.post(`/api/indicadores/iae/${id}/recalcular`)
+      } catch (e) {
+        console.error('Nao foi possivel calcular o IAE:', e)
+      }
+    }
+
     const feature = props.resultado ?? (await buscarNoBackend())
     const propriedades = feature.properties ?? {}
     const geometria = lerGeoJson(feature.geometry)

@@ -86,6 +86,7 @@ onMounted(carregar)
                 :to="{
                   name: 'Resultado',
                   params: { car: imovel.codigoCar },
+                  query: { id: imovel.id },
                 }"
               >
                 Ver mapa

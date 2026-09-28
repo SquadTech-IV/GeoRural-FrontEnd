@@ -7,7 +7,6 @@ import IconUpload from '../components/icons/IconUpload.vue'
 import ModalProcessamento from '../components/ModalProcessamento.vue'
 import { arquivoService } from '../services/arquivoService'
 
-
 const router = useRouter()
 
 const mostrarArquivos = ref(false)
@@ -79,9 +78,6 @@ async function handleArquivoSelecionado(event) {
   if (!validos.length) return
 
   enviando.value = true
-
-  // O backend processa dentro do próprio upload, então o modal
-  // fica aberto enquanto a requisição estiver em andamento.
   uploadConcluido.value = false
   erroProcessamento.value = null
   mostrarModal.value = true
@@ -108,11 +104,22 @@ async function handleArquivoSelecionado(event) {
     if (aceitos.length) {
       mostrarArquivos.value = true
 
-      // Avisa o modal que o backend terminou; ele conclui a última
-      // etapa e emite "finalizado".
-      uploadConcluido.value = true
-
       await carregarArquivos()
+
+      // Atualiza a situação exibida para os arquivos que o servidor aceitou.
+      const nomesAceitos = new Set(
+        aceitos.map((resultado) => resultado.nomeArquivo)
+      )
+
+      arquivos.value = arquivos.value.map((arquivo) => ({
+        ...arquivo,
+        situacao: nomesAceitos.has(arquivo.nome)
+          ? 'ACEITO'
+          : arquivo.situacao,
+      }))
+
+      // O modal termina a animação após a resposta bem-sucedida.
+      uploadConcluido.value = true
     } else {
       if (!mensagemErro.value) {
         mensagemErro.value = 'O servidor não aceitou os arquivos enviados.'
@@ -142,13 +149,11 @@ async function handleProcessamentoFinalizado() {
   mostrarModal.value = false
 
   if (!router.hasRoute('Resultado')) {
-    mensagemErro.value =
-      ''
+    mensagemErro.value = ''
     return
   }
 
   await router.push({ name: 'Resultado' })
-
 }
 
 onMounted(carregarArquivos)
