@@ -50,7 +50,7 @@ async function handleProcessamentoFinalizado() {
     console.error('Erro ao enviar arquivo para processamento:', error)
   } finally {
     mostrarModal.value = false
-    router.push({ name: 'mapa-resultados' })
+    router.push({ name: 'Imoveis' })
   }
 }
 </script>
@@ -90,9 +90,9 @@ async function handleProcessamentoFinalizado() {
             </button>
           </td>
           <td>
-            <button class="botao-icone" @click="processarDados" aria-label="Processar arquivo">
-              <IconProcess />
-            </button>
+            <button class="botao-icone" aria-label="Processar arquivo" @click="processarDados(dado)">
+  <IconProcess />
+</button>
           </td>
         </tr>
       </tbody>

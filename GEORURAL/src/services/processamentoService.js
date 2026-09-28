@@ -1,12 +1,7 @@
-import axios from 'axios'
-
-const api = axios.create({
-  baseURL: 'http://localhost:8080',
-  timeout: 0, // pipeline é síncrona; shapefile grande pode demorar
-})
-
+import api from "./api"
 export async function processarArquivo(arquivoId) {
-  // TROCAR pela rota real do controller
-  const { data } = await api.post(`/api/ROTA-DE-PROCESSAMENTO/${arquivoId}`)
+  const { data } = await api.post(
+    `/api/arquivos/${arquivoId}/processar`,
+  )
   return data
 }
