@@ -12,6 +12,8 @@ const router = useRouter()
 
 const mostrarArquivos = ref(false)
 const mostrarModal = ref(false)
+const uploadConcluido = ref(false)
+const erroProcessamento = ref(null)
 const arquivos = ref([])
 const mensagemErro = ref('')
 const enviando = ref(false)
@@ -78,6 +80,12 @@ async function handleArquivoSelecionado(event) {
 
   enviando.value = true
 
+  // O backend processa dentro do próprio upload, então o modal
+  // fica aberto enquanto a requisição estiver em andamento.
+  uploadConcluido.value = false
+  erroProcessamento.value = null
+  mostrarModal.value = true
+
   try {
     const resultados = await arquivoService.enviar(validos)
 
@@ -99,12 +107,18 @@ async function handleArquivoSelecionado(event) {
 
     if (aceitos.length) {
       mostrarArquivos.value = true
-      await carregarArquivos()
 
-      // Abre o modal após o backend aceitar o arquivo.
-      mostrarModal.value = true
-    } else if (!mensagemErro.value) {
-      mensagemErro.value = 'O servidor não aceitou os arquivos enviados.'
+      // Avisa o modal que o backend terminou; ele conclui a última
+      // etapa e emite "finalizado".
+      uploadConcluido.value = true
+
+      await carregarArquivos()
+    } else {
+      if (!mensagemErro.value) {
+        mensagemErro.value = 'O servidor não aceitou os arquivos enviados.'
+      }
+
+      erroProcessamento.value = mensagemErro.value
     }
   } catch (erro) {
     console.error('Erro no upload:', erro)
@@ -113,9 +127,15 @@ async function handleArquivoSelecionado(event) {
       erro.response?.data?.mensagem ||
       erro.response?.data?.message ||
       'Não foi possível enviar os arquivos. Verifique se o backend está em execução.'
+
+    erroProcessamento.value = mensagemErro.value
   } finally {
     enviando.value = false
   }
+}
+
+function handleFecharModal() {
+  mostrarModal.value = false
 }
 
 async function handleProcessamentoFinalizado() {
@@ -228,7 +248,10 @@ onMounted(carregarArquivos)
 
   <div v-if="mostrarModal" class="overlay">
     <ModalProcessamento
+      :concluido="uploadConcluido"
+      :erro="erroProcessamento"
       @finalizado="handleProcessamentoFinalizado"
+      @fechar="handleFecharModal"
     />
   </div>
 </template>
