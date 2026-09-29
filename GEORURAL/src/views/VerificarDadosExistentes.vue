@@ -2,7 +2,6 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
-import IconEye from '../components/icons/IconEye.vue'
 import IconProcess from '../components/icons/IconProcess.vue'
 import ModalProcessamento from '../components/ModalProcessamento.vue'
 import { arquivoService } from '../services/arquivoService'
@@ -20,6 +19,18 @@ const arquivoSelecionadoParaProcessar = ref(null)
 const processamentoConcluido = ref(false)
 const processamentoErro = ref(null)
 
+function formatarData(data) {
+  if (!data) return '—'
+
+  const valor = new Date(data)
+
+  return Number.isNaN(valor.getTime())
+    ? '—'
+    : valor.toLocaleDateString('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+      })
+}
+
 onMounted(async () => {
   try {
     const dados = await arquivoService.listar()
@@ -29,19 +40,19 @@ onMounted(async () => {
   }
 })
 
-async function visualizarDados(dado) {
-  try {
-    console.log('Arquivo selecionado:', dado)
+// async function visualizarDados(dado) {
+//   try {
+//     console.log('Arquivo selecionado:', dado)
 
-    const detalhe = await arquivoService.detalhe(dado.id)
-    console.log('Resposta do endpoint de detalhe:', detalhe)
+//     const detalhe = await arquivoService.detalhe(dado.id)
+//     console.log('Resposta do endpoint de detalhe:', detalhe)
 
-    dadosCSV.value = detalhe
-    mostrarModalVisualizacao.value = true
-  } catch (error) {
-    console.error('Erro ao buscar detalhes do arquivo:', error)
-  }
-}
+//     dadosCSV.value = detalhe
+//     mostrarModalVisualizacao.value = true
+//   } catch (error) {
+//     console.error('Erro ao buscar detalhes do arquivo:', error)
+//   }
+// }
 
 // clicar em processar: abre o modal E dispara o processamento
 async function processarDados(dado) {
@@ -90,8 +101,8 @@ function fecharModalErro() {
         <tr>
           <th>Nome do Arquivo</th>
           <th>Data de Cadastro</th>
-          <th>Visualizar Arquivo</th>
           <th>Processar Arquivo</th>
+          <th>Status</th>
         </tr>
       </thead>
       <tbody>
@@ -100,17 +111,13 @@ function fecharModalErro() {
         </tr>
         <tr v-for="dado in dadosCadastrados" :key="dado.id">
           <td>{{ dado.nome }}</td>
-          <td>{{ dado.recebidoEm }}</td>
-          <td>
-            <button class="botao-icone" @click="visualizarDados(dado)" aria-label="Visualizar arquivo">
-              <IconEye />
-            </button>
-          </td>
+          <td>{{ formatarData(dado.recebidoEm) }}</td>
           <td>
             <button class="botao-icone" aria-label="Processar arquivo" @click="processarDados(dado)">
               <IconProcess />
             </button>
           </td>
+          <td></td>
         </tr>
       </tbody>
     </table>
