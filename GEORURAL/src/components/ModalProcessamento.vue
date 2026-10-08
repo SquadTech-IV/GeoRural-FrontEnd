@@ -10,23 +10,23 @@ const emit = defineEmits(['finalizado', 'fechar'])
 
 const etapas = ref([
   {
-    titulo: 'Validando geometrias',
-    subtitulo: 'Checando se os polígonos são válidos',
+    titulo: 'Validando os dados geográficos',
+    subtitulo: 'Verificando a geometria do imóvel e dos embargos',
     status: 'pendente',
   },
   {
-    titulo: 'Reprojetando para área equivalente',
-    subtitulo: 'Projeção adequada para medir hectares',
+    titulo: 'Preparando as áreas para o cálculo',
+    subtitulo: 'Reprojetando as geometrias para medir as áreas em hectares',
     status: 'pendente',
   },
   {
-    titulo: 'Calculando interseções e áreas',
-    subtitulo: 'Compara a área do imóvel com os embargos ambientais',
+    titulo: 'Identificando áreas embargadas',
+    subtitulo: 'Calculando a sobreposição dos embargos com o imóvel',
     status: 'pendente',
   },
   {
     titulo: 'Calculando o IAE',
-    subtitulo: 'Compara a RL declarada com o mínimo do bioma',
+    subtitulo: 'Relacionando a área embargada com a área total do imóvel',
     status: 'pendente',
   },
 ])

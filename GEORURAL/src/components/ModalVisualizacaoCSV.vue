@@ -1,94 +1,213 @@
 <script setup>
-defineProps({
-  dados: {
+import { computed, ref, watch } from 'vue'
+
+const props = defineProps({
+  nomeArquivo: {
+    type: String,
+    default: '',
+  },
+  camadas: {
     type: Array,
-    default: () => []
-  }
+    default: () => [],
+  },
+  carregando: {
+    type: Boolean,
+    default: false,
+  },
+  erro: {
+    type: String,
+    default: '',
+  },
 })
+
 const emit = defineEmits(['fechar'])
+
+const camadaSelecionada = ref(0)
+const LIMITE_PREVIA = 100
+
+watch(
+  () => props.camadas,
+  () => {
+    camadaSelecionada.value = 0
+  },
+)
+
+const camadaAtual = computed(
+  () => props.camadas[camadaSelecionada.value] || null,
+)
+
+const registros = computed(
+  () => camadaAtual.value?.registros || [],
+)
+
+const colunas = computed(() => [
+  ...new Set(
+    registros.value.flatMap((registro) => Object.keys(registro)),
+  ),
+])
+
+const registrosVisiveis = computed(
+  () => registros.value.slice(0, LIMITE_PREVIA),
+)
+
+function formatarValor(valor) {
+  if (valor == null || valor === '') return '—'
+
+  if (typeof valor === 'object') {
+    return JSON.stringify(valor)
+  }
+
+  return String(valor)
+}
 </script>
 
 <template>
-  <div class="overlay" @click.self="emit('fechar')">
-
-    <div class="informacoes">
+  <div
+    class="overlay"
+    @click.self="emit('fechar')"
+  >
+    <div
+      class="informacoes"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="titulo-modal-arquivo"
+    >
       <div class="titulo">
         <div>
-          <h2>Dados do Arquivo</h2>
+          <h2 id="titulo-modal-arquivo">
+            Dados do arquivo
+          </h2>
+
+          <p class="nome-arquivo">
+            {{ nomeArquivo }}
+          </p>
         </div>
 
         <button
+          type="button"
           class="botao-fechar"
+          aria-label="Fechar"
           @click="emit('fechar')"
-          aria-label="Fechar">
+        >
           ×
         </button>
       </div>
 
-      <div v-if="dados.length === 0" class="vazio">
-        Nenhum dado encontrado neste arquivo.
-      </div>
+      <p v-if="carregando" class="estado">
+        Baixando e lendo o arquivo...
+      </p>
 
-      <div v-else class="tabela">
-        <table class="tabela-informacoes">
-          <thead>
-            <tr>
-              <th
-                v-for="coluna in Object.keys(dados[0])"
-                :key="coluna"
-              >
-                {{ coluna }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="(linha, index) in dados"
+      <p v-else-if="erro" class="estado erro">
+        {{ erro }}
+      </p>
+
+      <p v-else-if="camadas.length === 0" class="estado">
+        Nenhuma camada encontrada no arquivo.
+      </p>
+
+      <template v-else>
+        <label
+          v-if="camadas.length > 1"
+          class="seletor"
+        >
+          Camada
+
+          <select v-model.number="camadaSelecionada">
+            <option
+              v-for="(camada, index) in camadas"
               :key="index"
+              :value="index"
             >
-              <td
-                v-for="coluna in Object.keys(dados[0])"
-                :key="coluna"
-              >
-                {{ linha[coluna] }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+              {{ camada.nome }}
+            </option>
+          </select>
+        </label>
+
+        <p class="resumo">
+          {{ camadaAtual.nome }} —
+          {{ registros.length }} registro(s)
+        </p>
+
+        <p
+          v-if="registros.length === 0"
+          class="estado"
+        >
+          Esta camada não possui registros para exibir.
+        </p>
+
+        <template v-else>
+          <p
+            v-if="registros.length > LIMITE_PREVIA"
+            class="aviso"
+          >
+            Exibindo os primeiros {{ LIMITE_PREVIA }} registros.
+          </p>
+
+          <div class="tabela-container">
+            <table class="tabela-csv">
+              <thead>
+                <tr>
+                  <th
+                    v-for="coluna in colunas"
+                    :key="coluna"
+                  >
+                    {{ coluna }}
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr
+                  v-for="(registro, index) in registrosVisiveis"
+                  :key="index"
+                >
+                  <td
+                    v-for="coluna in colunas"
+                    :key="coluna"
+                  >
+                    {{ formatarValor(registro[coluna]) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </template>
     </div>
   </div>
 </template>
 
 <style scoped>
-
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.65);
+  z-index: 999;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 999;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.65);
 }
 
 .informacoes {
-  width: 90%;
-  max-width: 1100px;
-  max-height: 80vh;
-  background: #0a0a0f;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 0 30px rgba(184, 41, 247, 0.25);
+  box-sizing: border-box;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  max-width: 1100px;
+  max-height: 80vh;
+  padding: 24px;
+  border-radius: 16px;
+  background: #0a0a0f;
+  box-shadow: 0 0 30px rgba(184, 41, 247, 0.25);
 }
 
 .titulo {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 20px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .titulo h2 {
@@ -98,9 +217,15 @@ const emit = defineEmits(['fechar'])
   font-size: 24px;
 }
 
+.nome-arquivo {
+  margin: 0;
+  color: #9ca3af;
+  overflow-wrap: anywhere;
+}
+
 .botao-fechar {
-  background: transparent;
   border: none;
+  background: transparent;
   color: #fff;
   font-size: 30px;
   line-height: 1;
@@ -111,8 +236,43 @@ const emit = defineEmits(['fechar'])
   color: #b829f7;
 }
 
+.estado {
+  margin: 0;
+  padding: 32px;
+  color: #9ca3af;
+  font-family: 'Chakra Petch', sans-serif;
+  text-align: center;
+}
+
+.estado.erro {
+  color: #f87171;
+}
+
+.seletor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: #fff;
+}
+
+.seletor select {
+  max-width: 100%;
+  padding: 8px;
+  border: 1px solid #b829f7;
+  border-radius: 6px;
+  background: #1a1a22;
+  color: #fff;
+}
+
+.resumo,
+.aviso {
+  margin: 0 0 12px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
 .tabela-container {
-  max-height: 55vh;
   overflow: auto;
   border: 1px solid #2b2b35;
   border-radius: 10px;
@@ -128,6 +288,7 @@ const emit = defineEmits(['fechar'])
 .tabela-csv td {
   padding: 12px 16px;
   border-bottom: 1px solid #2b2b35;
+  color: #fff;
   text-align: left;
   white-space: nowrap;
 }
@@ -137,26 +298,13 @@ const emit = defineEmits(['fechar'])
   top: 0;
   background: #1a1a22;
   color: #b829f7;
-  font-weight: bold;
 }
 
-.tabela-csv td {
-  color: #fff;
-}
-
-.tabela-csv tr:nth-child(even) {
+.tabela-csv tbody tr:nth-child(even) {
   background: #111118;
 }
 
-.tabela-csv tr:hover {
+.tabela-csv tbody tr:hover {
   background: #1d1722;
 }
-
-.vazio {
-  padding: 40px;
-  color: #9ca3af;
-  text-align: center;
-  font-family: 'Chakra Petch', sans-serif;
-}
-
 </style>

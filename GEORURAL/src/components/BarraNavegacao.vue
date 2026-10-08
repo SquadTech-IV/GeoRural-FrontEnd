@@ -16,6 +16,9 @@ import { RouterLink } from 'vue-router'
       <RouterLink to="/verificar-dados-existentes" class="Barra-Navegacao-item" active-class="Barra-Navegacao-item--ativo">
         Verificar Dados Existentes
       </RouterLink>
+      <RouterLink to="/imoveis" class="Barra-Navegacao-item" ctive-class="Barra-Navegacao-item--ativo">
+  Imóveis
+</RouterLink>
     </nav>
   </div>
 </template>

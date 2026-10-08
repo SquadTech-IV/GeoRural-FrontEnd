@@ -1,21 +1,14 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import IconDocumentation from '../components/icons/IconDocumentation.vue'
 import IconUpload from '../components/icons/IconUpload.vue'
-import ModalProcessamento from '../components/ModalProcessamento.vue'
 import { arquivoService } from '../services/arquivoService'
 
-
-const router = useRouter()
-
 const mostrarArquivos = ref(false)
-const mostrarModal = ref(false)
-const uploadConcluido = ref(false)
-const erroProcessamento = ref(null)
 const arquivos = ref([])
 const mensagemErro = ref('')
+const mensagemSucesso = ref('')
 const enviando = ref(false)
 
 const EXTENSOES_ACEITAS = ['.zip', '.gpkg', '.geojson']
@@ -27,11 +20,14 @@ function obterExtensao(nomeArquivo) {
 function formatarData(data) {
   if (!data) return '—'
 
-  const valor = new Date(data)
+  // O backend envia LocalDateTime sem fuso, como
+  // "2026-09-28T22:29:29". Para exibir só a data cadastrada,
+  // não é necessário converter fusos horários.
+  const partes = String(data).match(/^(\d{4})-(\d{2})-(\d{2})/)
 
-  return Number.isNaN(valor.getTime())
-    ? '—'
-    : valor.toLocaleString('pt-BR')
+  if (!partes) return '—'
+
+  return `${partes[3]}/${partes[2]}/${partes[1]}`
 }
 
 async function carregarArquivos() {
@@ -40,17 +36,23 @@ async function carregarArquivos() {
 
     arquivos.value = dados
       .slice()
-      .sort((a, b) => new Date(b.recebidoEm) - new Date(a.recebidoEm))
+      .sort(
+        (a, b) =>
+          new Date(b.recebidoEm) - new Date(a.recebidoEm)
+      )
       .slice(0, 8)
       .map((arquivo) => ({
         id: arquivo.id,
-        nome: arquivo.nomeArquivo || arquivo.nome || 'Arquivo sem nome',
-        recebido: formatarData(arquivo.recebidoEm),
-        situacao: arquivo.situacao || 'AGUARDANDO',
+        nome:
+          arquivo.nomeArquivo ||
+          arquivo.nome ||
+          'Arquivo sem nome',
+        recebidoEm: arquivo.recebidoEm,
       }))
   } catch (erro) {
     console.error('Erro ao carregar arquivos:', erro)
-    mensagemErro.value = 'Não foi possível carregar os arquivos recentes.'
+    mensagemErro.value =
+      'Não foi possível carregar os arquivos recentes.'
   }
 }
 
@@ -61,18 +63,22 @@ async function handleArquivoSelecionado(event) {
   if (!selecionados.length || enviando.value) return
 
   mensagemErro.value = ''
+  mensagemSucesso.value = ''
 
   const validos = selecionados.filter((arquivo) =>
     EXTENSOES_ACEITAS.includes(obterExtensao(arquivo.name))
   )
 
   const invalidos = selecionados.filter(
-    (arquivo) => !EXTENSOES_ACEITAS.includes(obterExtensao(arquivo.name))
+    (arquivo) =>
+      !EXTENSOES_ACEITAS.includes(obterExtensao(arquivo.name))
   )
 
   if (invalidos.length) {
     mensagemErro.value =
-      `Formato não aceito: ${invalidos.map((arquivo) => arquivo.name).join(', ')}. ` +
+      `Formato não aceito: ${invalidos
+        .map((arquivo) => arquivo.name)
+        .join(', ')}. ` +
       'Envie Shapefile (.zip), GeoPackage (.gpkg) ou GeoJSON.'
   }
 
@@ -80,17 +86,16 @@ async function handleArquivoSelecionado(event) {
 
   enviando.value = true
 
-  // O backend processa dentro do próprio upload, então o modal
-  // fica aberto enquanto a requisição estiver em andamento.
-  uploadConcluido.value = false
-  erroProcessamento.value = null
-  mostrarModal.value = true
-
   try {
     const resultados = await arquivoService.enviar(validos)
 
-    const aceitos = resultados.filter((resultado) => resultado.aceito)
-    const rejeitados = resultados.filter((resultado) => !resultado.aceito)
+    const aceitos = resultados.filter(
+      (resultado) => resultado.aceito
+    )
+
+    const rejeitados = resultados.filter(
+      (resultado) => !resultado.aceito
+    )
 
     if (rejeitados.length) {
       const nomes = rejeitados
@@ -106,19 +111,16 @@ async function handleArquivoSelecionado(event) {
     }
 
     if (aceitos.length) {
+      mensagemSucesso.value =
+        aceitos.length === 1
+          ? 'Arquivo enviado com sucesso.'
+          : `${aceitos.length} arquivos enviados com sucesso.`
+
       mostrarArquivos.value = true
-
-      // Avisa o modal que o backend terminou; ele conclui a última
-      // etapa e emite "finalizado".
-      uploadConcluido.value = true
-
       await carregarArquivos()
-    } else {
-      if (!mensagemErro.value) {
-        mensagemErro.value = 'O servidor não aceitou os arquivos enviados.'
-      }
-
-      erroProcessamento.value = mensagemErro.value
+    } else if (!mensagemErro.value) {
+      mensagemErro.value =
+        'O servidor não aceitou os arquivos enviados.'
     }
   } catch (erro) {
     console.error('Erro no upload:', erro)
@@ -127,28 +129,9 @@ async function handleArquivoSelecionado(event) {
       erro.response?.data?.mensagem ||
       erro.response?.data?.message ||
       'Não foi possível enviar os arquivos. Verifique se o backend está em execução.'
-
-    erroProcessamento.value = mensagemErro.value
   } finally {
     enviando.value = false
   }
-}
-
-function handleFecharModal() {
-  mostrarModal.value = false
-}
-
-async function handleProcessamentoFinalizado() {
-  mostrarModal.value = false
-
-  if (!router.hasRoute('Resultado')) {
-    mensagemErro.value =
-      ''
-    return
-  }
-
-  await router.push({ name: 'Resultado' })
-
 }
 
 onMounted(carregarArquivos)
@@ -177,7 +160,8 @@ onMounted(carregarArquivos)
       </p>
 
       <p class="Card-Enviar-Arquivos-Subtitulo">
-        Formatos aceitos: Shapefile (.zip), GeoPackage (.gpkg) ou GeoJSON
+        Formatos aceitos: Shapefile (.zip), GeoPackage (.gpkg)
+        ou GeoJSON
       </p>
 
       <input
@@ -190,12 +174,12 @@ onMounted(carregarArquivos)
       />
     </label>
 
-    <p v-if="enviando" class="mensagem-envio">
-      Enviando arquivos...
+    <p v-if="mensagemErro" class="mensagem-erro" role="alert">
+      {{ mensagemErro }}
     </p>
 
-    <p v-if="mensagemErro" class="mensagem-erro">
-      {{ mensagemErro }}
+    <p v-if="mensagemSucesso" class="mensagem-sucesso" role="status">
+      {{ mensagemSucesso }}
     </p>
 
     <hr />
@@ -219,22 +203,15 @@ onMounted(carregarArquivos)
         <thead>
           <tr>
             <th>Arquivo</th>
-            <th>Recebido</th>
-            <th>Situação</th>
+            <th>Recebido em</th>
           </tr>
         </thead>
 
         <tbody>
           <tr v-for="arquivo in arquivos" :key="arquivo.id">
             <td class="mono">{{ arquivo.nome }}</td>
-            <td class="mono">{{ arquivo.recebido }}</td>
-            <td>
-              <span
-                class="badge"
-                :class="`badge--${arquivo.situacao.toLowerCase()}`"
-              >
-                {{ arquivo.situacao }}
-              </span>
+            <td class="mono">
+              {{ formatarData(arquivo.recebidoEm) }}
             </td>
           </tr>
         </tbody>
@@ -245,15 +222,6 @@ onMounted(carregarArquivos)
       </p>
     </template>
   </div>
-
-  <div v-if="mostrarModal" class="overlay">
-    <ModalProcessamento
-      :concluido="uploadConcluido"
-      :erro="erroProcessamento"
-      @finalizado="handleProcessamentoFinalizado"
-      @fechar="handleFecharModal"
-    />
-  </div>
 </template>
 
 <style scoped>
@@ -261,43 +229,33 @@ onMounted(carregarArquivos)
   box-sizing: border-box;
 }
 
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.7);
-}
-
 :global(body) {
-  background: #000;
   margin: 0;
+  background: #000;
 }
 
 .Conteudo {
-  padding: 32px 24px 16px;
   max-width: 900px;
   margin: 0 auto;
+  padding: 32px 24px 16px;
 }
 
 .Conteudo h3 {
-  font-size: 28px;
-  color: #fff;
   margin: 0 0 12px;
+  color: #fff;
   font-family: 'Chakra Petch', sans-serif;
+  font-size: 28px;
 }
 
 .Card-Upload-Arquivos {
-  background: #0a0a0f;
-  border: 1px solid #b829f7;
-  border-radius: 16px;
-  padding: 24px;
-  color: #fff;
-  font-family: sans-serif;
   max-width: 900px;
   margin: 16px auto;
+  padding: 24px;
+  border: 1px solid #b829f7;
+  border-radius: 16px;
+  background: #0a0a0f;
+  color: #fff;
+  font-family: sans-serif;
 }
 
 .Card-Upload-Arquivos-Titulo {
@@ -308,17 +266,17 @@ onMounted(carregarArquivos)
 }
 
 .Card-Upload-Arquivos-Titulo h2 {
-  font-size: 15px;
   margin: 0;
+  font-size: 15px;
 }
 
 .Card-Enviar-Arquivos {
+  display: block;
+  padding: 56px 24px;
   border: 2px dashed #b829f7;
   border-radius: 12px;
-  padding: 56px 24px;
   text-align: center;
   cursor: pointer;
-  display: block;
 }
 
 .desabilitado {
@@ -327,15 +285,15 @@ onMounted(carregarArquivos)
 }
 
 .Card-Enviar-Arquivos-Titulo {
-  font-weight: bold;
-  font-size: 16px;
   margin: 8px 0 4px;
+  font-size: 16px;
+  font-weight: bold;
 }
 
 .Card-Enviar-Arquivos-Subtitulo {
+  margin-top: 4px;
   color: #9ca3af;
   font-size: 13px;
-  margin-top: 4px;
 }
 
 .Card-Enviar-Arquivos-Icone {
@@ -344,33 +302,43 @@ onMounted(carregarArquivos)
 }
 
 .mensagem-envio {
+  margin-top: 12px;
   color: #d8b4fe;
   font-size: 13px;
-  margin-top: 12px;
 }
 
 .mensagem-erro {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.1);
+  margin-top: 12px;
+  padding: 10px 14px;
   border: 1px solid rgba(248, 113, 113, 0.4);
   border-radius: 8px;
-  padding: 10px 14px;
+  background: rgba(248, 113, 113, 0.1);
+  color: #f87171;
   font-size: 13px;
+}
+
+.mensagem-sucesso {
   margin-top: 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(74, 222, 128, 0.4);
+  border-radius: 8px;
+  background: rgba(74, 222, 128, 0.1);
+  color: #4ade80;
+  font-size: 13px;
 }
 
 hr {
+  margin: 20px 0;
   border: none;
   border-top: 1px solid #2a2a35;
-  margin: 20px 0;
 }
 
 .recent-files {
   display: flex;
   align-items: center;
   gap: 8px;
-  cursor: pointer;
   font-size: 14px;
+  cursor: pointer;
 }
 
 .arrow {
@@ -385,17 +353,17 @@ hr {
 
 .tabela-arquivos {
   width: 100%;
-  border-collapse: collapse;
   margin-top: 16px;
+  border-collapse: collapse;
   font-size: 13px;
 }
 
 .tabela-arquivos th {
-  text-align: left;
-  color: #9ca3af;
-  font-weight: 500;
   padding: 8px 12px;
   border-bottom: 1px solid #2a2a35;
+  color: #9ca3af;
+  font-weight: 500;
+  text-align: left;
 }
 
 .tabela-arquivos td {
@@ -408,34 +376,9 @@ hr {
   font-family: 'Courier New', monospace;
 }
 
-.badge {
-  display: inline-block;
-  padding: 2px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-}
-
-.badge--aceito {
-  color: #4ade80;
-  background: rgba(74, 222, 128, 0.1);
-}
-
-.badge--rejeitado {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.1);
-}
-
-.badge--pendente,
-.badge--aguardando {
-  color: #facc15;
-  background: rgba(250, 204, 21, 0.1);
-}
-
 .lista-vazia {
+  margin-top: 16px;
   color: #9ca3af;
   font-size: 13px;
-  margin-top: 16px;
 }
 </style>
