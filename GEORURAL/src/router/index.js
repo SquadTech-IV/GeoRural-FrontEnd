@@ -1,9 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import IngestaoFontes from '../views/IngestaoFontes.vue'
 import VerificarDadosExistentes from '../views/VerificarDadosExistentes.vue'
-
+import ListaImoveis from '../views/ListaImoveis.vue'
 import MapaResultado from '../views/MapaResultado.vue'
-
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -19,13 +18,17 @@ const router = createRouter({
       name: 'VerificarDadosExistentes',
       component: VerificarDadosExistentes,
     },
-
+    {
+      path: '/imoveis',
+      name: 'Imoveis',
+      component: ListaImoveis,
+    },
     {
       path: '/resultado/:car',
       name: 'Resultado',
       component: MapaResultado,
       props: true,
-    }
+    },
   ],
 })
 
