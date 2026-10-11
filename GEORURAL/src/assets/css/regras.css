@@ -596,6 +596,58 @@
   background: var(--cor-aviso-fundo);
 }
 
+.regras-calculo {
+  margin-bottom: 24px;
+}
+
+.regras-calculo > .regras-formula-botao {
+  list-style: none;
+  user-select: none;
+}
+
+.regras-calculo > .regras-formula-botao::-webkit-details-marker {
+  display: none;
+}
+
+.regras-calculo > .regras-formula-botao::marker {
+  content: '';
+}
+
+.regras-formula-botao:hover {
+  border-color: var(--cor-roxo);
+}
+
+.regras-formula-botao:focus-visible {
+  outline: 2px solid var(--cor-roxo);
+  outline-offset: 3px;
+}
+
+.regras-formula-seta {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+
+  color: var(--cor-roxo);
+  transition: transform 0.2s;
+}
+
+.regras-calculo[open] .regras-formula-seta {
+  transform: rotate(180deg);
+}
+
+.regras-calculo-conteudo {
+  padding-top: 4px;
+}
+
+.regras-calculo-conteudo .regras-formula {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.regras-calculo-conteudo .regras-exemplo {
+  margin-bottom: 0;
+}
+
 .regras-pagina button:focus-visible,
 .regras-pagina input:focus-visible,
 .regras-modal button:focus-visible,

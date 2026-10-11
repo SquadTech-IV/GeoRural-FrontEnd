@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ListaIndicadores from '../components/ListaIndicadores.vue'
+import PainelDetalheIndicador from '../components/PainelDetalheIndicador.vue'
 
 const indicadores = ref([
   {
@@ -10,42 +11,56 @@ const indicadores = ref([
     codigo: 'IRL',
     nome: 'Reserva Legal',
     possuiParametros: true,
+    formula:
+      'IRL (%) = área de Reserva Legal ÷ área do imóvel × 100, comparado ao mínimo do bioma (Mata Atlântica: 20%, Amazônia: 80%).',
   },
   {
     id: 'idesmat',
     codigo: 'IDesmat',
     nome: 'Desmatamento',
     possuiParametros: true,
+    formula:
+      'Para cada marco, mede a supressão (PRODES) posterior à data, dentro do imóvel, em ha e %. Marcos: 22/07/2008, 31/07/2019 e 31/12/2020.',
   },
   {
     id: 'ifc',
     codigo: 'IFC',
     nome: 'Focos de calor',
     possuiParametros: true,
+    formula:
+      'IFC = focos dentro do imóvel ÷ área do imóvel (ha) × 1000ha, no período de 12meses.',
   },
   {
     id: 'iae',
     codigo: 'IAE',
     nome: 'Área embargada',
     possuiParametros: false,
+    formula:
+      'IAE (%) = área do imóvel sobreposta a embargos ÷ área do imóvel × 100, também em hectares.',
   },
   {
     id: 'icv',
     codigo: 'ICV',
     nome: 'Cobertura vegetal nativa',
     possuiParametros: false,
+    formula:
+      'ICV (%) = vegetação nativa dentro do imóvel ÷ área do imóvel × 100, também em hectares.',
   },
   {
     id: 'iapp',
     codigo: 'IAPP',
     nome: 'APP conservada',
     possuiParametros: false,
+    formula:
+      'IAPP (%) = APP com vegetação nativa ÷ APP total × 100. Passivo (ha) = APP total − APP com vegetação.',
   },
   {
     id: 'isap',
     codigo: 'ISAP',
     nome: 'Áreas protegidas',
     possuiParametros: false,
+    formula:
+      'ISAP = área e % do imóvel sobreposta a cada categoria protegida (UC, TI, quilombos, florestas públicas), dissolvidas entre si para não contar área duas vezes.',
   },
 ])
 
@@ -76,55 +91,10 @@ function selecionarIndicador(indicador) {
         @selecionar="selecionarIndicador"
       />
 
-      <section class="regras-detalhe">
-        <header class="regras-detalhe-cabecalho">
-          <div>
-            <h2 v-if="indicadorSelecionado">
-              {{ indicadorSelecionado.codigo }}
-              ·
-              {{ indicadorSelecionado.nome }}
-            </h2>
-
-            <h2 v-else>
-              Detalhes do indicador
-            </h2>
-
-            <p v-if="!indicadorSelecionado">
-              Selecione um indicador para consultar suas informações.
-            </p>
-
-            <p v-else>
-              Consulte as informações do indicador selecionado.
-            </p>
-
-            <small v-if="indicadorSelecionado">
-              Versão vigente: —
-            </small>
-          </div>
-
-          <span
-            v-if="indicadorSelecionado"
-            class="regras-etiqueta"
-          >
-            {{
-              indicadorSelecionado.possuiParametros
-                ? 'Configurável'
-                : 'Consulta'
-            }}
-          </span>
-        </header>
-
-        <template v-if="indicadorSelecionado">
-          <details :key="indicadorSelecionado.id">
-            <summary class="regras-formula-botao">
-              Como é calculado
-            </summary>
-
-            <div class="regras-formula">
-              Nenhum método de cálculo carregado.
-            </div>
-          </details>
-
+      <PainelDetalheIndicador
+        :indicador="indicadorSelecionado"
+      >
+        <template #default>
           <section class="regras-parametros-vazios">
             <h3 class="regras-secao-titulo">
               Parâmetros
@@ -189,12 +159,7 @@ function selecionarIndicador(indicador) {
             </RouterLink>
           </section>
         </template>
-
-        <p v-else class="regras-texto-secundario">
-          Os detalhes serão apresentados após selecionar
-          um indicador na lista.
-        </p>
-      </section>
+      </PainelDetalheIndicador>
     </div>
   </main>
 
