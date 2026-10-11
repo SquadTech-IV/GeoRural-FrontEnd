@@ -306,7 +306,13 @@ async function confirmarNovaVersao(dados) {
 
     <component
       :is="Component"
-      v-else-if="Component && route.name === 'RegraDetalheVersao'"
+      v-else-if="
+        Component &&
+        (
+          route.name === 'RegraDetalheVersao' ||
+          route.name === 'RegraCompararVersoes'
+        )
+      "
       :indicador="indicadorSelecionado"
     />
 

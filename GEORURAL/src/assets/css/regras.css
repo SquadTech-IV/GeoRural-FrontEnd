@@ -632,6 +632,15 @@
   outline-offset: 3px;
 }
 
+.regras-comparacao-alterada th {
+  background: var(--cor-aviso-fundo);
+}
+
+.regras-tabela tbody th {
+  color: var(--cor-texto);
+  font-weight: 600;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .regras-formula-seta {
     transition: none;
