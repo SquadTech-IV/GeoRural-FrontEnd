@@ -6,6 +6,7 @@ import ListaIndicadores from '../components/ListaIndicadores.vue'
 import PainelDetalheIndicador from '../components/PainelDetalheIndicador.vue'
 import HistoricoVersoes from '../components/HistoricoVersoes.vue'
 import { regraService } from '../services/regraService'
+import { mensagemErroApi } from '../utils/mensagemErroApi'
 
 const router = useRouter()
 
@@ -14,6 +15,12 @@ const erroSalvarVersao = ref('')
 const mensagemSucesso = ref('')
 const indicadorSelecionado = ref(null)
 const parametrosPendentes = ref(null)
+
+const carregandoIndicador = ref(false)
+const erroCarregarIndicador = ref('')
+const indicadorParaCarregar = ref(null)
+
+let ultimaConsulta = 0
 
 const configuracaoParametros = {
   irl: [
@@ -156,17 +163,90 @@ const indicadores = ref(
   })),
 )
 
-function selecionarIndicador(indicador) {
+async function selecionarIndicador(indicador) {
   if (salvandoVersao.value) return
 
-  indicadorSelecionado.value = indicador
   parametrosPendentes.value = null
   erroSalvarVersao.value = ''
   mensagemSucesso.value = ''
+
+  indicadorParaCarregar.value = indicador.id
+  indicadorSelecionado.value = indicador
+
+  await carregarIndicador(indicador.id)
+}
+
+async function carregarIndicador(id) {
+  const consulta = ++ultimaConsulta
+
+  carregandoIndicador.value = true
+  erroCarregarIndicador.value = ''
+
+  try {
+    const resposta = await regraService.obterIndicador(id)
+
+    if (consulta !== ultimaConsulta) return
+
+    if (
+      !resposta ||
+      String(resposta.id) !== String(id) ||
+      !Array.isArray(resposta.parametros) ||
+      !Array.isArray(resposta.versoes)
+    ) {
+      erroCarregarIndicador.value =
+        'O servidor retornou dados incompletos do indicador.'
+      return
+    }
+
+    const existente = indicadores.value.find(
+      (item) => String(item.id) === String(id),
+    )
+
+    const atualizado = {
+      ...existente,
+      ...resposta,
+    }
+
+    indicadores.value = indicadores.value.map((item) =>
+      String(item.id) === String(id)
+        ? atualizado
+        : item,
+    )
+
+    indicadorSelecionado.value = atualizado
+  } catch (erro) {
+    if (consulta !== ultimaConsulta) return
+
+    erroCarregarIndicador.value = mensagemErroApi(
+      erro,
+      'Não foi possível carregar o indicador. Tente novamente.',
+    )
+  } finally {
+    if (consulta === ultimaConsulta) {
+      carregandoIndicador.value = false
+    }
+  }
+}
+
+function tentarNovamenteIndicador() {
+  if (
+    indicadorParaCarregar.value == null ||
+    carregandoIndicador.value
+  ) {
+    return
+  }
+
+  carregarIndicador(indicadorParaCarregar.value)
 }
 
 function abrirNovaVersao(dados) {
-  if (salvandoVersao.value) return
+  if (
+    salvandoVersao.value ||
+    carregandoIndicador.value ||
+    erroCarregarIndicador.value
+  ) {
+    return
+  }
 
   if (
     !indicadorSelecionado.value ||
@@ -211,43 +291,50 @@ async function confirmarNovaVersao(dados) {
 
     if (
       !resposta ||
-      resposta.id !== indicador.id ||
+      String(resposta.id) !== String(indicador.id) ||
       !Array.isArray(resposta.parametros) ||
       resposta.versaoVigente == null ||
       !Array.isArray(resposta.versoes)
     ) {
-      throw new Error(
+      erroSalvarVersao.value =
         'Não foi possível confirmar os dados da nova versão. ' +
-        'Consulte o histórico antes de tentar salvar novamente.',
-      )
+        'O salvamento pode ter ocorrido. Consulte o histórico ' +
+        'antes de tentar novamente.'
+      return
     }
 
-    const indicadorAtualizado = {
+    const atualizado = {
       ...indicador,
       ...resposta,
     }
 
     indicadores.value = indicadores.value.map((item) =>
-      item.id === indicadorAtualizado.id
-        ? indicadorAtualizado
+      String(item.id) === String(atualizado.id)
+        ? atualizado
         : item,
     )
 
-    indicadorSelecionado.value = indicadorAtualizado
+    indicadorSelecionado.value = atualizado
     parametrosPendentes.value = null
     mensagemSucesso.value = 'Nova versão criada com sucesso.'
 
     await router.push({ name: 'Regras' })
   } catch (erro) {
-    const mensagem =
-      erro.response?.data?.mensagem ||
-      erro.response?.data?.message ||
-      erro.message
-
-    erroSalvarVersao.value =
-      typeof mensagem === 'string'
-        ? mensagem
-        : 'Não foi possível salvar a nova versão. Tente novamente.'
+    if (
+      erro?.code === 'ECONNABORTED' ||
+      erro?.code === 'ETIMEDOUT' ||
+      erro?.code === 'ERR_NETWORK'
+    ) {
+      erroSalvarVersao.value =
+        'A conexão foi interrompida antes da confirmação. ' +
+        'O salvamento pode ter ocorrido. Consulte o histórico ' +
+        'antes de tentar novamente.'
+    } else {
+      erroSalvarVersao.value = mensagemErroApi(
+        erro,
+        'Não foi possível salvar a nova versão. Tente novamente.',
+      )
+    }
   } finally {
     salvandoVersao.value = false
   }
@@ -284,6 +371,9 @@ async function confirmarNovaVersao(dados) {
 
       <PainelDetalheIndicador
         :indicador="indicadorSelecionado"
+        :carregando="carregandoIndicador"
+        :erro="erroCarregarIndicador"
+        @tentar-novamente="tentarNovamenteIndicador"
         @salvar-nova-versao="abrirNovaVersao"
       >
         <template #default="{ indicador }">
@@ -314,6 +404,9 @@ async function confirmarNovaVersao(dados) {
         )
       "
       :indicador="indicadorSelecionado"
+      :carregando="carregandoIndicador"
+      :erro="erroCarregarIndicador"
+      @tentar-novamente="tentarNovamenteIndicador"
     />
 
     <component
