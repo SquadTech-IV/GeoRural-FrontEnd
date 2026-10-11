@@ -1,86 +1,143 @@
-/* color palette from <https://github.com/vuejs/theme>
 :root {
-  --vt-c-white: #ffffff;
-  --vt-c-white-soft: #f8f8f8;
-  --vt-c-white-mute: #f2f2f2;
+  color-scheme: dark;
 
-  --vt-c-black: #181818;
-  --vt-c-black-soft: #222222;
-  --vt-c-black-mute: #282828;
+  --sidebar-largura: 260px;
 
-  --vt-c-indigo: #2c3e50;
+  /* Tema escuro */
+  --cor-fundo: #000;
+  --cor-painel: #0a0a0f;
+  --cor-painel-secundario: #1a1a22;
+  --cor-texto: #fff;
+  --cor-texto-secundario: #9ca3af;
+  --cor-roxo: #b829f7;
 
-  --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
-  --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
-  --vt-c-divider-dark-1: rgba(84, 84, 84, 0.65);
-  --vt-c-divider-dark-2: rgba(84, 84, 84, 0.48);
+  --cor-borda: #2a2a35;
+  --cor-borda-suave: #1a1a22;
 
-  --vt-c-text-light-1: var(--vt-c-indigo);
-  --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
-  --vt-c-text-dark-1: var(--vt-c-white);
-  --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
+  --cor-erro: #f87171;
+  --cor-sucesso: #4ade80;
+  --cor-aviso: #facc15;
+
+  --cor-limite: #b400ff;
+  --cor-embargo: #ff4d6d;
+
+  /* Superfícies adicionais */
+  --cor-fundo-mapa: #050507;
+  --cor-painel-mapa: #0b0b10;
+  --cor-controle-mapa: rgba(11, 11, 16, 0.92);
+  --cor-fundo-hover: #1d1722;
+  --cor-linha-alternada: #111118;
+  --cor-texto-envio: #d8b4fe;
+
+  --cor-erro-fundo: rgba(248, 113, 113, 0.1);
+  --cor-erro-borda: rgba(248, 113, 113, 0.4);
+  --cor-sucesso-fundo: rgba(74, 222, 128, 0.1);
+  --cor-sucesso-borda: rgba(74, 222, 128, 0.4);
+
+  --cor-aviso-fundo: #1a1608;
+  --cor-aviso-borda: #6b5610;
+
+  --cor-trilha: #16161f;
+  --cor-spinner: #d1fae5;
+  --cor-icone-pendente: #d1d5db;
+
+  --cor-texto-botao: #fff;
+  --cor-menu-ativo: var(--cor-roxo);
+  --cor-menu-fundo: rgba(184, 41, 247, 0.14);
+  --cor-menu-hover: rgba(184, 41, 247, 0.08);
+  --cor-menu-ativo-hover: rgba(184, 41, 247, 0.2);
+  --cor-menu-borda: rgba(184, 41, 247, 0.45);
+
+  --fonte-padrao: Arial, Helvetica, sans-serif;
+  --fonte-titulo: 'Chakra Petch', sans-serif;
+  --fonte-mono: 'Courier New', monospace;
 }
 
-/* semantic color variables for this project */
-/* :root {
-  --color-background: var(--vt-c-white);
-  --color-background-soft: var(--vt-c-white-soft);
-  --color-background-mute: var(--vt-c-white-mute);
+/* Tema claro */
 
-  --color-border: var(--vt-c-divider-light-2);
-  --color-border-hover: var(--vt-c-divider-light-1);
+:root[data-tema='light'] {
+  color-scheme: light;
 
-  --color-heading: var(--vt-c-text-light-1);
-  --color-text: var(--vt-c-text-light-1);
+  --cor-fundo: #f5f6fa;
+  --cor-painel: #fff;
+  --cor-painel-secundario: #f0edf5;
+  --cor-texto: #24202d;
+  --cor-texto-secundario: #686273;
+  --cor-roxo: #8520bd;
 
-  --section-gap: 160px;
-}
+  --cor-borda: #ded8e7;
+  --cor-borda-suave: #ece8f1;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-background: var(--vt-c-black);
-    --color-background-soft: var(--vt-c-black-soft);
-    --color-background-mute: var(--vt-c-black-mute);
+  --cor-erro: #b42335;
+  --cor-sucesso: #18733c;
+  --cor-aviso: #8a5b00;
 
-    --color-border: var(--vt-c-divider-dark-2);
-    --color-border-hover: var(--vt-c-divider-dark-1);
+  --cor-fundo-mapa: #f5f6fa;
+  --cor-painel-mapa: #fff;
+  --cor-controle-mapa: rgba(255, 255, 255, 0.96);
+  --cor-fundo-hover: #f1e9f8;
+  --cor-linha-alternada: #faf8fc;
+  --cor-texto-envio: #8520bd;
 
-    --color-heading: var(--vt-c-text-dark-1);
-    --color-text: var(--vt-c-text-dark-2);
-  }
+  --cor-erro-fundo: #fff0f1;
+  --cor-erro-borda: #efbcc4;
+  --cor-sucesso-fundo: #edf8f0;
+  --cor-sucesso-borda: #b6ddc1;
+
+  --cor-aviso-fundo: #fff8e6;
+  --cor-aviso-borda: #e4ce91;
+
+  --cor-trilha: #e8e2ee;
+  --cor-spinner: #ded8e7;
+  --cor-icone-pendente: #8c8596;
+
+  --cor-menu-ativo: #8520bd;
+  --cor-menu-fundo: #f1e6f9;
+  --cor-menu-hover: #f6f0fb;
+  --cor-menu-ativo-hover: #eaddf4;
+  --cor-menu-borda: #d7b5ec;
 }
 
 *,
 *::before,
 *::after {
   box-sizing: border-box;
-  margin: 0;
-  font-weight: normal;
 }
 
 body {
+  margin: 0;
+  min-width: 320px;
   min-height: 100vh;
-  color: var(--color-text);
-  background: var(--color-background);
-  transition:
-    color 0.5s,
-    background-color 0.5s;
-  line-height: 1.6;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
-    sans-serif;
-  font-size: 15px;
-  text-rendering: optimizeLegibility;
+  padding-left: var(--sidebar-largura);
+
+  background: var(--cor-fundo);
+  color: var(--cor-texto);
+
+  font-family: var(--fonte-padrao);
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-} */
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: wait;
+}
+
+img {
+  max-width: 100%;
+}
+
+#app {
+  min-height: 100vh;
+}
