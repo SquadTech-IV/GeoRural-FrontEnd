@@ -610,6 +610,28 @@
   outline-offset: 3px;
 }
 
+.regras-historico-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.regras-historico-lista > li + li {
+  border-top: 1px solid var(--cor-borda-suave);
+}
+
+.regras-historico-lista .regras-versao {
+  margin-bottom: 0;
+  padding: 16px 10px;
+  text-decoration: none;
+}
+
+.regras-historico a:focus-visible,
+.regras-historico button:focus-visible {
+  outline: 2px solid var(--cor-roxo);
+  outline-offset: 3px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .regras-formula-seta {
     transition: none;

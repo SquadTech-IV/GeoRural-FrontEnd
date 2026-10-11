@@ -1,16 +1,77 @@
 <script setup>
 import { ref } from 'vue'
-import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { RouterView, useRouter } from 'vue-router'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ListaIndicadores from '../components/ListaIndicadores.vue'
 import PainelDetalheIndicador from '../components/PainelDetalheIndicador.vue'
+import HistoricoVersoes from '../components/HistoricoVersoes.vue'
 import { regraService } from '../services/regraService'
+
+const router = useRouter()
 
 const salvandoVersao = ref(false)
 const erroSalvarVersao = ref('')
 const mensagemSucesso = ref('')
+const indicadorSelecionado = ref(null)
+const parametrosPendentes = ref(null)
 
-const router = useRouter()
+const configuracaoParametros = {
+  irl: [
+    {
+      id: 'minimo-mata-atlantica',
+      nome: 'Mínimo RL — Mata Atlântica',
+      descricao: 'Percentual mínimo utilizado na comparação.',
+      tipo: 'percentual',
+      unidade: '%',
+    },
+    {
+      id: 'minimo-amazonia',
+      nome: 'Mínimo RL — Amazônia Legal',
+      descricao: 'Percentual mínimo utilizado na comparação.',
+      tipo: 'percentual',
+      unidade: '%',
+    },
+  ],
+  idesmat: [
+    {
+      id: 'marco-1',
+      nome: 'Marco 1',
+      descricao: 'Primeira data de referência.',
+      tipo: 'data',
+    },
+    {
+      id: 'marco-2',
+      nome: 'Marco 2',
+      descricao: 'Segunda data de referência.',
+      tipo: 'data',
+    },
+    {
+      id: 'marco-3',
+      nome: 'Marco 3',
+      descricao: 'Terceira data de referência.',
+      tipo: 'data',
+    },
+  ],
+  ifc: [
+    {
+      id: 'fator-normalizacao',
+      nome: 'Fator de normalização',
+      descricao: 'Base de comparação por área.',
+      tipo: 'numero',
+      unidade: 'ha',
+      positivo: true,
+    },
+    {
+      id: 'periodo-apuracao',
+      nome: 'Período de apuração',
+      descricao: 'Janela de contagem dos focos.',
+      tipo: 'numero',
+      unidade: 'meses',
+      positivo: true,
+      inteiro: true,
+    },
+  ],
+}
 
 const indicadores = ref([
   {
@@ -87,80 +148,31 @@ const indicadores = ref([
       'O total utiliza a união das sobreposições para evitar ' +
       'contagem duplicada.',
   },
-])
-
-const configuracaoParametros = {
-  irl: [
-    {
-      id: 'minimo-mata-atlantica',
-      nome: 'Mínimo RL — Mata Atlântica',
-      descricao: 'Percentual mínimo utilizado na comparação.',
-      tipo: 'percentual',
-      unidade: '%',
-    },
-    {
-      id: 'minimo-amazonia',
-      nome: 'Mínimo RL — Amazônia Legal',
-      descricao: 'Percentual mínimo utilizado na comparação.',
-      tipo: 'percentual',
-      unidade: '%',
-    },
-  ],
-  idesmat: [
-    {
-      id: 'marco-1',
-      nome: 'Marco 1',
-      descricao: 'Primeira data de referência.',
-      tipo: 'data',
-    },
-    {
-      id: 'marco-2',
-      nome: 'Marco 2',
-      descricao: 'Segunda data de referência.',
-      tipo: 'data',
-    },
-    {
-      id: 'marco-3',
-      nome: 'Marco 3',
-      descricao: 'Terceira data de referência.',
-      tipo: 'data',
-    },
-  ],
-  ifc: [
-    {
-      id: 'fator-normalizacao',
-      nome: 'Fator de normalização',
-      descricao: 'Base de comparação por área.',
-      tipo: 'numero',
-      unidade: 'ha',
-      positivo: true,
-    },
-    {
-      id: 'periodo-apuracao',
-      nome: 'Período de apuração',
-      descricao: 'Janela de contagem dos focos.',
-      tipo: 'numero',
-      unidade: 'meses',
-      positivo: true,
-      inteiro: true,
-    },
-  ],
-}
-
-indicadores.value = indicadores.value.map((indicador) => ({
+].map((indicador) => ({
   ...indicador,
   parametros: configuracaoParametros[indicador.id] ?? [],
-}))
-
-const indicadorSelecionado = ref(null)
-const parametrosPendentes = ref(null)
+  versoes: [],
+})))
 
 function selecionarIndicador(indicador) {
+  if (salvandoVersao.value) return
+
   indicadorSelecionado.value = indicador
   parametrosPendentes.value = null
+  erroSalvarVersao.value = ''
+  mensagemSucesso.value = ''
 }
 
 function abrirNovaVersao(dados) {
+  if (salvandoVersao.value) return
+
+  if (
+    !indicadorSelecionado.value ||
+    dados.indicadorId !== indicadorSelecionado.value.id
+  ) {
+    return
+  }
+
   parametrosPendentes.value = dados
   erroSalvarVersao.value = ''
   mensagemSucesso.value = ''
@@ -193,18 +205,24 @@ async function confirmarNovaVersao(dados) {
   mensagemSucesso.value = ''
 
   try {
-    const indicadorAtualizado = await regraService.criarVersao(dados)
-    // retornar o indicador completo após o salvamento.
+    const resposta = await regraService.criarVersao(dados)
+
     if (
-      !indicadorAtualizado ||
-      indicadorAtualizado.id !== indicador.id ||
-      !Array.isArray(indicadorAtualizado.parametros) ||
-      indicadorAtualizado.versaoVigente == null
+      !resposta ||
+      resposta.id !== indicador.id ||
+      !Array.isArray(resposta.parametros) ||
+      resposta.versaoVigente == null ||
+      !Array.isArray(resposta.versoes)
     ) {
       throw new Error(
         'Não foi possível confirmar os dados da nova versão. ' +
         'Consulte o histórico antes de tentar salvar novamente.',
       )
+    }
+
+    const indicadorAtualizado = {
+      ...indicador,
+      ...resposta,
     }
 
     indicadores.value = indicadores.value.map((item) =>
@@ -267,37 +285,7 @@ async function confirmarNovaVersao(dados) {
         @salvar-nova-versao="abrirNovaVersao"
       >
         <template #default="{ indicador }">
-          <section class="regras-historico">
-            <div class="regras-historico-cabecalho">
-              <h3 class="regras-secao-titulo">
-                Histórico de versões
-              </h3>
-
-              <RouterLink
-                :to="{
-                  name: 'RegraCompararVersoes',
-                  query: { indicador: indicador.id },
-                }"
-                class="regras-botao"
-              >
-                Comparar versões
-              </RouterLink>
-            </div>
-
-            <p class="regras-texto-secundario">
-              Nenhuma versão carregada.
-            </p>
-
-            <RouterLink
-              :to="{
-                name: 'RegraDetalheVersao',
-                query: { indicador: indicador.id },
-              }"
-              class="regras-botao"
-            >
-              Detalhes da versão
-            </RouterLink>
-          </section>
+          <HistoricoVersoes :indicador="indicador" />
         </template>
       </PainelDetalheIndicador>
     </div>
