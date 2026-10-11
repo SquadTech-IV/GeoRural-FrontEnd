@@ -73,86 +73,88 @@ const configuracaoParametros = {
   ],
 }
 
-const indicadores = ref([
-  {
-    id: 'irl',
-    codigo: 'IRL',
-    nome: 'Reserva Legal',
-    possuiParametros: true,
-    formula:
-      'IRL (%) = área de Reserva Legal ÷ área do imóvel × 100. ' +
-      'O resultado é comparado ao percentual mínimo configurado ' +
-      'para o enquadramento do imóvel.',
-  },
-  {
-    id: 'idesmat',
-    codigo: 'IDesmat',
-    nome: 'Desmatamento',
-    possuiParametros: true,
-    formula:
-      'Para cada marco configurado, mede a supressão identificada ' +
-      'pelo PRODES posterior à data, dentro do imóvel, em hectares ' +
-      'e percentual da área total.',
-  },
-  {
-    id: 'ifc',
-    codigo: 'IFC',
-    nome: 'Focos de calor',
-    possuiParametros: true,
-    formula:
-      'IFC = quantidade de focos dentro do imóvel ÷ área do imóvel ' +
-      'em hectares × fator de normalização configurado. ' +
-      'A contagem considera o período de apuração configurado.',
-  },
-  {
-    id: 'iae',
-    codigo: 'IAE',
-    nome: 'Área embargada',
-    possuiParametros: false,
-    formula:
-      'IAE (%) = área do imóvel sobreposta a embargos ÷ área do ' +
-      'imóvel × 100. O resultado também é apresentado em hectares. ' +
-      'As sobreposições entre embargos são unificadas para evitar ' +
-      'contagem duplicada.',
-  },
-  {
-    id: 'icv',
-    codigo: 'ICV',
-    nome: 'Cobertura vegetal nativa',
-    possuiParametros: false,
-    formula:
-      'ICV (%) = área de vegetação nativa dentro do imóvel ÷ área ' +
-      'total do imóvel × 100. O resultado também é apresentado ' +
-      'em hectares.',
-  },
-  {
-    id: 'iapp',
-    codigo: 'IAPP',
-    nome: 'APP conservada',
-    possuiParametros: false,
-    formula:
-      'IAPP (%) = APP com vegetação nativa ÷ APP total × 100. ' +
-      'Área de APP sem vegetação nativa (ha) = APP total − APP ' +
-      'com vegetação. Quando não houver APP identificada, o ' +
-      'percentual é apresentado como não aplicável.',
-  },
-  {
-    id: 'isap',
-    codigo: 'ISAP',
-    nome: 'Áreas protegidas',
-    possuiParametros: false,
-    formula:
-      'Mede a área e o percentual do imóvel sobrepostos a cada ' +
-      'categoria protegida, como unidades de conservação, terras ' +
-      'indígenas, territórios quilombolas e florestas públicas. ' +
-      'O total utiliza a união das sobreposições para evitar ' +
-      'contagem duplicada.',
-  },
-].map((indicador) => ({
-  ...indicador,
-  parametros: configuracaoParametros[indicador.id] ?? [],
-  versoes: [],
-})))
+const indicadores = ref(
+  [
+    {
+      id: 'irl',
+      codigo: 'IRL',
+      nome: 'Reserva Legal',
+      possuiParametros: true,
+      formula:
+        'IRL (%) = área de Reserva Legal ÷ área do imóvel × 100. ' +
+        'O resultado é comparado ao percentual mínimo configurado ' +
+        'para o enquadramento do imóvel.',
+    },
+    {
+      id: 'idesmat',
+      codigo: 'IDesmat',
+      nome: 'Desmatamento',
+      possuiParametros: true,
+      formula:
+        'Para cada marco configurado, mede a supressão identificada ' +
+        'pelo PRODES posterior à data, dentro do imóvel, em hectares ' +
+        'e percentual da área total.',
+    },
+    {
+      id: 'ifc',
+      codigo: 'IFC',
+      nome: 'Focos de calor',
+      possuiParametros: true,
+      formula:
+        'IFC = quantidade de focos dentro do imóvel ÷ área do imóvel ' +
+        'em hectares × fator de normalização configurado. ' +
+        'A contagem considera o período de apuração configurado.',
+    },
+    {
+      id: 'iae',
+      codigo: 'IAE',
+      nome: 'Área embargada',
+      possuiParametros: false,
+      formula:
+        'IAE (%) = área do imóvel sobreposta a embargos ÷ área do ' +
+        'imóvel × 100. O resultado também é apresentado em hectares. ' +
+        'As sobreposições entre embargos são unificadas para evitar ' +
+        'contagem duplicada.',
+    },
+    {
+      id: 'icv',
+      codigo: 'ICV',
+      nome: 'Cobertura vegetal nativa',
+      possuiParametros: false,
+      formula:
+        'ICV (%) = área de vegetação nativa dentro do imóvel ÷ área ' +
+        'total do imóvel × 100. O resultado também é apresentado ' +
+        'em hectares.',
+    },
+    {
+      id: 'iapp',
+      codigo: 'IAPP',
+      nome: 'APP conservada',
+      possuiParametros: false,
+      formula:
+        'IAPP (%) = APP com vegetação nativa ÷ APP total × 100. ' +
+        'Área de APP sem vegetação nativa (ha) = APP total − APP ' +
+        'com vegetação. Quando não houver APP identificada, o ' +
+        'percentual é apresentado como não aplicável.',
+    },
+    {
+      id: 'isap',
+      codigo: 'ISAP',
+      nome: 'Áreas protegidas',
+      possuiParametros: false,
+      formula:
+        'Mede a área e o percentual do imóvel sobrepostos a cada ' +
+        'categoria protegida, como unidades de conservação, terras ' +
+        'indígenas, territórios quilombolas e florestas públicas. ' +
+        'O total utiliza a união das sobreposições para evitar ' +
+        'contagem duplicada.',
+    },
+  ].map((indicador) => ({
+    ...indicador,
+    parametros: configuracaoParametros[indicador.id] ?? [],
+    versoes: [],
+  })),
+)
 
 function selecionarIndicador(indicador) {
   if (salvandoVersao.value) return
@@ -300,6 +302,12 @@ async function confirmarNovaVersao(dados) {
       :salvando="salvandoVersao"
       :erro="erroSalvarVersao"
       @confirmar="confirmarNovaVersao"
+    />
+
+    <component
+      :is="Component"
+      v-else-if="Component && route.name === 'RegraDetalheVersao'"
+      :indicador="indicadorSelecionado"
     />
 
     <component
