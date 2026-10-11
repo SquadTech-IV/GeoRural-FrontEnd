@@ -59,7 +59,7 @@ import { RouterLink } from 'vue-router'
       </div>
 
       <div class="regras-acoes">
-        <RouterLink :to="{ name: 'RegrasMetodos' }" class="regras-botao">
+        <RouterLink :to="{ name: 'Regras' }" class="regras-botao">
           Fechar
         </RouterLink>
       </div>

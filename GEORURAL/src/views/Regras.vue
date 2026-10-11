@@ -4,6 +4,11 @@ import { RouterLink, RouterView, useRouter } from 'vue-router'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ListaIndicadores from '../components/ListaIndicadores.vue'
 import PainelDetalheIndicador from '../components/PainelDetalheIndicador.vue'
+import { regraService } from '../services/regraService'
+
+const salvandoVersao = ref(false)
+const erroSalvarVersao = ref('')
+const mensagemSucesso = ref('')
 
 const router = useRouter()
 
@@ -157,6 +162,8 @@ function selecionarIndicador(indicador) {
 
 function abrirNovaVersao(dados) {
   parametrosPendentes.value = dados
+  erroSalvarVersao.value = ''
+  mensagemSucesso.value = ''
 
   router.push({
     name: 'RegraNovaVersao',
@@ -164,6 +171,66 @@ function abrirNovaVersao(dados) {
       indicador: dados.indicadorId,
     },
   })
+}
+
+async function confirmarNovaVersao(dados) {
+  if (salvandoVersao.value) return
+
+  const indicador = indicadorSelecionado.value
+
+  if (
+    !indicador ||
+    dados.indicadorId !== indicador.id ||
+    parametrosPendentes.value?.indicadorId !== indicador.id
+  ) {
+    erroSalvarVersao.value =
+      'Selecione o indicador e revise os parâmetros novamente.'
+    return
+  }
+
+  salvandoVersao.value = true
+  erroSalvarVersao.value = ''
+  mensagemSucesso.value = ''
+
+  try {
+    const indicadorAtualizado = await regraService.criarVersao(dados)
+    // retornar o indicador completo após o salvamento.
+    if (
+      !indicadorAtualizado ||
+      indicadorAtualizado.id !== indicador.id ||
+      !Array.isArray(indicadorAtualizado.parametros) ||
+      indicadorAtualizado.versaoVigente == null
+    ) {
+      throw new Error(
+        'Não foi possível confirmar os dados da nova versão. ' +
+        'Consulte o histórico antes de tentar salvar novamente.',
+      )
+    }
+
+    indicadores.value = indicadores.value.map((item) =>
+      item.id === indicadorAtualizado.id
+        ? indicadorAtualizado
+        : item,
+    )
+
+    indicadorSelecionado.value = indicadorAtualizado
+    parametrosPendentes.value = null
+    mensagemSucesso.value = 'Nova versão criada com sucesso.'
+
+    await router.push({ name: 'Regras' })
+  } catch (erro) {
+    const mensagem =
+      erro.response?.data?.mensagem ||
+      erro.response?.data?.message ||
+      erro.message
+
+    erroSalvarVersao.value =
+      typeof mensagem === 'string'
+        ? mensagem
+        : 'Não foi possível salvar a nova versão. Tente novamente.'
+  } finally {
+    salvandoVersao.value = false
+  }
 }
 </script>
 
@@ -179,6 +246,14 @@ function abrirNovaVersao(dados) {
         e acompanhe o histórico de versões.
       </p>
     </header>
+
+    <p
+      v-if="mensagemSucesso"
+      class="regras-sucesso"
+      role="status"
+    >
+      {{ mensagemSucesso }}
+    </p>
 
     <div class="regras-layout">
       <ListaIndicadores
@@ -228,11 +303,20 @@ function abrirNovaVersao(dados) {
     </div>
   </main>
 
-  <RouterView v-slot="{ Component }">
+  <RouterView v-slot="{ Component, route }">
     <component
       :is="Component"
-      v-if="Component"
+      v-if="Component && route.name === 'RegraNovaVersao'"
       :parametros-pendentes="parametrosPendentes"
+      :indicador="indicadorSelecionado"
+      :salvando="salvandoVersao"
+      :erro="erroSalvarVersao"
+      @confirmar="confirmarNovaVersao"
+    />
+
+    <component
+      :is="Component"
+      v-else-if="Component"
     />
   </RouterView>
 </template>

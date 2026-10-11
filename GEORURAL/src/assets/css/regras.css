@@ -667,6 +667,17 @@
   font-weight: 700;
 }
 
+.regras-campo input[aria-invalid='true'],
+.regras-campo textarea[aria-invalid='true'] {
+  border-color: var(--cor-erro);
+}
+
+.regras-campo input:disabled,
+.regras-campo textarea:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
 .regras-pagina button:focus-visible,
 .regras-pagina input:focus-visible,
 .regras-modal button:focus-visible,
