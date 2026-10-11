@@ -648,6 +648,25 @@
   margin-bottom: 0;
 }
 
+.regras-aviso-consulta {
+  margin: 16px 0;
+  padding: 16px 18px;
+
+  border: 1px solid var(--cor-menu-borda);
+  border-left: 3px solid var(--cor-roxo);
+  border-radius: 12px;
+
+  background: var(--cor-menu-fundo);
+  color: var(--cor-roxo);
+
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.regras-aviso-consulta strong {
+  font-weight: 700;
+}
+
 .regras-pagina button:focus-visible,
 .regras-pagina input:focus-visible,
 .regras-modal button:focus-visible,

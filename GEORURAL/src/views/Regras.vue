@@ -1,9 +1,11 @@
 <script setup>
 import { ref } from 'vue'
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ListaIndicadores from '../components/ListaIndicadores.vue'
 import PainelDetalheIndicador from '../components/PainelDetalheIndicador.vue'
+
+const router = useRouter()
 
 const indicadores = ref([
   {
@@ -12,7 +14,9 @@ const indicadores = ref([
     nome: 'Reserva Legal',
     possuiParametros: true,
     formula:
-      'IRL (%) = área de Reserva Legal ÷ área do imóvel × 100, comparado ao mínimo do bioma (Mata Atlântica: 20%, Amazônia: 80%).',
+      'IRL (%) = área de Reserva Legal ÷ área do imóvel × 100. ' +
+      'O resultado é comparado ao percentual mínimo configurado ' +
+      'para o enquadramento do imóvel.',
   },
   {
     id: 'idesmat',
@@ -20,7 +24,9 @@ const indicadores = ref([
     nome: 'Desmatamento',
     possuiParametros: true,
     formula:
-      'Para cada marco, mede a supressão (PRODES) posterior à data, dentro do imóvel, em ha e %. Marcos: 22/07/2008, 31/07/2019 e 31/12/2020.',
+      'Para cada marco configurado, mede a supressão identificada ' +
+      'pelo PRODES posterior à data, dentro do imóvel, em hectares ' +
+      'e percentual da área total.',
   },
   {
     id: 'ifc',
@@ -28,7 +34,9 @@ const indicadores = ref([
     nome: 'Focos de calor',
     possuiParametros: true,
     formula:
-      'IFC = focos dentro do imóvel ÷ área do imóvel (ha) × 1000ha, no período de 12meses.',
+      'IFC = quantidade de focos dentro do imóvel ÷ área do imóvel ' +
+      'em hectares × fator de normalização configurado. ' +
+      'A contagem considera o período de apuração configurado.',
   },
   {
     id: 'iae',
@@ -36,7 +44,10 @@ const indicadores = ref([
     nome: 'Área embargada',
     possuiParametros: false,
     formula:
-      'IAE (%) = área do imóvel sobreposta a embargos ÷ área do imóvel × 100, também em hectares.',
+      'IAE (%) = área do imóvel sobreposta a embargos ÷ área do ' +
+      'imóvel × 100. O resultado também é apresentado em hectares. ' +
+      'As sobreposições entre embargos são unificadas para evitar ' +
+      'contagem duplicada.',
   },
   {
     id: 'icv',
@@ -44,7 +55,9 @@ const indicadores = ref([
     nome: 'Cobertura vegetal nativa',
     possuiParametros: false,
     formula:
-      'ICV (%) = vegetação nativa dentro do imóvel ÷ área do imóvel × 100, também em hectares.',
+      'ICV (%) = área de vegetação nativa dentro do imóvel ÷ área ' +
+      'total do imóvel × 100. O resultado também é apresentado ' +
+      'em hectares.',
   },
   {
     id: 'iapp',
@@ -52,7 +65,10 @@ const indicadores = ref([
     nome: 'APP conservada',
     possuiParametros: false,
     formula:
-      'IAPP (%) = APP com vegetação nativa ÷ APP total × 100. Passivo (ha) = APP total − APP com vegetação.',
+      'IAPP (%) = APP com vegetação nativa ÷ APP total × 100. ' +
+      'Área de APP sem vegetação nativa (ha) = APP total − APP ' +
+      'com vegetação. Quando não houver APP identificada, o ' +
+      'percentual é apresentado como não aplicável.',
   },
   {
     id: 'isap',
@@ -60,14 +76,94 @@ const indicadores = ref([
     nome: 'Áreas protegidas',
     possuiParametros: false,
     formula:
-      'ISAP = área e % do imóvel sobreposta a cada categoria protegida (UC, TI, quilombos, florestas públicas), dissolvidas entre si para não contar área duas vezes.',
+      'Mede a área e o percentual do imóvel sobrepostos a cada ' +
+      'categoria protegida, como unidades de conservação, terras ' +
+      'indígenas, territórios quilombolas e florestas públicas. ' +
+      'O total utiliza a união das sobreposições para evitar ' +
+      'contagem duplicada.',
   },
 ])
 
+const configuracaoParametros = {
+  irl: [
+    {
+      id: 'minimo-mata-atlantica',
+      nome: 'Mínimo RL — Mata Atlântica',
+      descricao: 'Percentual mínimo utilizado na comparação.',
+      tipo: 'percentual',
+      unidade: '%',
+    },
+    {
+      id: 'minimo-amazonia',
+      nome: 'Mínimo RL — Amazônia Legal',
+      descricao: 'Percentual mínimo utilizado na comparação.',
+      tipo: 'percentual',
+      unidade: '%',
+    },
+  ],
+  idesmat: [
+    {
+      id: 'marco-1',
+      nome: 'Marco 1',
+      descricao: 'Primeira data de referência.',
+      tipo: 'data',
+    },
+    {
+      id: 'marco-2',
+      nome: 'Marco 2',
+      descricao: 'Segunda data de referência.',
+      tipo: 'data',
+    },
+    {
+      id: 'marco-3',
+      nome: 'Marco 3',
+      descricao: 'Terceira data de referência.',
+      tipo: 'data',
+    },
+  ],
+  ifc: [
+    {
+      id: 'fator-normalizacao',
+      nome: 'Fator de normalização',
+      descricao: 'Base de comparação por área.',
+      tipo: 'numero',
+      unidade: 'ha',
+      positivo: true,
+    },
+    {
+      id: 'periodo-apuracao',
+      nome: 'Período de apuração',
+      descricao: 'Janela de contagem dos focos.',
+      tipo: 'numero',
+      unidade: 'meses',
+      positivo: true,
+      inteiro: true,
+    },
+  ],
+}
+
+indicadores.value = indicadores.value.map((indicador) => ({
+  ...indicador,
+  parametros: configuracaoParametros[indicador.id] ?? [],
+}))
+
 const indicadorSelecionado = ref(null)
+const parametrosPendentes = ref(null)
 
 function selecionarIndicador(indicador) {
   indicadorSelecionado.value = indicador
+  parametrosPendentes.value = null
+}
+
+function abrirNovaVersao(dados) {
+  parametrosPendentes.value = dados
+
+  router.push({
+    name: 'RegraNovaVersao',
+    query: {
+      indicador: dados.indicadorId,
+    },
+  })
 }
 </script>
 
@@ -93,40 +189,9 @@ function selecionarIndicador(indicador) {
 
       <PainelDetalheIndicador
         :indicador="indicadorSelecionado"
+        @salvar-nova-versao="abrirNovaVersao"
       >
-        <template #default>
-          <section class="regras-parametros-vazios">
-            <h3 class="regras-secao-titulo">
-              Parâmetros
-            </h3>
-
-            <p
-              v-if="indicadorSelecionado.possuiParametros"
-              class="regras-texto-secundario"
-            >
-              Nenhum parâmetro carregado.
-            </p>
-
-            <p v-else class="regras-aviso">
-              Este indicador não possui parâmetros configuráveis.
-            </p>
-          </section>
-
-          <div
-            v-if="indicadorSelecionado.possuiParametros"
-            class="regras-acoes"
-          >
-            <RouterLink
-              :to="{
-                name: 'RegraNovaVersao',
-                query: { indicador: indicadorSelecionado.id },
-              }"
-              class="regras-botao regras-botao--principal"
-            >
-              Nova versão
-            </RouterLink>
-          </div>
-
+        <template #default="{ indicador }">
           <section class="regras-historico">
             <div class="regras-historico-cabecalho">
               <h3 class="regras-secao-titulo">
@@ -136,7 +201,7 @@ function selecionarIndicador(indicador) {
               <RouterLink
                 :to="{
                   name: 'RegraCompararVersoes',
-                  query: { indicador: indicadorSelecionado.id },
+                  query: { indicador: indicador.id },
                 }"
                 class="regras-botao"
               >
@@ -151,7 +216,7 @@ function selecionarIndicador(indicador) {
             <RouterLink
               :to="{
                 name: 'RegraDetalheVersao',
-                query: { indicador: indicadorSelecionado.id },
+                query: { indicador: indicador.id },
               }"
               class="regras-botao"
             >
@@ -163,7 +228,13 @@ function selecionarIndicador(indicador) {
     </div>
   </main>
 
-  <RouterView />
+  <RouterView v-slot="{ Component }">
+    <component
+      :is="Component"
+      v-if="Component"
+      :parametros-pendentes="parametrosPendentes"
+    />
+  </RouterView>
 </template>
 
 <style scoped src="../assets/css/regras.css"></style>
