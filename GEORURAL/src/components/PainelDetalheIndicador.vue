@@ -188,6 +188,7 @@ const possuiAlteracoes = computed(() =>
 )
 
 const podeSalvar = computed(() =>
+  configuravel.value === true &&
   parametros.value.length > 0 &&
   possuiAlteracoes.value &&
   !possuiErros.value &&
@@ -319,11 +320,11 @@ function limiteMaximo(parametro) {
       </details>
 
       <section class="regras-edicao">
-        <h3 class="regras-secao-titulo">
-          Parâmetros
-        </h3>
+        <template v-if="configuravel === true">
+          <h3 class="regras-secao-titulo">
+            Parâmetros
+          </h3>
 
-        <template v-if="configuravel">
           <form v-if="parametros.length" novalidate @submit.prevent="salvarNovaVersao">
             <div v-for="parametro in parametros" :key="parametro.id" class="regras-parametro" :class="{
               'regras-parametro--erro': mostrarErro(parametro),
@@ -350,9 +351,9 @@ function limiteMaximo(parametro) {
                     ? 'date'
                     : 'number'
                   " :min="limiteMinimo(parametro)" :max="limiteMaximo(parametro)" :step="parametro.tipo === 'data' || parametro.inteiro
-                      ? 1
-                      : 'any'
-                    " :required="parametro.obrigatorio !== false" :aria-invalid="Boolean(mostrarErro(parametro))"
+                ? 1
+                : 'any'
+              " :required="parametro.obrigatorio !== false" :aria-invalid="Boolean(mostrarErro(parametro))"
                   :aria-describedby="mostrarErro(parametro)
                       ? `erro-parametro-${parametro.id}`
                       : undefined
@@ -392,8 +393,13 @@ function limiteMaximo(parametro) {
           diferente do IRL ou do IDesmat, onde há percentuais e datas
           a ajustar.
 
-          Nesta tela você pode <strong>consultar</strong> como ele funciona
-          e ver o histórico de versões, mas não há campos para editar.
+          Nesta tela você pode <strong>consultar</strong> como ele
+          funciona e ver o histórico de versões, mas não há campos
+          para editar.
+        </p>
+
+        <p v-else class="regras-texto-secundario">
+          Nenhuma informação sobre parâmetros carregada.
         </p>
       </section>
       <slot :indicador="indicador"></slot>
