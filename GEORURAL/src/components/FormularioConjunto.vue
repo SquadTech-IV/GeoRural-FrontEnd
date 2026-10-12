@@ -1,7 +1,18 @@
 <script setup>
-import {computed,nextTick,onBeforeUnmount,onMounted,ref,watch,} from 'vue'
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from 'vue'
 
 const props = defineProps({
+  conjunto: {
+    type: Object,
+    default: null,
+  },
   fontes: {
     type: Array,
     default: () => [],
@@ -31,21 +42,25 @@ const formularioElement = ref(null)
 const tentouSalvar = ref(false)
 const tocados = ref({})
 
-const formulario = ref({
-  fonteId: '',
-  nome: '',
-  srs: '',
-  cobertura: '',
-  coberturaPersonalizada: '',
-  periodicidade: '',
-  upload: true,
-  api: false,
-  endpoint: '',
-  formatoApi: 'GeoJSON',
-  autenticacao: '',
-})
+const editando = computed(() => props.conjunto?.id != null)
 
 const sistemasReferencia = [
+  {
+    valor: 'EPSG:4674',
+    nome: 'SIRGAS 2000 (EPSG:4674)',
+  },
+  {
+    valor: 'EPSG:31982',
+    nome: 'SIRGAS 2000 / UTM 22S (EPSG:31982)',
+  },
+  {
+    valor: 'EPSG:4326',
+    nome: 'WGS 84 (EPSG:4326)',
+  },
+  {
+    valor: 'EPSG:4618',
+    nome: 'SAD 69 (EPSG:4618)',
+  },
 ]
 
 const coberturas = [
@@ -72,6 +87,43 @@ const formatosApi = [
   'Shapefile (.zip)',
 ]
 
+const formulario = ref({})
+
+let elementoAnterior
+let overflowAnterior
+
+watch(
+  [() => props.conjunto, () => props.fonteId],
+  ([conjunto, fonteId]) => {
+    const cobertura = conjunto?.cobertura ?? ''
+
+    const coberturaPadronizada =
+      cobertura !== 'Outro' && coberturas.includes(cobertura)
+
+    formulario.value = {
+      fonteId: conjunto?.fonteId ?? fonteId ?? '',
+      nome: conjunto?.nome ?? '',
+      srs: conjunto?.srs ?? '',
+      cobertura: cobertura
+        ? coberturaPadronizada
+          ? cobertura
+          : 'Outro'
+        : '',
+      coberturaPersonalizada: coberturaPadronizada ? '' : cobertura,
+      periodicidade: conjunto?.periodicidade ?? '',
+      upload: conjunto ? conjunto.upload === true : true,
+      api: conjunto?.api === true,
+      endpoint: conjunto?.endpoint ?? '',
+      formatoApi: conjunto?.formatoApi ?? 'GeoJSON',
+      autenticacao: '',
+    }
+
+    tentouSalvar.value = false
+    tocados.value = {}
+  },
+  { immediate: true },
+)
+
 const fontesAtivas = computed(() =>
   props.fontes.filter((fonte) => fonte.ativo === true),
 )
@@ -91,25 +143,47 @@ const conjuntosDisponiveis = computed(() => {
     : []
 })
 
-let elementoAnterior
-let overflowAnterior
-
-watch(
-  () => props.fonteId,
-  (id) => {
-    formulario.value.fonteId = id ?? ''
-    formulario.value.nome = ''
-    tentouSalvar.value = false
-    tocados.value = {}
+const camposSelecao = computed(() => [
+  {
+    chave: 'fonteId',
+    titulo: 'Fonte',
+    opcoes: fontesAtivas.value.map((fonte) => ({
+      valor: fonte.id,
+      nome: `${fonte.sigla} — ${fonte.nome}`,
+    })),
+    ajuda: fontesAtivas.value.length
+      ? 'Selecione uma fonte ativa.'
+      : 'Cadastre ou reative uma fonte para continuar.',
   },
-  { immediate: true },
-)
-
-watch(conjuntosDisponiveis, (nomes) => {
-  if (!nomes.includes(formulario.value.nome)) {
-    formulario.value.nome = ''
-  }
-})
+  {
+    chave: 'nome',
+    titulo: 'Conjunto',
+    opcoes: conjuntosDisponiveis.value.map((nome) => ({
+      valor: nome,
+      nome,
+    })),
+    ajuda: fonteSelecionada.value && !conjuntosDisponiveis.value.length
+      ? 'Edite a fonte e informe os conjuntos que ela fornece.'
+      : 'São exibidos apenas os conjuntos declarados pela fonte.',
+  },
+  {
+    chave: 'srs',
+    titulo: 'Sistema de referência',
+    opcoes: sistemasReferencia,
+  },
+  {
+    chave: 'cobertura',
+    titulo: 'Cobertura',
+    opcoes: coberturas.map((nome) => ({ valor: nome, nome })),
+  },
+  {
+    chave: 'periodicidade',
+    titulo: 'Periodicidade',
+    opcoes: periodicidades.map((nome) => ({ valor: nome, nome })),
+    ajuda:
+      'Frequência de atualização da fonte. A competência de cada arquivo é informada no upload.',
+  },
+])
 
 function normalizar(valor) {
   return String(valor ?? '').trim().toLocaleLowerCase('pt-BR')
@@ -127,24 +201,27 @@ const erros = computed(() => {
   if (!dados.nome) {
     resultado.nome = 'Selecione um conjunto.'
   } else if (!conjuntosDisponiveis.value.includes(dados.nome)) {
-    resultado.nome = 'O conjunto deve ser fornecido pela fonte selecionada.'
+    resultado.nome =
+      'O conjunto deve ser fornecido pela fonte selecionada.'
   } else if (
     fonte &&
-    props.conjuntos.some(
-      (conjunto) =>
+    props.conjuntos.some((conjunto) => {
+      const mesmoRegistro =
+        editando.value &&
+        String(conjunto.id) === String(props.conjunto.id)
+
+      return (
+        !mesmoRegistro &&
         String(conjunto.fonteId) === String(fonte.id) &&
-        normalizar(conjunto.nome) === normalizar(dados.nome),
-    )
+        normalizar(conjunto.nome) === normalizar(dados.nome)
+      )
+    })
   ) {
     resultado.nome =
-      'Esse conjunto já está cadastrado para a fonte. Edite o cadastro existente.'
+      'Esse conjunto já está cadastrado para a fonte.'
   }
 
-  if (
-    !sistemasReferencia.some(
-      (sistema) => sistema.valor === dados.srs,
-    )
-  ) {
+  if (!sistemasReferencia.some((sistema) => sistema.valor === dados.srs)) {
     resultado.srs = 'Selecione um sistema de referência válido.'
   }
 
@@ -186,15 +263,15 @@ const erros = computed(() => {
             'O endpoint deve começar com http:// ou https://.'
         } else if (url.username || url.password) {
           resultado.endpoint =
-            'Informe a autenticação no campo próprio, sem credenciais na URL.'
+            'Informe a autenticação no campo próprio.'
         }
       } catch {
-        resultado.endpoint = 'Informe uma URL válida para o endpoint.'
+        resultado.endpoint = 'Informe uma URL válida.'
       }
     }
 
     if (!formatosApi.includes(dados.formatoApi)) {
-      resultado.formatoApi = 'Selecione um formato retornado válido.'
+      resultado.formatoApi = 'Selecione um formato válido.'
     }
   }
 
@@ -212,9 +289,12 @@ function tocar(campo) {
   tocados.value[campo] = true
 }
 
-function alterarFonte() {
-  formulario.value.nome = ''
-  tocar('fonteId')
+function alterarSelecao(campo) {
+  tocar(campo)
+
+  if (campo === 'fonteId') {
+    formulario.value.nome = ''
+  }
 }
 
 function alternarEntrada(tipo) {
@@ -238,30 +318,45 @@ async function salvar() {
   if (Object.keys(erros.value).length) {
     await nextTick()
 
-    formularioElement.value
-      ?.querySelector('[aria-invalid="true"]')
-      ?.focus()
+    const invalido = Array.from(
+      formularioElement.value?.querySelectorAll(
+        '[aria-invalid="true"]',
+      ) ?? [],
+    ).find((elemento) => !elemento.matches(':disabled'))
 
+    invalido?.focus()
     return
   }
 
   const dados = formulario.value
 
-  emit('salvar', {
+  const payload = {
     fonteId: fonteSelecionada.value.id,
     nome: dados.nome,
     srs: dados.srs,
-    cobertura:
-      dados.cobertura === 'Outro'
-        ? dados.coberturaPersonalizada.trim()
-        : dados.cobertura,
+    cobertura: dados.cobertura === 'Outro'
+      ? dados.coberturaPersonalizada.trim()
+      : dados.cobertura,
     periodicidade: dados.periodicidade,
     upload: dados.upload,
     api: dados.api,
     endpoint: dados.api ? dados.endpoint.trim() : '',
     formatoApi: dados.api ? dados.formatoApi : '',
-    autenticacao: dados.api ? dados.autenticacao.trim() : '',
-  })
+  }
+
+  if (editando.value) {
+    payload.id = props.conjunto.id
+
+    if (dados.api && dados.autenticacao.trim()) {
+      payload.autenticacao = dados.autenticacao.trim()
+    }
+  } else {
+    payload.autenticacao = dados.api
+      ? dados.autenticacao.trim()
+      : ''
+  }
+
+  emit('salvar', payload)
 }
 
 function tratarTeclado(evento) {
@@ -310,6 +405,12 @@ function tratarTeclado(evento) {
   }
 }
 
+function registrarSelect(elemento, chave) {
+  if (chave === 'fonteId') {
+    fonteSelect.value = elemento
+  }
+}
+
 onMounted(async () => {
   elementoAnterior = document.activeElement
   overflowAnterior = document.body.style.overflow
@@ -341,11 +442,11 @@ onBeforeUnmount(() => {
         <header class="cadastros-modal-cabecalho">
           <div>
             <span class="cadastros-identificacao">
-              CADASTRO DE CONJUNTO
+              {{ editando ? 'EDIÇÃO DE CONJUNTO' : 'CADASTRO DE CONJUNTO' }}
             </span>
 
             <h2 id="titulo-formulario-conjunto">
-              Novo conjunto de dados
+              {{ editando ? 'Editar conjunto de dados' : 'Novo conjunto de dados' }}
             </h2>
           </div>
 
@@ -379,282 +480,118 @@ onBeforeUnmount(() => {
               id="descricao-formulario-conjunto"
               class="conjunto-formulario-descricao"
             >
-              Vincule o conjunto a uma fonte e configure
-              suas informações e formas de entrada.
+              {{
+                editando
+                  ? 'Atualize as informações e as formas de entrada do conjunto.'
+                  : 'Vincule o conjunto a uma fonte e configure suas informações.'
+              }}
             </p>
 
             <fieldset
               class="conjunto-formulario-campos"
               :disabled="salvando"
             >
-              <div class="cadastros-campo">
-                <label for="conjunto-fonte">Fonte</label>
-
-                <select
-                  id="conjunto-fonte"
-                  ref="fonteSelect"
-                  v-model="formulario.fonteId"
-                  required
-                  :aria-invalid="erroVisivel('fonteId')"
-                  :aria-describedby="
-                    erroVisivel('fonteId')
-                      ? 'erro-conjunto-fonte'
-                      : 'ajuda-conjunto-fonte'
-                  "
-                  :class="{
-                    'conjunto-campo--invalido': erroVisivel('fonteId'),
-                  }"
-                  @change="alterarFonte"
-                  @blur="tocar('fonteId')"
-                >
-                  <option value="" disabled>Selecione uma fonte</option>
-
-                  <option
-                    v-for="fonte in fontesAtivas"
-                    :key="fonte.id"
-                    :value="fonte.id"
-                  >
-                    {{ fonte.sigla }} — {{ fonte.nome }}
-                  </option>
-                </select>
-
-                <p
-                  id="ajuda-conjunto-fonte"
-                  class="cadastros-ajuda"
-                >
-                  {{
-                    fontesAtivas.length
-                      ? 'Apenas fontes ativas podem receber novos conjuntos.'
-                      : 'Cadastre ou reative uma fonte para continuar.'
-                  }}
-                </p>
-
-                <p
-                  v-if="erroVisivel('fonteId')"
-                  id="erro-conjunto-fonte"
-                  class="conjunto-erro-campo"
-                >
-                  {{ erros.fonteId }}
-                </p>
-              </div>
-
-              <div class="cadastros-campo">
-                <label for="conjunto-nome">Conjunto</label>
-
-                <select
-                  id="conjunto-nome"
-                  v-model="formulario.nome"
-                  :disabled="!conjuntosDisponiveis.length"
-                  required
-                  :aria-invalid="erroVisivel('nome')"
-                  :aria-describedby="
-                    erroVisivel('nome')
-                      ? 'erro-conjunto-nome'
-                      : 'ajuda-conjunto-nome'
-                  "
-                  :class="{
-                    'conjunto-campo--invalido': erroVisivel('nome'),
-                  }"
-                  @blur="tocar('nome')"
-                  @change="tocar('nome')"
-                >
-                  <option value="" disabled>Selecione um conjunto</option>
-
-                  <option
-                    v-for="nome in conjuntosDisponiveis"
-                    :key="nome"
-                    :value="nome"
-                  >
-                    {{ nome }}
-                  </option>
-                </select>
-
-                <p
-                  id="ajuda-conjunto-nome"
-                  class="cadastros-ajuda"
-                >
-                  {{
-                    fonteSelecionada && !conjuntosDisponiveis.length
-                      ? 'Edite a fonte e informe os conjuntos que ela fornece.'
-                      : 'São exibidos apenas os conjuntos declarados pela fonte.'
-                  }}
-                </p>
-
-                <p
-                  v-if="erroVisivel('nome')"
-                  id="erro-conjunto-nome"
-                  class="conjunto-erro-campo"
-                >
-                  {{ erros.nome }}
-                </p>
-              </div>
-
-              <div class="cadastros-duas-colunas">
+              <template
+                v-for="campo in camposSelecao"
+                :key="campo.chave"
+              >
                 <div class="cadastros-campo">
-                  <label for="conjunto-srs">
-                    Sistema de referência
+                  <label :for="`conjunto-${campo.chave}`">
+                    {{ campo.titulo }}
                   </label>
 
                   <select
-                    id="conjunto-srs"
-                    v-model="formulario.srs"
+                    :id="`conjunto-${campo.chave}`"
+                    :ref="(elemento) => registrarSelect(elemento, campo.chave)"
+                    v-model="formulario[campo.chave]"
                     required
-                    :aria-invalid="erroVisivel('srs')"
+                    :disabled="
+                      campo.chave === 'nome' &&
+                      !conjuntosDisponiveis.length
+                    "
+                    :aria-invalid="erroVisivel(campo.chave)"
                     :aria-describedby="
-                      erroVisivel('srs')
-                        ? 'erro-conjunto-srs'
-                        : undefined
+                      erroVisivel(campo.chave)
+                        ? `erro-conjunto-${campo.chave}`
+                        : campo.ajuda
+                          ? `ajuda-conjunto-${campo.chave}`
+                          : undefined
                     "
                     :class="{
-                      'conjunto-campo--invalido': erroVisivel('srs'),
+                      'conjunto-campo--invalido':
+                        erroVisivel(campo.chave),
                     }"
-                    @blur="tocar('srs')"
+                    @blur="tocar(campo.chave)"
+                    @change="alterarSelecao(campo.chave)"
                   >
                     <option value="" disabled>Selecione</option>
 
                     <option
-                      v-for="sistema in sistemasReferencia"
-                      :key="sistema.valor"
-                      :value="sistema.valor"
+                      v-for="opcao in campo.opcoes"
+                      :key="opcao.valor"
+                      :value="opcao.valor"
                     >
-                      {{ sistema.nome }}
+                      {{ opcao.nome }}
                     </option>
                   </select>
 
                   <p
-                    v-if="erroVisivel('srs')"
-                    id="erro-conjunto-srs"
+                    v-if="campo.ajuda"
+                    :id="`ajuda-conjunto-${campo.chave}`"
+                    class="cadastros-ajuda"
+                  >
+                    {{ campo.ajuda }}
+                  </p>
+
+                  <p
+                    v-if="erroVisivel(campo.chave)"
+                    :id="`erro-conjunto-${campo.chave}`"
                     class="conjunto-erro-campo"
                   >
-                    {{ erros.srs }}
+                    {{ erros[campo.chave] }}
                   </p>
                 </div>
 
-                <div class="cadastros-campo">
-                  <label for="conjunto-cobertura">Cobertura</label>
+                <div
+                  v-if="
+                    campo.chave === 'cobertura' &&
+                    formulario.cobertura === 'Outro'
+                  "
+                  class="cadastros-campo"
+                >
+                  <label for="conjunto-cobertura-personalizada">
+                    Descrição da cobertura
+                  </label>
 
-                  <select
-                    id="conjunto-cobertura"
-                    v-model="formulario.cobertura"
+                  <input
+                    id="conjunto-cobertura-personalizada"
+                    v-model="formulario.coberturaPersonalizada"
+                    type="text"
                     required
-                    :aria-invalid="erroVisivel('cobertura')"
+                    maxlength="200"
+                    placeholder="Informe a região abrangida"
+                    :aria-invalid="erroVisivel('coberturaPersonalizada')"
                     :aria-describedby="
-                      erroVisivel('cobertura')
-                        ? 'erro-conjunto-cobertura'
+                      erroVisivel('coberturaPersonalizada')
+                        ? 'erro-conjunto-cobertura-personalizada'
                         : undefined
                     "
                     :class="{
                       'conjunto-campo--invalido':
-                        erroVisivel('cobertura'),
+                        erroVisivel('coberturaPersonalizada'),
                     }"
-                    @blur="tocar('cobertura')"
-                  >
-                    <option value="" disabled>Selecione</option>
-
-                    <option
-                      v-for="cobertura in coberturas"
-                      :key="cobertura"
-                      :value="cobertura"
-                    >
-                      {{ cobertura }}
-                    </option>
-                  </select>
+                    @blur="tocar('coberturaPersonalizada')"
+                  />
 
                   <p
-                    v-if="erroVisivel('cobertura')"
-                    id="erro-conjunto-cobertura"
+                    v-if="erroVisivel('coberturaPersonalizada')"
+                    id="erro-conjunto-cobertura-personalizada"
                     class="conjunto-erro-campo"
                   >
-                    {{ erros.cobertura }}
+                    {{ erros.coberturaPersonalizada }}
                   </p>
                 </div>
-              </div>
-
-              <div
-                v-if="formulario.cobertura === 'Outro'"
-                class="cadastros-campo"
-              >
-                <label for="conjunto-cobertura-personalizada">
-                  Descrição da cobertura
-                </label>
-
-                <input
-                  id="conjunto-cobertura-personalizada"
-                  v-model="formulario.coberturaPersonalizada"
-                  type="text"
-                  required
-                  maxlength="200"
-                  :aria-invalid="erroVisivel('coberturaPersonalizada')"
-                  :aria-describedby="
-                    erroVisivel('coberturaPersonalizada')
-                      ? 'erro-conjunto-cobertura-personalizada'
-                      : undefined
-                  "
-                  :class="{
-                    'conjunto-campo--invalido':
-                      erroVisivel('coberturaPersonalizada'),
-                  }"
-                  placeholder="Informe a região abrangida"
-                  @blur="tocar('coberturaPersonalizada')"
-                />
-
-                <p
-                  v-if="erroVisivel('coberturaPersonalizada')"
-                  id="erro-conjunto-cobertura-personalizada"
-                  class="conjunto-erro-campo"
-                >
-                  {{ erros.coberturaPersonalizada }}
-                </p>
-              </div>
-
-              <div class="cadastros-campo">
-                <label for="conjunto-periodicidade">
-                  Periodicidade
-                </label>
-
-                <select
-                  id="conjunto-periodicidade"
-                  v-model="formulario.periodicidade"
-                  required
-                  :aria-invalid="erroVisivel('periodicidade')"
-                  :aria-describedby="
-                    erroVisivel('periodicidade')
-                      ? 'erro-conjunto-periodicidade'
-                      : 'ajuda-conjunto-periodicidade'
-                  "
-                  :class="{
-                    'conjunto-campo--invalido':
-                      erroVisivel('periodicidade'),
-                  }"
-                  @blur="tocar('periodicidade')"
-                >
-                  <option value="" disabled>Selecione</option>
-
-                  <option
-                    v-for="periodicidade in periodicidades"
-                    :key="periodicidade"
-                    :value="periodicidade"
-                  >
-                    {{ periodicidade }}
-                  </option>
-                </select>
-
-                <p
-                  id="ajuda-conjunto-periodicidade"
-                  class="cadastros-ajuda"
-                >
-                  Frequência de atualização da fonte.
-                  A competência de cada arquivo é informada no upload.
-                </p>
-
-                <p
-                  v-if="erroVisivel('periodicidade')"
-                  id="erro-conjunto-periodicidade"
-                  class="conjunto-erro-campo"
-                >
-                  {{ erros.periodicidade }}
-                </p>
-              </div>
+              </template>
 
               <fieldset class="cadastros-entrada">
                 <legend>Como o dado chega</legend>
@@ -683,9 +620,7 @@ onBeforeUnmount(() => {
                       stroke-linejoin="round"
                       aria-hidden="true"
                     >
-                      <path
-                        d="M12 16V4m-5 5 5-5 5 5M4 16v4h16v-4"
-                      />
+                      <path d="M12 16V4m-5 5 5-5 5 5M4 16v4h16v-4" />
                     </svg>
 
                     <strong>Upload</strong>
@@ -709,9 +644,7 @@ onBeforeUnmount(() => {
                       stroke-linejoin="round"
                       aria-hidden="true"
                     >
-                      <path
-                        d="m8 8-4 4 4 4m8-8 4 4-4 4m-3-12-2 16"
-                      />
+                      <path d="m8 8-4 4 4 4m8-8 4 4-4 4m-3-12-2 16" />
                     </svg>
 
                     <strong>API</strong>
@@ -749,6 +682,7 @@ onBeforeUnmount(() => {
                     v-model="formulario.endpoint"
                     type="url"
                     required
+                    placeholder="https://..."
                     :aria-invalid="erroVisivel('endpoint')"
                     :aria-describedby="
                       erroVisivel('endpoint')
@@ -759,7 +693,6 @@ onBeforeUnmount(() => {
                       'conjunto-campo--invalido':
                         erroVisivel('endpoint'),
                     }"
-                    placeholder="https://..."
                     @blur="tocar('endpoint')"
                   />
 
@@ -822,8 +755,14 @@ onBeforeUnmount(() => {
                       v-model="formulario.autenticacao"
                       type="password"
                       autocomplete="new-password"
-                      placeholder="Chave ou token"
+                      :placeholder="
+                        editando ? 'Informe para substituir' : 'Chave ou token'
+                      "
                     />
+
+                    <p v-if="editando" class="cadastros-ajuda">
+                      Deixe vazio para manter a autenticação existente.
+                    </p>
                   </div>
                 </div>
               </section>
@@ -841,12 +780,8 @@ onBeforeUnmount(() => {
               {{ erro }}
             </p>
 
-            <p
-              v-if="salvando"
-              class="cadastros-ajuda"
-              role="status"
-            >
-              Salvando conjunto...
+            <p v-if="salvando" class="cadastros-ajuda" role="status">
+              {{ editando ? 'Salvando alterações...' : 'Salvando conjunto...' }}
             </p>
           </div>
 
@@ -865,7 +800,13 @@ onBeforeUnmount(() => {
               class="cadastros-botao cadastros-botao--principal"
               :disabled="salvando"
             >
-              {{ salvando ? 'Salvando...' : 'Salvar conjunto' }}
+              {{
+                salvando
+                  ? 'Salvando...'
+                  : editando
+                    ? 'Salvar alterações'
+                    : 'Salvar conjunto'
+              }}
             </button>
           </footer>
         </form>

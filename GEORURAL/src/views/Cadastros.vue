@@ -69,6 +69,7 @@ const fonteEmEdicao = ref(null)
 
 const formularioConjuntoAberto = ref(false)
 const fonteIdNovoConjunto = ref(null)
+const conjuntoEmEdicao = ref(null)
 
 const botaoAbaFontes = ref(null)
 const botaoAbaConjuntos = ref(null)
@@ -187,6 +188,7 @@ function abrirFormularioFonte() {
 
   fonteEmEdicao.value = null
   formularioFonteAberto.value = true
+
   emit('nova-fonte')
 }
 
@@ -195,6 +197,7 @@ function editarFonte(fonte) {
 
   fonteEmEdicao.value = fonte
   formularioFonteAberto.value = true
+
   emit('editar-fonte', fonte)
 }
 
@@ -221,8 +224,19 @@ function abrirFormularioConjunto(fonte = null) {
     return
   }
 
+  conjuntoEmEdicao.value = null
   fonteIdNovoConjunto.value = fonte?.id ?? null
   formularioConjuntoAberto.value = true
+}
+
+function editarConjunto(conjunto) {
+  if (salvando.value || modalAberto.value) return
+
+  conjuntoEmEdicao.value = conjunto
+  fonteIdNovoConjunto.value = conjunto.fonteId
+  formularioConjuntoAberto.value = true
+
+  emit('editar-conjunto', conjunto)
 }
 
 function fecharFormularioConjunto() {
@@ -230,6 +244,7 @@ function fecharFormularioConjunto() {
 
   formularioConjuntoAberto.value = false
   fonteIdNovoConjunto.value = null
+  conjuntoEmEdicao.value = null
 }
 
 function solicitarCadastroConjunto(dados) {
@@ -271,6 +286,7 @@ defineExpose({
         @click="selecionarAba('fontes')"
       >
         Fontes
+        <span>{{ fontes.length }}</span>
       </button>
 
       <button
@@ -285,6 +301,7 @@ defineExpose({
         @click="selecionarAba('conjuntos')"
       >
         Conjuntos de dados
+        <span>{{ conjuntos.length }}</span>
       </button>
     </div>
 
@@ -734,7 +751,7 @@ defineExpose({
                         class="cadastros-botao"
                         :disabled="salvando"
                         :aria-label="`Editar ${conjunto.nome}`"
-                        @click="emit('editar-conjunto', conjunto)"
+                        @click="editarConjunto(conjunto)"
                       >
                         Editar
                       </button>
@@ -776,16 +793,17 @@ defineExpose({
     @salvar="solicitarCadastroFonte"
   />
 
-<FormularioConjunto
-  v-if="formularioConjuntoAberto"
-  :fontes="fontes"
-  :conjuntos="conjuntos"
-  :fonte-id="fonteIdNovoConjunto"
-  :salvando="salvandoConjunto"
-  :erro="erroSalvarConjunto"
-  @fechar="fecharFormularioConjunto"
-  @salvar="solicitarCadastroConjunto"
-/>
+  <FormularioConjunto
+    v-if="formularioConjuntoAberto"
+    :conjunto="conjuntoEmEdicao"
+    :fontes="fontes"
+    :conjuntos="conjuntos"
+    :fonte-id="fonteIdNovoConjunto"
+    :salvando="salvandoConjunto"
+    :erro="erroSalvarConjunto"
+    @fechar="fecharFormularioConjunto"
+    @salvar="solicitarCadastroConjunto"
+  />
 </template>
 
 <style scoped src="../assets/css/cadastros.css"></style>
