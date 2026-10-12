@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
+import FormularioFonte from '../components/FormularioFonte.vue'
 
 const props = defineProps({
   fontes: {
@@ -19,6 +20,14 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  salvandoFonte: {
+    type: Boolean,
+    default: false,
+  },
+  erroSalvarFonte: {
+    type: String,
+    default: '',
+  },
 })
 
 const emit = defineEmits([
@@ -27,9 +36,28 @@ const emit = defineEmits([
   'detalhar-fonte',
   'alterar-status-fonte',
   'tentar-novamente',
+  'salvar-fonte',
 ])
 
 const busca = ref('')
+const formularioFonteAberto = ref(false)
+
+function abrirFormularioFonte() {
+  formularioFonteAberto.value = true
+  emit('nova-fonte')
+}
+
+function fecharFormularioFonte() {
+  if (props.salvandoFonte) return
+
+  formularioFonteAberto.value = false
+}
+
+function solicitarCadastroFonte(dados) {
+  if (props.salvandoFonte) return
+
+  emit('salvar-fonte', dados)
+}
 
 function normalizar(valor) {
   return String(valor ?? '')
@@ -79,6 +107,10 @@ function formatarData(valor) {
     ? `${partes[3]}/${partes[2]}/${partes[1]}`
     : '—'
 }
+
+defineExpose({
+  fecharFormularioFonte,
+})
 </script>
 
 <template>
@@ -86,6 +118,7 @@ function formatarData(valor) {
 
   <main class="cadastros-pagina">
     <header class="cadastros-cabecalho">
+
       <h1>Fontes de dados</h1>
 
       <p>
@@ -118,8 +151,8 @@ function formatarData(valor) {
         <button
           type="button"
           class="cadastros-botao cadastros-botao--principal"
-          :disabled="carregando"
-          @click="emit('nova-fonte')"
+          :disabled="carregando || salvandoFonte"
+          @click="abrirFormularioFonte"
         >
           <span aria-hidden="true">+</span>
           Nova fonte
@@ -360,6 +393,14 @@ function formatarData(valor) {
       </template>
     </section>
   </main>
+
+  <FormularioFonte
+    v-if="formularioFonteAberto"
+    :salvando="salvandoFonte"
+    :erro="erroSalvarFonte"
+    @fechar="fecharFormularioFonte"
+    @salvar="solicitarCadastroFonte"
+  />
 </template>
 
 <style scoped src="../assets/css/cadastros.css"></style>
