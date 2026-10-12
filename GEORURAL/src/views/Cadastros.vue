@@ -776,15 +776,16 @@ defineExpose({
     @salvar="solicitarCadastroFonte"
   />
 
-  <FormularioConjunto
-    v-if="formularioConjuntoAberto"
-    :fontes="fontes"
-    :fonte-id="fonteIdNovoConjunto"
-    :salvando="salvandoConjunto"
-    :erro="erroSalvarConjunto"
-    @fechar="fecharFormularioConjunto"
-    @salvar="solicitarCadastroConjunto"
-  />
+<FormularioConjunto
+  v-if="formularioConjuntoAberto"
+  :fontes="fontes"
+  :conjuntos="conjuntos"
+  :fonte-id="fonteIdNovoConjunto"
+  :salvando="salvandoConjunto"
+  :erro="erroSalvarConjunto"
+  @fechar="fecharFormularioConjunto"
+  @salvar="solicitarCadastroConjunto"
+/>
 </template>
 
 <style scoped src="../assets/css/cadastros.css"></style>
