@@ -29,17 +29,29 @@ const itens = [
     titulo: 'Regras e Métodos',
     icone: 'regras',
   },
+  {
+    caminho: '/cadastros',
+    titulo: 'Fontes e conjuntos',
+    icone: 'cadastros',
+  },
 ]
 
 function estaAtivo(caminho) {
-  if (caminho === '/imoveis') {
-    return (
-      route.path === '/imoveis' ||
-      route.path.startsWith('/resultado/')
-    )
+  if (caminho === '/') {
+    return route.path === '/'
   }
 
-  return route.path === caminho
+  if (
+    caminho === '/imoveis' &&
+    route.path.startsWith('/resultado/')
+  ) {
+    return true
+  }
+
+  return (
+    route.path === caminho ||
+    route.path.startsWith(`${caminho}/`)
+  )
 }
 
 function alternarTema() {
@@ -50,7 +62,7 @@ function alternarTema() {
   try {
     localStorage.setItem('georural-tema', tema.value)
   } catch {
-    // Mantém a troca de tema mesmo sem acesso ao armazenamento.
+    // A troca de tema funciona mesmo sem acesso ao armazenamento.
   }
 }
 </script>
@@ -120,6 +132,16 @@ function alternarTema() {
               <circle cx="15" cy="17" r="3" />
             </template>
 
+            <template v-else-if="item.icone === 'cadastros'">
+              <ellipse cx="12" cy="5" rx="8" ry="3" />
+              <path
+                d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5"
+              />
+              <path
+                d="M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7"
+              />
+            </template>
+
             <template v-else>
               <path
                 d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"
@@ -166,7 +188,6 @@ function alternarTema() {
 
             <template v-else>
               <circle cx="12" cy="12" r="4" />
-
               <path
                 d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"
               />

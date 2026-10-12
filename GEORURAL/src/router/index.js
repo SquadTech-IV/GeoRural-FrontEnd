@@ -1,9 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
+
 import IngestaoFontes from '../views/IngestaoFontes.vue'
 import VerificarDadosExistentes from '../views/VerificarDadosExistentes.vue'
 import ListaImoveis from '../views/ListaImoveis.vue'
 import MapaResultado from '../views/MapaResultado.vue'
 import Regras from '../views/Regras.vue'
+import Cadastros from '../views/Cadastros.vue'
+
 import ModalSalvarRegras from '../components/ModalSalvarRegras.vue'
 import ModalDetalheVersao from '../components/ModalDetalheVersao.vue'
 import ModalCompararVersoes from '../components/ModalCompararVersoes.vue'
@@ -34,9 +37,15 @@ const router = createRouter({
       props: true,
     },
     {
+      path: '/cadastros',
+      name: 'Cadastros',
+      component: Cadastros,
+    },
+    {
       path: '/regras',
       name: 'Regras',
       component: Regras,
+
       children: [
         {
           path: 'nova-versao',
