@@ -9,15 +9,20 @@ const tema = ref(
 )
 
 const itens = [
-  {
-    caminho: '/',
-    titulo: 'Ingestão de Fontes',
-    icone: 'upload',
-  },
-  {
-    caminho: '/verificar-dados-existentes',
-    titulo: 'Dados Existentes',
-    icone: 'arquivos',
+  // {
+  //   caminho: '/',
+  //   titulo: 'Ingestão de Fontes',
+  //   icone: 'upload',
+  // },
+  // {
+  //   caminho: '/verificar-dados-existentes',
+  //   titulo: 'Dados Existentes',
+  //   icone: 'arquivos',
+  // },
+    {
+    caminho: '/cadastros',
+    titulo: 'Fontes e conjuntos',
+    icone: 'cadastros',
   },
   {
     caminho: '/imoveis',
@@ -29,11 +34,7 @@ const itens = [
     titulo: 'Regras e Métodos',
     icone: 'regras',
   },
-  {
-    caminho: '/cadastros',
-    titulo: 'Fontes e conjuntos',
-    icone: 'cadastros',
-  },
+
 ]
 
 function estaAtivo(caminho) {

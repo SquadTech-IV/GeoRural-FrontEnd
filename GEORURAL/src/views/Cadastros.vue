@@ -41,16 +41,29 @@ const emit = defineEmits([
 
 const busca = ref('')
 const formularioFonteAberto = ref(false)
+const fonteEmEdicao = ref(null)
 
 function abrirFormularioFonte() {
+  if (props.carregando || props.salvandoFonte) return
+
+  fonteEmEdicao.value = null
   formularioFonteAberto.value = true
   emit('nova-fonte')
+}
+
+function editarFonte(fonte) {
+  if (props.salvandoFonte) return
+
+  fonteEmEdicao.value = fonte
+  formularioFonteAberto.value = true
+  emit('editar-fonte', fonte)
 }
 
 function fecharFormularioFonte() {
   if (props.salvandoFonte) return
 
   formularioFonteAberto.value = false
+  fonteEmEdicao.value = null
 }
 
 function solicitarCadastroFonte(dados) {
@@ -118,9 +131,7 @@ defineExpose({
 
   <main class="cadastros-pagina">
     <header class="cadastros-cabecalho">
-
       <h1>Fontes de dados</h1>
-
       <p>
         Consulte os órgãos de origem e os conjuntos
         fornecidos para as análises do GeoRural.
@@ -355,6 +366,7 @@ defineExpose({
                     <button
                       type="button"
                       class="cadastros-botao"
+                      :disabled="salvandoFonte"
                       :aria-label="`Ver detalhes de ${fonte.nome}`"
                       @click="emit('detalhar-fonte', fonte)"
                     >
@@ -364,8 +376,9 @@ defineExpose({
                     <button
                       type="button"
                       class="cadastros-botao"
+                      :disabled="salvandoFonte"
                       :aria-label="`Editar ${fonte.nome}`"
-                      @click="emit('editar-fonte', fonte)"
+                      @click="editarFonte(fonte)"
                     >
                       Editar
                     </button>
@@ -374,6 +387,7 @@ defineExpose({
                       v-if="typeof fonte.ativo === 'boolean'"
                       type="button"
                       class="cadastros-botao"
+                      :disabled="salvandoFonte"
                       :class="{
                         'cadastros-botao--perigo': fonte.ativo,
                       }"
@@ -395,13 +409,14 @@ defineExpose({
   </main>
 
   <FormularioFonte
-  v-if="formularioFonteAberto"
-  :fontes="fontes"
-  :salvando="salvandoFonte"
-  :erro="erroSalvarFonte"
-  @fechar="fecharFormularioFonte"
-  @salvar="solicitarCadastroFonte"
-
+    v-if="formularioFonteAberto"
+    :fonte="fonteEmEdicao"
+    :fontes="fontes"
+    :conjuntos="conjuntos"
+    :salvando="salvandoFonte"
+    :erro="erroSalvarFonte"
+    @fechar="fecharFormularioFonte"
+    @salvar="solicitarCadastroFonte"
   />
 </template>
 

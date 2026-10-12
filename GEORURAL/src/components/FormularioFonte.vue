@@ -5,10 +5,19 @@ import {
   onBeforeUnmount,
   onMounted,
   ref,
+  watch,
 } from 'vue'
 
 const props = defineProps({
+  fonte: {
+    type: Object,
+    default: null,
+  },
   fontes: {
+    type: Array,
+    default: () => [],
+  },
+  conjuntos: {
     type: Array,
     default: () => [],
   },
@@ -40,6 +49,8 @@ const formulario = ref({
   esfera: '',
   oferece: [],
 })
+
+const editando = computed(() => props.fonte?.id != null)
 
 const esferas = [
   'Federal',
@@ -94,8 +105,48 @@ const tiposConjunto = [
 let elementoAnterior
 let overflowAnterior
 
+watch(
+  () => props.fonte,
+  (fonte) => {
+    formulario.value = {
+      nome: fonte?.nome ?? '',
+      sigla: fonte?.sigla ?? '',
+      esfera: fonte?.esfera ?? '',
+      oferece: Array.isArray(fonte?.oferece)
+        ? [...fonte.oferece]
+        : [],
+    }
+
+    tentouSalvar.value = false
+
+    tocados.value = {
+      nome: false,
+      sigla: false,
+      esfera: false,
+    }
+  },
+  { immediate: true },
+)
+
 function normalizarSigla(valor) {
-  return String(valor ?? '').trim().toLocaleLowerCase('pt-BR')
+  return String(valor ?? '')
+    .trim()
+    .toLocaleLowerCase('pt-BR')
+}
+
+function pertenceAFonte(conjunto) {
+  return (
+    editando.value &&
+    String(conjunto.fonteId) === String(props.fonte.id)
+  )
+}
+
+function possuiConjuntoCadastrado(nome) {
+  return props.conjuntos.some(
+    (conjunto) =>
+      pertenceAFonte(conjunto) &&
+      conjunto.nome === nome,
+  )
 }
 
 const erros = computed(() => {
@@ -115,10 +166,16 @@ const erros = computed(() => {
   } else if (sigla.length > 30) {
     resultado.sigla = 'A sigla deve ter no máximo 30 caracteres.'
   } else if (
-    props.fontes.some(
-      (fonte) =>
-        normalizarSigla(fonte.sigla) === normalizarSigla(sigla),
-    )
+    props.fontes.some((fonte) => {
+      const mesmaFonte =
+        editando.value &&
+        String(fonte.id) === String(props.fonte.id)
+
+      return (
+        !mesmaFonte &&
+        normalizarSigla(fonte.sigla) === normalizarSigla(sigla)
+      )
+    })
   ) {
     resultado.sigla = 'Já existe uma fonte com essa sigla.'
   }
@@ -137,6 +194,15 @@ const erros = computed(() => {
     )
   ) {
     resultado.oferece = 'Selecione apenas conjuntos do catálogo.'
+  } else if (
+    props.conjuntos.some(
+      (conjunto) =>
+        pertenceAFonte(conjunto) &&
+        !formulario.value.oferece.includes(conjunto.nome),
+    )
+  ) {
+    resultado.oferece =
+      'Mantenha selecionados os tipos que possuem conjuntos cadastrados.'
   }
 
   return resultado
@@ -170,12 +236,18 @@ async function salvar() {
     return
   }
 
-  emit('salvar', {
+  const dados = {
     nome: formulario.value.nome.trim(),
     sigla: formulario.value.sigla.trim(),
     esfera: formulario.value.esfera,
     oferece: [...new Set(formulario.value.oferece)],
-  })
+  }
+
+  if (editando.value) {
+    dados.id = props.fonte.id
+  }
+
+  emit('salvar', dados)
 }
 
 function tratarTeclado(evento) {
@@ -229,6 +301,7 @@ function tratarTeclado(evento) {
 onMounted(async () => {
   elementoAnterior = document.activeElement
   overflowAnterior = document.body.style.overflow
+
   document.body.style.overflow = 'hidden'
 
   await nextTick()
@@ -257,10 +330,12 @@ onBeforeUnmount(() => {
         <header class="cadastros-modal-cabecalho">
           <div>
             <span class="cadastros-identificacao">
-              CADASTRO DE FONTE
+              {{ editando ? 'EDIÇÃO DE FONTE' : 'CADASTRO DE FONTE' }}
             </span>
 
-            <h2 id="titulo-formulario-fonte">Nova fonte</h2>
+            <h2 id="titulo-formulario-fonte">
+              {{ editando ? 'Editar fonte' : 'Nova fonte' }}
+            </h2>
           </div>
 
           <button
@@ -293,8 +368,11 @@ onBeforeUnmount(() => {
               id="descricao-formulario-fonte"
               class="fonte-formulario-descricao"
             >
-              Informe o órgão de origem e selecione
-              os conjuntos de dados que ele fornece.
+              {{
+                editando
+                  ? 'Atualize as informações da fonte e os conjuntos que ela fornece.'
+                  : 'Informe o órgão de origem e selecione os conjuntos que ele fornece.'
+              }}
               Nome e sigla são obrigatórios.
             </p>
 
@@ -317,7 +395,9 @@ onBeforeUnmount(() => {
                   }"
                   :aria-invalid="erroVisivel('nome')"
                   :aria-describedby="
-                    erroVisivel('nome') ? 'erro-fonte-nome' : undefined
+                    erroVisivel('nome')
+                      ? 'erro-fonte-nome'
+                      : undefined
                   "
                   placeholder="Informe o nome do órgão ou instituição"
                   @blur="tocados.nome = true"
@@ -410,7 +490,11 @@ onBeforeUnmount(() => {
                 </legend>
 
                 <p class="cadastros-ajuda">
-                  Você pode selecionar mais de um conjunto.
+                  {{
+                    editando
+                      ? 'Tipos com conjuntos cadastrados devem permanecer selecionados.'
+                      : 'Você pode selecionar mais de um conjunto.'
+                  }}
                 </p>
 
                 <div class="fonte-formulario-opcoes">
@@ -427,10 +511,18 @@ onBeforeUnmount(() => {
                       v-model="formulario.oferece"
                       type="checkbox"
                       :value="tipo.nome"
+                      :disabled="possuiConjuntoCadastrado(tipo.nome)"
                     />
 
                     <span>{{ tipo.nome }}</span>
-                    <small>{{ tipo.indicadores }}</small>
+
+                    <small>
+                      {{
+                        possuiConjuntoCadastrado(tipo.nome)
+                          ? 'Cadastrado'
+                          : tipo.indicadores
+                      }}
+                    </small>
                   </label>
                 </div>
 
@@ -472,7 +564,11 @@ onBeforeUnmount(() => {
               class="cadastros-ajuda"
               role="status"
             >
-              Salvando fonte...
+              {{
+                editando
+                  ? 'Salvando alterações...'
+                  : 'Salvando fonte...'
+              }}
             </p>
           </div>
 
@@ -491,7 +587,13 @@ onBeforeUnmount(() => {
               class="cadastros-botao cadastros-botao--principal"
               :disabled="salvando"
             >
-              {{ salvando ? 'Salvando...' : 'Salvar fonte' }}
+              {{
+                salvando
+                  ? 'Salvando...'
+                  : editando
+                    ? 'Salvar alterações'
+                    : 'Salvar fonte'
+              }}
             </button>
           </footer>
         </form>
