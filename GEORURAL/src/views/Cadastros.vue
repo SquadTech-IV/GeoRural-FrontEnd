@@ -4,6 +4,7 @@ import BarraNavegacao from '../components/BarraNavegacao.vue'
 import FormularioFonte from '../components/FormularioFonte.vue'
 import FormularioConjunto from '../components/FormularioConjunto.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
+import ModalConfirmacao from '../components/ModalConfirmacao.vue'
 
 defineOptions({
   name: 'CadastrosDados',
@@ -50,6 +51,14 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  alterandoStatus: {
+    type: Boolean,
+    default: false,
+  },
+  erroAlterarStatus: {
+    type: String,
+    default: '',
+  },
   feedback: {
     type: Object,
     default: null,
@@ -84,17 +93,53 @@ const botaoAbaFontes = ref(null)
 const botaoAbaConjuntos = ref(null)
 
 const notificacao = ref(null)
+const desativacaoPendente = ref(null)
+const confirmacaoEnviada = ref(false)
+
 let sequenciaNotificacao = 0
 
 const salvando = computed(
-  () => props.salvandoFonte || props.salvandoConjunto,
+  () =>
+    props.salvandoFonte ||
+    props.salvandoConjunto ||
+    props.alterandoStatus ||
+    confirmacaoEnviada.value,
 )
 
 const modalAberto = computed(
   () =>
     formularioFonteAberto.value ||
-    formularioConjuntoAberto.value,
+    formularioConjuntoAberto.value ||
+    desativacaoPendente.value !== null,
 )
+
+const processandoDesativacao = computed(
+  () => props.alterandoStatus || confirmacaoEnviada.value,
+)
+
+const mensagemDesativacao = computed(() => {
+  const pendente = desativacaoPendente.value
+
+  if (!pendente) return ''
+
+  return pendente.tipo === 'fonte'
+    ? `Deseja desativar a fonte “${pendente.registro.nome}”?`
+    : `Deseja desativar o conjunto “${pendente.registro.nome}”?`
+})
+
+const avisoDesativacao = computed(() => {
+  if (desativacaoPendente.value?.tipo === 'fonte') {
+    return (
+      'Os conjuntos vinculados ficam indisponíveis enquanto ' +
+      'a fonte estiver inativa. Os cadastros serão preservados.'
+    )
+  }
+
+  return (
+    'O conjunto ficará inativo. Seu cadastro será preservado ' +
+    'e poderá ser reativado posteriormente.'
+  )
+})
 
 function notificar(mensagem, tipo = 'sucesso') {
   if (typeof mensagem !== 'string' || !mensagem.trim()) return
@@ -123,6 +168,24 @@ watch(
     notificar(feedback.mensagem, feedback.tipo)
   },
   { immediate: true },
+)
+
+watch(
+  () => props.erroAlterarStatus,
+  (erro) => {
+    if (erro) {
+      liberarTentativaDesativacao()
+    }
+  },
+)
+
+watch(
+  () => props.alterandoStatus,
+  (atual, anterior) => {
+    if (anterior && !atual && props.erroAlterarStatus) {
+      liberarTentativaDesativacao()
+    }
+  },
 )
 
 function selecionarAba(nome) {
@@ -297,13 +360,70 @@ function solicitarCadastroConjunto(dados) {
 function solicitarAlteracaoStatusFonte(fonte) {
   if (salvando.value || modalAberto.value) return
 
-  emit('alterar-status-fonte', fonte)
+  if (fonte.ativo === false) {
+    emit('alterar-status-fonte', fonte)
+    return
+  }
+
+  if (fonte.ativo !== true) return
+
+  confirmacaoEnviada.value = false
+  desativacaoPendente.value = {
+    tipo: 'fonte',
+    registro: fonte,
+  }
 }
 
 function solicitarAlteracaoStatusConjunto(conjunto) {
   if (salvando.value || modalAberto.value) return
 
-  emit('alterar-status-conjunto', conjunto)
+  if (conjunto.ativo === false) {
+    emit('alterar-status-conjunto', conjunto)
+    return
+  }
+
+  if (conjunto.ativo !== true) return
+
+  confirmacaoEnviada.value = false
+  desativacaoPendente.value = {
+    tipo: 'conjunto',
+    registro: conjunto,
+  }
+}
+
+function cancelarDesativacao() {
+  if (processandoDesativacao.value) return
+
+  desativacaoPendente.value = null
+}
+
+function confirmarDesativacao() {
+  if (
+    !desativacaoPendente.value ||
+    processandoDesativacao.value
+  ) {
+    return
+  }
+
+  confirmacaoEnviada.value = true
+
+  const { tipo, registro } = desativacaoPendente.value
+
+  emit(
+    tipo === 'fonte'
+      ? 'alterar-status-fonte'
+      : 'alterar-status-conjunto',
+    registro,
+  )
+}
+
+function finalizarDesativacao() {
+  confirmacaoEnviada.value = false
+  desativacaoPendente.value = null
+}
+
+function liberarTentativaDesativacao() {
+  confirmacaoEnviada.value = false
 }
 
 function limparFiltrosConjuntos() {
@@ -315,6 +435,8 @@ defineExpose({
   fecharFormularioFonte,
   fecharFormularioConjunto,
   notificar,
+  finalizarDesativacao,
+  liberarTentativaDesativacao,
 })
 </script>
 
@@ -857,6 +979,21 @@ defineExpose({
     :erro="erroSalvarConjunto"
     @fechar="fecharFormularioConjunto"
     @salvar="solicitarCadastroConjunto"
+  />
+
+  <ModalConfirmacao
+    v-if="desativacaoPendente"
+    :titulo="
+      desativacaoPendente.tipo === 'fonte'
+        ? 'Desativar fonte'
+        : 'Desativar conjunto'
+    "
+    :mensagem="mensagemDesativacao"
+    :aviso="avisoDesativacao"
+    :processando="processandoDesativacao"
+    :erro="erroAlterarStatus"
+    @cancelar="cancelarDesativacao"
+    @confirmar="confirmarDesativacao"
   />
 
   <ToastMensagem
