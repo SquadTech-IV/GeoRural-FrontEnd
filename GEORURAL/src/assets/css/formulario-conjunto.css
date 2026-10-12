@@ -1,0 +1,28 @@
+.conjunto-formulario-descricao {
+  margin: 0 0 22px;
+  color: var(--cor-texto-secundario);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.conjunto-formulario-campos {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.conjunto-formulario-campos:disabled {
+  opacity: 0.65;
+}
+
+.conjunto-formulario-campos:disabled button,
+.conjunto-formulario-campos:disabled input,
+.conjunto-formulario-campos:disabled select {
+  cursor: not-allowed;
+}
+
+.cadastros-fechar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

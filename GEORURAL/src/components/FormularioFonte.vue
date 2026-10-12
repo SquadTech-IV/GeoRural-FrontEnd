@@ -329,13 +329,7 @@ onBeforeUnmount(() => {
       >
         <header class="cadastros-modal-cabecalho">
           <div>
-            <span class="cadastros-identificacao">
-              {{ editando ? 'EDIÇÃO DE FONTE' : 'CADASTRO DE FONTE' }}
-            </span>
-
-            <h2 id="titulo-formulario-fonte">
-              {{ editando ? 'Editar fonte' : 'Nova fonte' }}
-            </h2>
+            <h2 id="titulo-formulario-fonte"> Nova fonte </h2>
           </div>
 
           <button
