@@ -45,22 +45,6 @@ const tocados = ref({})
 const editando = computed(() => props.conjunto?.id != null)
 
 const sistemasReferencia = [
-  {
-    valor: 'EPSG:4674',
-    nome: 'SIRGAS 2000 (EPSG:4674)',
-  },
-  {
-    valor: 'EPSG:31982',
-    nome: 'SIRGAS 2000 / UTM 22S (EPSG:31982)',
-  },
-  {
-    valor: 'EPSG:4326',
-    nome: 'WGS 84 (EPSG:4326)',
-  },
-  {
-    valor: 'EPSG:4618',
-    nome: 'SAD 69 (EPSG:4618)',
-  },
 ]
 
 const coberturas = [
@@ -441,10 +425,6 @@ onBeforeUnmount(() => {
       >
         <header class="cadastros-modal-cabecalho">
           <div>
-            <span class="cadastros-identificacao">
-              {{ editando ? 'EDIÇÃO DE CONJUNTO' : 'CADASTRO DE CONJUNTO' }}
-            </span>
-
             <h2 id="titulo-formulario-conjunto">
               {{ editando ? 'Editar conjunto de dados' : 'Novo conjunto de dados' }}
             </h2>

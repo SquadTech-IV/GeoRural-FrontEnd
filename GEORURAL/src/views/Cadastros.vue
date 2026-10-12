@@ -1,8 +1,13 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import FormularioFonte from '../components/FormularioFonte.vue'
 import FormularioConjunto from '../components/FormularioConjunto.vue'
+import ToastMensagem from '../components/ToastMensagem.vue'
+
+defineOptions({
+  name: 'CadastrosDados',
+})
 
 const props = defineProps({
   fontes: {
@@ -45,6 +50,10 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  feedback: {
+    type: Object,
+    default: null,
+  },
 })
 
 const emit = defineEmits([
@@ -74,6 +83,9 @@ const conjuntoEmEdicao = ref(null)
 const botaoAbaFontes = ref(null)
 const botaoAbaConjuntos = ref(null)
 
+const notificacao = ref(null)
+let sequenciaNotificacao = 0
+
 const salvando = computed(
   () => props.salvandoFonte || props.salvandoConjunto,
 )
@@ -82,6 +94,35 @@ const modalAberto = computed(
   () =>
     formularioFonteAberto.value ||
     formularioConjuntoAberto.value,
+)
+
+function notificar(mensagem, tipo = 'sucesso') {
+  if (typeof mensagem !== 'string' || !mensagem.trim()) return
+
+  const tipoValido = ['sucesso', 'erro', 'aviso'].includes(tipo)
+    ? tipo
+    : 'aviso'
+
+  notificacao.value = {
+    id: ++sequenciaNotificacao,
+    mensagem: mensagem.trim(),
+    tipo: tipoValido,
+    duracao: tipoValido === 'sucesso' ? 5000 : 0,
+  }
+}
+
+function fecharNotificacao() {
+  notificacao.value = null
+}
+
+watch(
+  () => props.feedback,
+  (feedback) => {
+    if (!feedback) return
+
+    notificar(feedback.mensagem, feedback.tipo)
+  },
+  { immediate: true },
 )
 
 function selecionarAba(nome) {
@@ -253,6 +294,18 @@ function solicitarCadastroConjunto(dados) {
   emit('salvar-conjunto', dados)
 }
 
+function solicitarAlteracaoStatusFonte(fonte) {
+  if (salvando.value || modalAberto.value) return
+
+  emit('alterar-status-fonte', fonte)
+}
+
+function solicitarAlteracaoStatusConjunto(conjunto) {
+  if (salvando.value || modalAberto.value) return
+
+  emit('alterar-status-conjunto', conjunto)
+}
+
 function limparFiltrosConjuntos() {
   buscaConjunto.value = ''
   filtroFonte.value = ''
@@ -261,6 +314,7 @@ function limparFiltrosConjuntos() {
 defineExpose({
   fecharFormularioFonte,
   fecharFormularioConjunto,
+  notificar,
 })
 </script>
 
@@ -516,7 +570,7 @@ defineExpose({
                         :aria-label="
                           `${fonte.ativo ? 'Desativar' : 'Reativar'} ${fonte.nome}`
                         "
-                        @click="emit('alterar-status-fonte', fonte)"
+                        @click="solicitarAlteracaoStatusFonte(fonte)"
                       >
                         {{ fonte.ativo ? 'Desativar' : 'Reativar' }}
                       </button>
@@ -767,7 +821,7 @@ defineExpose({
                         :aria-label="
                           `${conjunto.ativo ? 'Desativar' : 'Reativar'} ${conjunto.nome}`
                         "
-                        @click="emit('alterar-status-conjunto', conjunto)"
+                        @click="solicitarAlteracaoStatusConjunto(conjunto)"
                       >
                         {{ conjunto.ativo ? 'Desativar' : 'Reativar' }}
                       </button>
@@ -803,6 +857,15 @@ defineExpose({
     :erro="erroSalvarConjunto"
     @fechar="fecharFormularioConjunto"
     @salvar="solicitarCadastroConjunto"
+  />
+
+  <ToastMensagem
+    v-if="notificacao"
+    :key="notificacao.id"
+    :mensagem="notificacao.mensagem"
+    :tipo="notificacao.tipo"
+    :duracao="notificacao.duracao"
+    @fechar="fecharNotificacao"
   />
 </template>
 
