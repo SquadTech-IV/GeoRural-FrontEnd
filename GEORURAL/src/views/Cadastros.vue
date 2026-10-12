@@ -395,11 +395,13 @@ defineExpose({
   </main>
 
   <FormularioFonte
-    v-if="formularioFonteAberto"
-    :salvando="salvandoFonte"
-    :erro="erroSalvarFonte"
-    @fechar="fecharFormularioFonte"
-    @salvar="solicitarCadastroFonte"
+  v-if="formularioFonteAberto"
+  :fontes="fontes"
+  :salvando="salvandoFonte"
+  :erro="erroSalvarFonte"
+  @fechar="fecharFormularioFonte"
+  @salvar="solicitarCadastroFonte"
+
   />
 </template>
 

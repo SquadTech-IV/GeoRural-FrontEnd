@@ -1,7 +1,17 @@
 <script setup>
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+} from 'vue'
 
 const props = defineProps({
+  fontes: {
+    type: Array,
+    default: () => [],
+  },
   salvando: {
     type: Boolean,
     default: false,
@@ -15,6 +25,14 @@ const props = defineProps({
 const emit = defineEmits(['fechar', 'salvar'])
 
 const nomeInput = ref(null)
+const formularioElement = ref(null)
+const tentouSalvar = ref(false)
+
+const tocados = ref({
+  nome: false,
+  sigla: false,
+  esfera: false,
+})
 
 const formulario = ref({
   nome: '',
@@ -22,6 +40,13 @@ const formulario = ref({
   esfera: '',
   oferece: [],
 })
+
+const esferas = [
+  'Federal',
+  'Estadual',
+  'Municipal',
+  'Outra',
+]
 
 const tiposConjunto = [
   {
@@ -69,20 +94,87 @@ const tiposConjunto = [
 let elementoAnterior
 let overflowAnterior
 
+function normalizarSigla(valor) {
+  return String(valor ?? '').trim().toLocaleLowerCase('pt-BR')
+}
+
+const erros = computed(() => {
+  const resultado = {}
+  const nome = formulario.value.nome.trim()
+  const sigla = formulario.value.sigla.trim()
+  const esfera = formulario.value.esfera
+
+  if (!nome) {
+    resultado.nome = 'Informe o nome da fonte.'
+  } else if (nome.length > 200) {
+    resultado.nome = 'O nome deve ter no máximo 200 caracteres.'
+  }
+
+  if (!sigla) {
+    resultado.sigla = 'Informe a sigla da fonte.'
+  } else if (sigla.length > 30) {
+    resultado.sigla = 'A sigla deve ter no máximo 30 caracteres.'
+  } else if (
+    props.fontes.some(
+      (fonte) =>
+        normalizarSigla(fonte.sigla) === normalizarSigla(sigla),
+    )
+  ) {
+    resultado.sigla = 'Já existe uma fonte com essa sigla.'
+  }
+
+  if (esfera && !esferas.includes(esfera)) {
+    resultado.esfera = 'Selecione uma esfera válida.'
+  }
+
+  const nomesPermitidos = new Set(
+    tiposConjunto.map((tipo) => tipo.nome),
+  )
+
+  if (
+    formulario.value.oferece.some(
+      (nomeTipo) => !nomesPermitidos.has(nomeTipo),
+    )
+  ) {
+    resultado.oferece = 'Selecione apenas conjuntos do catálogo.'
+  }
+
+  return resultado
+})
+
+function erroVisivel(campo) {
+  return (
+    (tentouSalvar.value || tocados.value[campo]) &&
+    Boolean(erros.value[campo])
+  )
+}
+
 function fechar() {
   if (props.salvando) return
 
   emit('fechar')
 }
 
-function salvar() {
+async function salvar() {
   if (props.salvando) return
+
+  tentouSalvar.value = true
+
+  if (Object.keys(erros.value).length) {
+    await nextTick()
+
+    formularioElement.value
+      ?.querySelector('[aria-invalid="true"]')
+      ?.focus()
+
+    return
+  }
 
   emit('salvar', {
     nome: formulario.value.nome.trim(),
     sigla: formulario.value.sigla.trim(),
-    esfera: formulario.value.esfera.trim(),
-    oferece: [...formulario.value.oferece],
+    esfera: formulario.value.esfera,
+    oferece: [...new Set(formulario.value.oferece)],
   })
 }
 
@@ -101,7 +193,11 @@ function tratarTeclado(evento) {
       'select:not([disabled]), textarea:not([disabled]), ' +
       '[tabindex="0"]',
     ),
-  ).filter((elemento) => elemento.getClientRects().length)
+  ).filter(
+    (elemento) =>
+      !elemento.matches(':disabled') &&
+      elemento.getClientRects().length,
+  )
 
   const primeiro = elementos[0]
   const ultimo = elementos[elementos.length - 1]
@@ -133,7 +229,6 @@ function tratarTeclado(evento) {
 onMounted(async () => {
   elementoAnterior = document.activeElement
   overflowAnterior = document.body.style.overflow
-
   document.body.style.overflow = 'hidden'
 
   await nextTick()
@@ -148,10 +243,7 @@ onBeforeUnmount(() => {
 
 <template>
   <Teleport to="body">
-    <div
-      class="cadastros-overlay"
-      @click.self="fechar"
-    >
+    <div class="cadastros-overlay" @click.self="fechar">
       <section
         class="cadastros-modal"
         role="dialog"
@@ -164,9 +256,11 @@ onBeforeUnmount(() => {
       >
         <header class="cadastros-modal-cabecalho">
           <div>
-            <h2 id="titulo-formulario-fonte">
-              Nova fonte
-            </h2>
+            <span class="cadastros-identificacao">
+              CADASTRO DE FONTE
+            </span>
+
+            <h2 id="titulo-formulario-fonte">Nova fonte</h2>
           </div>
 
           <button
@@ -189,7 +283,11 @@ onBeforeUnmount(() => {
           </button>
         </header>
 
-        <form @submit.prevent="salvar">
+        <form
+          ref="formularioElement"
+          novalidate
+          @submit.prevent="salvar"
+        >
           <div class="cadastros-modal-conteudo">
             <p
               id="descricao-formulario-fonte"
@@ -197,6 +295,7 @@ onBeforeUnmount(() => {
             >
               Informe o órgão de origem e selecione
               os conjuntos de dados que ele fornece.
+              Nome e sigla são obrigatórios.
             </p>
 
             <fieldset
@@ -204,9 +303,7 @@ onBeforeUnmount(() => {
               :disabled="salvando"
             >
               <div class="cadastros-campo">
-                <label for="fonte-nome">
-                  Nome da fonte
-                </label>
+                <label for="fonte-nome">Nome da fonte</label>
 
                 <input
                   id="fonte-nome"
@@ -214,23 +311,57 @@ onBeforeUnmount(() => {
                   v-model="formulario.nome"
                   type="text"
                   required
+                  maxlength="200"
+                  :class="{
+                    'fonte-campo--invalido': erroVisivel('nome'),
+                  }"
+                  :aria-invalid="erroVisivel('nome')"
+                  :aria-describedby="
+                    erroVisivel('nome') ? 'erro-fonte-nome' : undefined
+                  "
                   placeholder="Informe o nome do órgão ou instituição"
+                  @blur="tocados.nome = true"
                 />
+
+                <p
+                  v-if="erroVisivel('nome')"
+                  id="erro-fonte-nome"
+                  class="fonte-erro-campo"
+                >
+                  {{ erros.nome }}
+                </p>
               </div>
 
               <div class="cadastros-duas-colunas">
                 <div class="cadastros-campo">
-                  <label for="fonte-sigla">
-                    Sigla / órgão
-                  </label>
+                  <label for="fonte-sigla">Sigla / órgão</label>
 
                   <input
                     id="fonte-sigla"
                     v-model="formulario.sigla"
                     type="text"
                     required
+                    maxlength="30"
+                    :class="{
+                      'fonte-campo--invalido': erroVisivel('sigla'),
+                    }"
+                    :aria-invalid="erroVisivel('sigla')"
+                    :aria-describedby="
+                      erroVisivel('sigla')
+                        ? 'erro-fonte-sigla'
+                        : undefined
+                    "
                     placeholder="Informe a sigla"
+                    @blur="tocados.sigla = true"
                   />
+
+                  <p
+                    v-if="erroVisivel('sigla')"
+                    id="erro-fonte-sigla"
+                    class="fonte-erro-campo"
+                  >
+                    {{ erros.sigla }}
+                  </p>
                 </div>
 
                 <div class="cadastros-campo">
@@ -241,13 +372,35 @@ onBeforeUnmount(() => {
                   <select
                     id="fonte-esfera"
                     v-model="formulario.esfera"
+                    :class="{
+                      'fonte-campo--invalido': erroVisivel('esfera'),
+                    }"
+                    :aria-invalid="erroVisivel('esfera')"
+                    :aria-describedby="
+                      erroVisivel('esfera')
+                        ? 'erro-fonte-esfera'
+                        : undefined
+                    "
+                    @blur="tocados.esfera = true"
                   >
                     <option value="">Selecione</option>
-                    <option value="Federal">Federal</option>
-                    <option value="Estadual">Estadual</option>
-                    <option value="Municipal">Municipal</option>
-                    <option value="Outra">Outra</option>
+
+                    <option
+                      v-for="esfera in esferas"
+                      :key="esfera"
+                      :value="esfera"
+                    >
+                      {{ esfera }}
+                    </option>
                   </select>
+
+                  <p
+                    v-if="erroVisivel('esfera')"
+                    id="erro-fonte-esfera"
+                    class="fonte-erro-campo"
+                  >
+                    {{ erros.esfera }}
+                  </p>
                 </div>
               </div>
 
@@ -277,7 +430,6 @@ onBeforeUnmount(() => {
                     />
 
                     <span>{{ tipo.nome }}</span>
-
                     <small>{{ tipo.indicadores }}</small>
                   </label>
                 </div>
@@ -293,14 +445,25 @@ onBeforeUnmount(() => {
                       : 'conjuntos selecionados'
                   }}
                 </p>
+
+                <p
+                  v-if="tentouSalvar && erros.oferece"
+                  class="fonte-erro-campo"
+                >
+                  {{ erros.oferece }}
+                </p>
               </fieldset>
             </fieldset>
 
             <p
-              v-if="erro"
-              class="cadastros-erro"
+              v-if="tentouSalvar && Object.keys(erros).length"
+              class="fonte-validacao-resumo"
               role="alert"
             >
+              Revise os campos indicados antes de salvar.
+            </p>
+
+            <p v-if="erro" class="cadastros-erro" role="alert">
               {{ erro }}
             </p>
 

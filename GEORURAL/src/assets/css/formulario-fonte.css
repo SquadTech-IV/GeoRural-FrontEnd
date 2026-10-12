@@ -103,3 +103,25 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.cadastros-campo input.fonte-campo--invalido,
+.cadastros-campo select.fonte-campo--invalido {
+  border-color: var(--cor-erro);
+}
+
+.fonte-erro-campo {
+  margin: 7px 0 0;
+  color: var(--cor-erro);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.fonte-validacao-resumo {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--cor-erro);
+  border-radius: 10px;
+  color: var(--cor-erro);
+  font-size: 12px;
+  line-height: 1.7;
+}
