@@ -689,6 +689,71 @@
   cursor: pointer;
 }
 
+.cadastros-estado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 250px;
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.cadastros-estado h3 {
+  margin: 0;
+  color: var(--cor-texto);
+  font-family: var(--fonte-titulo);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.cadastros-estado p {
+  max-width: 480px;
+  margin: 0;
+  color: var(--cor-texto-secundario);
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.cadastros-estado .cadastros-botao {
+  margin-top: 8px;
+}
+
+.cadastros-estado-icone {
+  width: 38px;
+  height: 38px;
+  margin-bottom: 4px;
+  color: var(--cor-roxo);
+}
+
+.cadastros-estado--erro .cadastros-estado-icone {
+  color: var(--cor-erro);
+}
+
+.cadastros-spinner {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 8px;
+  border: 3px solid var(--cor-borda);
+  border-top-color: var(--cor-roxo);
+  border-radius: 50%;
+  animation: cadastros-girar 0.8s linear infinite;
+}
+
+@keyframes cadastros-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cadastros-spinner {
+    animation: none;
+  }
+}
+
 .cadastros-pagina button:focus-visible,
 .cadastros-pagina input:focus-visible,
 .cadastros-pagina select:focus-visible,

@@ -11,6 +11,14 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  carregando: {
+    type: Boolean,
+    default: false,
+  },
+  erro: {
+    type: String,
+    default: '',
+  },
 })
 
 const emit = defineEmits([
@@ -18,6 +26,7 @@ const emit = defineEmits([
   'editar-fonte',
   'detalhar-fonte',
   'alterar-status-fonte',
+  'tentar-novamente',
 ])
 
 const busca = ref('')
@@ -88,17 +97,28 @@ function formatarData(valor) {
     <section
       class="cadastros-painel"
       aria-labelledby="titulo-listagem-fontes"
+      :aria-busy="carregando"
     >
       <header class="cadastros-secao">
         <div>
           <h2 id="titulo-listagem-fontes">
             Fontes cadastradas
           </h2>
+
+          <p v-if="!carregando && !erro">
+            {{ fontes.length }}
+            {{
+              fontes.length === 1
+                ? 'fonte cadastrada'
+                : 'fontes cadastradas'
+            }}
+          </p>
         </div>
 
         <button
           type="button"
           class="cadastros-botao cadastros-botao--principal"
+          :disabled="carregando"
           @click="emit('nova-fonte')"
         >
           <span aria-hidden="true">+</span>
@@ -106,143 +126,238 @@ function formatarData(valor) {
         </button>
       </header>
 
-      <div class="cadastros-filtros">
-        <label class="cadastros-busca">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            aria-hidden="true"
-          >
-            <circle cx="10.5" cy="10.5" r="6.5" />
-            <path d="m16 16 4 4" />
-          </svg>
+      <div
+        v-if="carregando"
+        class="cadastros-estado"
+        role="status"
+        aria-live="polite"
+      >
+        <span
+          class="cadastros-spinner"
+          aria-hidden="true"
+        ></span>
 
-          <input
-            v-model="busca"
-            type="search"
-            aria-label="Buscar fonte pelo nome ou sigla"
-            placeholder="Buscar fonte pelo nome ou sigla..."
-          />
-        </label>
+        <h3>Carregando fontes</h3>
+
+        <p>Aguarde enquanto os dados são consultados.</p>
       </div>
 
-      <div class="cadastros-tabela-container">
-        <table class="cadastros-tabela">
-          <thead>
-            <tr>
-              <th scope="col">Fonte</th>
-              <th scope="col">Sigla</th>
-              <th scope="col">Conjuntos</th>
-              <th scope="col">Cadastrado em</th>
-              <th scope="col">Ações</th>
-            </tr>
-          </thead>
+      <div
+        v-else-if="erro"
+        class="cadastros-estado cadastros-estado--erro"
+        role="alert"
+      >
+        <svg
+          class="cadastros-estado-icone"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="9" />
+          <path d="M12 7v6" />
+          <path d="M12 17h.01" />
+        </svg>
 
-          <tbody>
-            <tr
-              v-for="fonte in fontesFiltradas"
-              :key="fonte.id"
-              :class="{
-                'cadastros-linha--inativa': fonte.ativo === false,
-              }"
+        <h3>Não foi possível carregar as fontes</h3>
+
+        <p>{{ erro }}</p>
+
+        <button
+          type="button"
+          class="cadastros-botao cadastros-botao--principal"
+          @click="emit('tentar-novamente')"
+        >
+          Tentar novamente
+        </button>
+      </div>
+
+      <div
+        v-else-if="!fontes.length"
+        class="cadastros-estado"
+        role="status"
+      >
+        <svg
+          class="cadastros-estado-icone"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <ellipse cx="12" cy="5" rx="8" ry="3" />
+          <path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
+          <path d="M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7" />
+        </svg>
+
+        <h3>Nenhuma fonte cadastrada</h3>
+
+        <p>
+          Clique em “Nova fonte” para cadastrar
+          o primeiro órgão de origem.
+        </p>
+      </div>
+
+      <template v-else>
+        <div class="cadastros-filtros">
+          <label class="cadastros-busca">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              aria-hidden="true"
             >
-              <td>
-                <strong>{{ fonte.nome }}</strong>
+              <circle cx="10.5" cy="10.5" r="6.5" />
+              <path d="m16 16 4 4" />
+            </svg>
 
-                <small v-if="fonte.esfera">
-                  {{ fonte.esfera }}
-                </small>
+            <input
+              v-model="busca"
+              type="search"
+              aria-label="Buscar fonte pelo nome ou sigla"
+              placeholder="Buscar fonte pelo nome ou sigla..."
+            />
+          </label>
+        </div>
 
-                <span
-                  v-if="fonte.ativo === false"
-                  class="cadastros-chip"
-                >
-                  Inativa
-                </span>
-              </td>
+        <div
+          v-if="!fontesFiltradas.length"
+          class="cadastros-estado"
+          role="status"
+        >
+          <h3>Nenhuma fonte encontrada</h3>
 
-              <td>
-                <span class="cadastros-chip cadastros-chip--roxo">
-                  {{ fonte.sigla }}
-                </span>
-              </td>
+          <p>
+            Nenhuma fonte corresponde à busca
+            “{{ busca.trim() }}”.
+          </p>
 
-              <td>
-                <div class="cadastros-chips">
-                  <span class="cadastros-chip cadastros-chip--sucesso">
-                    {{ quantidadeCadastrada(fonte) }}
-                    {{
-                      quantidadeCadastrada(fonte) === 1
-                        ? 'cadastrado'
-                        : 'cadastrados'
-                    }}
-                  </span>
+          <button
+            type="button"
+            class="cadastros-botao"
+            @click="busca = ''"
+          >
+            Limpar busca
+          </button>
+        </div>
+
+        <div v-else class="cadastros-tabela-container">
+          <table class="cadastros-tabela">
+            <thead>
+              <tr>
+                <th scope="col">Fonte</th>
+                <th scope="col">Sigla</th>
+                <th scope="col">Conjuntos</th>
+                <th scope="col">Cadastrado em</th>
+                <th scope="col">Ações</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr
+                v-for="fonte in fontesFiltradas"
+                :key="fonte.id"
+                :class="{
+                  'cadastros-linha--inativa':
+                    fonte.ativo === false,
+                }"
+              >
+                <td>
+                  <strong>{{ fonte.nome }}</strong>
+
+                  <small v-if="fonte.esfera">
+                    {{ fonte.esfera }}
+                  </small>
 
                   <span
-                    v-if="quantidadePendente(fonte)"
-                    class="cadastros-chip cadastros-chip--aviso"
+                    v-if="fonte.ativo === false"
+                    class="cadastros-chip"
                   >
-                    {{ quantidadePendente(fonte) }} a cadastrar
+                    Inativa
                   </span>
-                </div>
-              </td>
+                </td>
 
-              <td>
-                {{ formatarData(fonte.cadastradoEm) }}
-              </td>
-
-              <td>
-                <div class="cadastros-acoes">
-                  <button
-                    type="button"
-                    class="cadastros-botao"
-                    :aria-label="`Ver detalhes de ${fonte.nome}`"
-                    @click="emit('detalhar-fonte', fonte)"
+                <td>
+                  <span
+                    class="cadastros-chip cadastros-chip--roxo"
                   >
-                    Detalhes
-                  </button>
+                    {{ fonte.sigla }}
+                  </span>
+                </td>
 
-                  <button
-                    type="button"
-                    class="cadastros-botao"
-                    :aria-label="`Editar ${fonte.nome}`"
-                    @click="emit('editar-fonte', fonte)"
-                  >
-                    Editar
-                  </button>
+                <td>
+                  <div class="cadastros-chips">
+                    <span
+                      class="cadastros-chip cadastros-chip--sucesso"
+                    >
+                      {{ quantidadeCadastrada(fonte) }}
+                      {{
+                        quantidadeCadastrada(fonte) === 1
+                          ? 'cadastrado'
+                          : 'cadastrados'
+                      }}
+                    </span>
 
-                  <button
-                    v-if="typeof fonte.ativo === 'boolean'"
-                    type="button"
-                    class="cadastros-botao"
-                    :class="{
-                      'cadastros-botao--perigo': fonte.ativo,
-                    }"
-                    :aria-label="
-                      `${fonte.ativo ? 'Desativar' : 'Reativar'} ${fonte.nome}`
-                    "
-                    @click="emit('alterar-status-fonte', fonte)"
-                  >
-                    {{ fonte.ativo ? 'Desativar' : 'Reativar' }}
-                  </button>
-                </div>
-              </td>
-            </tr>
+                    <span
+                      v-if="quantidadePendente(fonte)"
+                      class="cadastros-chip cadastros-chip--aviso"
+                    >
+                      {{ quantidadePendente(fonte) }} a cadastrar
+                    </span>
+                  </div>
+                </td>
 
-            <tr v-if="!fontesFiltradas.length">
-              <td colspan="5" class="cadastros-vazio">
-                {{
-                  busca.trim()
-                    ? 'Nenhuma fonte corresponde à busca.'
-                    : 'Nenhuma fonte cadastrada.'
-                }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                <td>
+                  {{ formatarData(fonte.cadastradoEm) }}
+                </td>
+
+                <td>
+                  <div class="cadastros-acoes">
+                    <button
+                      type="button"
+                      class="cadastros-botao"
+                      :aria-label="`Ver detalhes de ${fonte.nome}`"
+                      @click="emit('detalhar-fonte', fonte)"
+                    >
+                      Detalhes
+                    </button>
+
+                    <button
+                      type="button"
+                      class="cadastros-botao"
+                      :aria-label="`Editar ${fonte.nome}`"
+                      @click="emit('editar-fonte', fonte)"
+                    >
+                      Editar
+                    </button>
+
+                    <button
+                      v-if="typeof fonte.ativo === 'boolean'"
+                      type="button"
+                      class="cadastros-botao"
+                      :class="{
+                        'cadastros-botao--perigo': fonte.ativo,
+                      }"
+                      :aria-label="
+                        `${fonte.ativo ? 'Desativar' : 'Reativar'} ${fonte.nome}`
+                      "
+                      @click="emit('alterar-status-fonte', fonte)"
+                    >
+                      {{ fonte.ativo ? 'Desativar' : 'Reativar' }}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
     </section>
   </main>
 </template>
