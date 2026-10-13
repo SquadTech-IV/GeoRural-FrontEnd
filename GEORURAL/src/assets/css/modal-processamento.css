@@ -1,0 +1,125 @@
+.modal-processamento {
+  width: min(500px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 32px;
+  border: 1px solid var(--cor-roxo);
+  border-radius: 16px;
+  background: #0a0a0a;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  font-family: var(--fonte-titulo);
+  text-align: center;
+}
+
+h2 {
+  margin: 0 0 8px;
+  color: var(--cor-texto);
+  font-size: 20px;
+}
+
+.subtitulo {
+  margin: 0 0 24px;
+  color: var(--cor-texto);
+  font-size: 14px;
+}
+
+.lista-etapas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+
+.etapa {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 0;
+  border-bottom: 1px solid #333;
+}
+
+.etapa:last-child {
+  border-bottom: none;
+}
+
+.icone {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.circulo-vazio {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #d1d5db;
+  border-radius: 50%;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #d1fae5;
+  border-top-color: var(--cor-roxo);
+  border-radius: 50%;
+  animation: processamento-girar 0.7s linear infinite;
+}
+
+@keyframes processamento-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.check,
+.falha {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: var(--cor-texto);
+  font-size: 12px;
+}
+
+.check {
+  background: var(--cor-roxo);
+}
+
+.falha {
+  background: var(--cor-erro);
+}
+
+.etapa-titulo {
+  margin: 0;
+  color: var(--cor-texto);
+  font-size: 14px;
+}
+
+.etapa-subtitulo {
+  margin: 2px 0 0;
+  color: var(--cor-texto-secundario);
+  font-size: 12px;
+}
+
+.bloco-erro {
+  margin-top: 16px;
+}
+
+.erro {
+  margin: 0 0 12px;
+  color: var(--cor-erro);
+  font-size: 13px;
+}
+
+.btn-fechar {
+  padding: 8px 20px;
+  border: 1px solid var(--cor-roxo);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cor-texto);
+  font-family: inherit;
+  cursor: pointer;
+}

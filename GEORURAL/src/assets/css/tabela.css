@@ -1,0 +1,134 @@
+/* Upload: arquivos recentes */
+
+.tabela-arquivos {
+  width: 100%;
+  margin-top: 16px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tabela-arquivos th {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--cor-borda);
+  color: var(--cor-texto-secundario);
+  font-weight: 500;
+  text-align: left;
+}
+
+.tabela-arquivos td {
+  padding: 12px;
+  border-bottom: 1px solid var(--cor-borda-suave);
+  color: var(--cor-texto);
+}
+
+.tabela-arquivos .mono {
+  font-family: var(--fonte-mono);
+}
+
+/* Dados existentes */
+
+.tabela-dados {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--cor-painel);
+  border: 1px solid var(--cor-roxo);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.tabela-dados th,
+.tabela-dados td {
+  padding: 12px;
+  color: var(--cor-texto);
+  font-family: var(--fonte-titulo);
+  text-align: center;
+}
+
+.tabela-dados th {
+  background: var(--cor-painel-secundario);
+  font-weight: bold;
+}
+
+.tabela-dados tbody tr:nth-child(even) {
+  background: var(--cor-painel-secundario);
+}
+
+/* Lista de imóveis */
+
+.tabela-imoveis {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.tabela-imoveis th,
+.tabela-imoveis td {
+  padding: 16px;
+  border-bottom: 1px solid #25202b;
+}
+
+.tabela-imoveis th {
+  background: #1a1422;
+  color: #cbbbd7;
+}
+
+.tabela-imoveis tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* Modal de visualização */
+
+.informacoes .tabela,
+.informacoes .tabela-container {
+  max-height: 55vh;
+  overflow: auto;
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+}
+
+.informacoes .tabela-informacoes,
+.informacoes .tabela-csv {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--fonte-titulo);
+}
+
+.informacoes .tabela-informacoes th,
+.informacoes .tabela-informacoes td,
+.informacoes .tabela-csv th,
+.informacoes .tabela-csv td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--cor-borda);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.informacoes .tabela-informacoes th,
+.informacoes .tabela-csv th {
+  position: sticky;
+  top: 0;
+  background: var(--cor-painel-secundario);
+  color: var(--cor-roxo);
+  font-weight: bold;
+}
+
+.informacoes .tabela-informacoes td,
+.informacoes .tabela-csv td {
+  color: var(--cor-texto);
+}
+
+.informacoes .tabela-informacoes tbody tr:nth-child(even),
+.informacoes .tabela-csv tbody tr:nth-child(even) {
+  background: #111118;
+}
+
+.informacoes .tabela-informacoes tbody tr:hover,
+.informacoes .tabela-csv tbody tr:hover {
+  background: #1d1722;
+}
+
+@media (max-width: 650px) {
+  .tabela-imoveis {
+    min-width: 680px;
+  }
+}
