@@ -1,9 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
+
 import IngestaoFontes from '../views/IngestaoFontes.vue'
 import VerificarDadosExistentes from '../views/VerificarDadosExistentes.vue'
 import ListaImoveis from '../views/ListaImoveis.vue'
 import MapaResultado from '../views/MapaResultado.vue'
+import MapaIndicadores from '../views/MapaIndicadores.vue'
 import Regras from '../views/Regras.vue'
+
 import ModalSalvarRegras from '../components/ModalSalvarRegras.vue'
 import ModalDetalheVersao from '../components/ModalDetalheVersao.vue'
 import ModalCompararVersoes from '../components/ModalCompararVersoes.vue'
@@ -31,6 +34,12 @@ const router = createRouter({
       path: '/resultado/:car',
       name: 'Resultado',
       component: MapaResultado,
+      props: true,
+    },
+    {
+      path: '/mapa-indicadores/:car?',
+      name: 'MapaIndicadores',
+      component: MapaIndicadores,
       props: true,
     },
     {
