@@ -7,6 +7,9 @@ import {
 } from 'vue'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { criarMapa } from '../services/mapaRenderizacaoService'
+import {
+  criarControleCamadas,
+} from '../services/camadasIndicadoresService'
 
 defineOptions({
   name: 'MapaGeografico',
@@ -16,6 +19,10 @@ const props = defineProps({
   geojson: {
     type: [Object, String],
     default: null,
+  },
+  indicadores: {
+    type: Array,
+    default: () => [],
   },
 })
 
@@ -27,23 +34,56 @@ const emit = defineEmits([
 const containerMapa = ref(null)
 const carregando = ref(true)
 const mensagemErro = ref('')
+const legendaIndicadores = ref([])
 
 let instancia = null
+let controleCamadas = null
 let desmontado = false
 
 function informarErro(erro) {
   carregando.value = false
+
   mensagemErro.value =
     erro.message || 'Não foi possível carregar o mapa.'
 
   emit('erro', erro)
 }
 
-function iniciarMapa() {
-  if (desmontado) return
+function atualizarIndicadores() {
+  if (!controleCamadas || desmontado) return
+
+  try {
+    legendaIndicadores.value =
+      controleCamadas.atualizar(props.indicadores)
+  } catch (erro) {
+    informarErro(erro)
+  }
+}
+
+function atualizarImovel(valor) {
+  if (!instancia || desmontado) return
+
+  try {
+    instancia.atualizarGeoJson(valor)
+  } catch (erro) {
+    informarErro(erro)
+  }
+}
+
+function destruirMapa() {
+  controleCamadas?.limpar()
+  controleCamadas = null
 
   instancia?.destruir()
   instancia = null
+
+  legendaIndicadores.value = []
+}
+
+function iniciarMapa() {
+  if (desmontado) return
+
+  destruirMapa()
 
   carregando.value = true
   mensagemErro.value = ''
@@ -56,7 +96,12 @@ function iniciarMapa() {
       aoCarregar(mapa) {
         if (desmontado) return
 
+        controleCamadas = criarControleCamadas(mapa)
+
         carregando.value = false
+
+        atualizarIndicadores()
+
         emit('carregado', mapa)
       },
 
@@ -71,23 +116,19 @@ function iniciarMapa() {
   }
 }
 
-function atualizarDados(valor) {
-  if (!instancia || desmontado) return
-
-  try {
-    instancia.atualizarGeoJson(valor)
-  } catch (erro) {
-    informarErro(erro)
-  }
-}
-
 function obterMapa() {
   return instancia?.mapa ?? null
 }
 
 watch(
   () => props.geojson,
-  atualizarDados,
+  atualizarImovel,
+  { deep: true },
+)
+
+watch(
+  () => props.indicadores,
+  atualizarIndicadores,
   { deep: true },
 )
 
@@ -95,8 +136,7 @@ onMounted(iniciarMapa)
 
 onBeforeUnmount(() => {
   desmontado = true
-  instancia?.destruir()
-  instancia = null
+  destruirMapa()
 })
 
 defineExpose({
@@ -108,7 +148,7 @@ defineExpose({
 <template>
   <section
     class="mapa-geografico"
-    aria-label="Mapa geográfico"
+    aria-label="Mapa do imóvel e dos indicadores"
     :aria-busy="carregando"
   >
     <div
@@ -127,6 +167,42 @@ defineExpose({
       ></span>
 
       <span>Carregando mapa...</span>
+    </div>
+
+    <div
+      v-if="!carregando"
+      class="mapa-geografico-legenda"
+      aria-label="Legenda das camadas"
+    >
+      <strong>Legenda</strong>
+
+      <div v-if="geojson">
+        <span
+          class="mapa-geografico-legenda-cor"
+          style="background: #b400ff"
+        ></span>
+
+        <span>Limite do imóvel</span>
+      </div>
+
+      <div
+        v-for="camada in legendaIndicadores"
+        :key="camada.id"
+      >
+        <span
+          class="mapa-geografico-legenda-cor"
+          :style="{ background: camada.cor }"
+        ></span>
+
+        <span>{{ camada.nome }}</span>
+      </div>
+
+      <p
+        v-if="!geojson && !legendaIndicadores.length"
+        class="mapa-geografico-legenda-vazia"
+      >
+        Nenhuma geometria recebida.
+      </p>
     </div>
 
     <div

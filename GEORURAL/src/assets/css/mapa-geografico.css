@@ -146,3 +146,56 @@
     animation: none;
   }
 }
+.mapa-geografico-legenda {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+
+  min-width: 170px;
+  max-width: 260px;
+  padding: 14px 16px;
+
+  border: 1px solid var(--cor-borda);
+  border-radius: 12px;
+
+  background: var(--cor-painel);
+  color: var(--cor-texto);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.mapa-geografico-legenda > strong {
+  display: block;
+  margin-bottom: 12px;
+
+  color: var(--cor-texto-secundario);
+  font-family: var(--fonte-titulo);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.mapa-geografico-legenda > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 9px;
+
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.mapa-geografico-legenda-cor {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.mapa-geografico-legenda-vazia {
+  margin: 0;
+  color: var(--cor-texto-secundario);
+  font-size: 11px;
+  line-height: 1.6;
+}

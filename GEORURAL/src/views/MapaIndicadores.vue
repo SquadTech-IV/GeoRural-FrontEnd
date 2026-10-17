@@ -12,6 +12,10 @@ defineProps({
     type: [Object, String],
     default: null,
   },
+  indicadores: {
+    type: Array,
+    default: () => [],
+  },
 })
 </script>
 
@@ -31,14 +35,17 @@ defineProps({
         <h1>Mapa de indicadores</h1>
 
         <p>
-          Visualização geográfica dos imóveis
-          e das camadas utilizadas nas análises.
+          Consulte o limite do imóvel e as geometrias
+          dos indicadores disponíveis.
         </p>
       </div>
     </header>
 
     <div class="mapa-base-conteudo">
-      <MapaGeografico :geojson="geojson" />
+      <MapaGeografico
+        :geojson="geojson"
+        :indicadores="indicadores"
+      />
     </div>
   </main>
 </template>
