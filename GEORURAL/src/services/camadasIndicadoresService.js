@@ -216,7 +216,7 @@ export function criarControleCamadas(mapa) {
       camadas.map((camada) => camada.id),
     )
 
-    for (const id of [...cadastradas]) {
+    for (const id of cadastradas) {
       if (!idsRecebidos.has(id)) {
         removerCamada(mapa, id)
         cadastradas.delete(id)

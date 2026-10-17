@@ -26,7 +26,9 @@ function estaAtivo(caminho) {
   if (caminho === '/imoveis') {
     return (
       route.path === '/imoveis' ||
-      route.path.startsWith('/resultado/')
+      route.path.startsWith('/resultado/') ||
+      route.path === '/mapa-indicadores' ||
+      route.path.startsWith('/mapa-indicadores/')
     )
   }
 
