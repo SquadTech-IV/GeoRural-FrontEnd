@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { formatarData, formatarValorParametro } from '../services/regraService'
 import { RouterLink, useRoute } from 'vue-router'
 
 const route = useRoute()
@@ -28,11 +29,7 @@ function valorQuery(valor) {
 const indicadorCorreto = computed(() => {
   const id = valorQuery(route.query.indicador)
 
-  return (
-    props.indicador &&
-    id != null &&
-    String(props.indicador.id) === String(id)
-  )
+  return props.indicador && id != null && String(props.indicador.id) === String(id)
 })
 
 const versao = computed(() => {
@@ -43,17 +40,13 @@ const versao = computed(() => {
 
   if (id == null || !Array.isArray(versoes)) return null
 
-  return versoes.find(
-    (item) => String(item.id ?? item.numero) === String(id),
-  ) ?? null
+  return versoes.find((item) => String(item.id ?? item.numero) === String(id)) ?? null
 })
 
 const nomeVersao = computed(() => {
   if (!versao.value) return ''
 
-  return versao.value.numero != null
-    ? `v${versao.value.numero}`
-    : String(versao.value.id)
+  return versao.value.numero != null ? `v${versao.value.numero}` : String(versao.value.id)
 })
 
 const vigente = computed(() => {
@@ -65,63 +58,23 @@ const vigente = computed(() => {
 
   if (props.indicador.versaoVigente == null) return null
 
-  return (
-    String(props.indicador.versaoVigente) ===
-    String(versao.value.id ?? versao.value.numero)
-  )
+  return String(props.indicador.versaoVigente) === String(versao.value.id ?? versao.value.numero)
 })
 
 const parametros = computed(() =>
-  Array.isArray(versao.value?.parametros)
-    ? versao.value.parametros
-    : [],
+  Array.isArray(versao.value?.parametros) ? versao.value.parametros : [],
 )
 
 function definicaoParametro(parametro) {
-  return props.indicador?.parametros?.find(
-    (item) => item.id === parametro.id,
-  )
+  return props.indicador?.parametros?.find((item) => item.id === parametro.id)
 }
 
 function nomeParametro(parametro) {
-  return (
-    parametro.nome ||
-    definicaoParametro(parametro)?.nome ||
-    parametro.id
-  )
-}
-
-function formatarData(valor) {
-  if (!valor) return '—'
-
-  const partes = String(valor).match(
-    /^(\d{4})-(\d{2})-(\d{2})/,
-  )
-
-  return partes
-    ? `${partes[3]}/${partes[2]}/${partes[1]}`
-    : '—'
+  return parametro.nome || definicaoParametro(parametro)?.nome || parametro.id
 }
 
 function formatarValor(parametro) {
-  const valor = parametro.valor
-
-  if (valor == null || valor === '') return '—'
-
-  const definicao = definicaoParametro(parametro)
-  const tipo = parametro.tipo ?? definicao?.tipo
-  const unidade = parametro.unidade ?? definicao?.unidade
-
-  if (tipo === 'data') {
-    return formatarData(valor)
-  }
-
-  const numero = Number(valor)
-  const texto = Number.isFinite(numero)
-    ? numero.toLocaleString('pt-BR')
-    : String(valor)
-
-  return `${texto}${unidade ? ` ${unidade}` : ''}`
+  return formatarValorParametro(parametro)
 }
 
 const mensagemVazia = computed(() => {
@@ -146,23 +99,13 @@ const mensagemVazia = computed(() => {
         aria-labelledby="titulo-modal-versao"
         :aria-busy="carregando"
       >
-        <RouterLink
-          :to="{ name: 'Regras' }"
-          class="regras-modal-fechar"
-          aria-label="Fechar"
-        >
+        <RouterLink :to="{ name: 'Regras' }" class="regras-modal-fechar" aria-label="Fechar">
           ×
         </RouterLink>
 
-        <h2 id="titulo-modal-versao">
-          Detalhes da versão
-        </h2>
+        <h2 id="titulo-modal-versao">Detalhes da versão</h2>
 
-        <p
-          v-if="carregando"
-          class="regras-texto-secundario"
-          role="status"
-        >
+        <p v-if="carregando" class="regras-texto-secundario" role="status">
           Carregando os detalhes da versão...
         </p>
 
@@ -171,19 +114,14 @@ const mensagemVazia = computed(() => {
             {{ erro }}
           </p>
 
-          <button
-            type="button"
-            class="regras-botao"
-            @click="emit('tentar-novamente')"
-          >
+          <button type="button" class="regras-botao" @click="emit('tentar-novamente')">
             Tentar novamente
           </button>
         </div>
 
         <template v-else-if="versao">
           <p class="regras-texto-secundario">
-            {{ indicador.codigo }} · {{ indicador.nome }}
-            · {{ nomeVersao }}
+            {{ indicador.codigo }} · {{ indicador.nome }} · {{ nomeVersao }}
           </p>
 
           <span
@@ -211,34 +149,9 @@ const mensagemVazia = computed(() => {
               <dt>Autor</dt>
               <dd>{{ versao.autor || 'Não informado' }}</dd>
             </div>
-
-            <div>
-              <dt>Início da vigência</dt>
-              <dd>{{ formatarData(versao.inicio) }}</dd>
-            </div>
-
-            <div>
-              <dt>Fim da vigência</dt>
-              <dd>
-                {{
-                  versao.fim
-                    ? formatarData(versao.fim)
-                    : vigente === true
-                      ? 'Em vigor'
-                      : '—'
-                }}
-              </dd>
-            </div>
-
-            <div>
-              <dt>Resultados vinculados</dt>
-              <dd>{{ versao.usos ?? '—' }}</dd>
-            </div>
           </dl>
 
-          <h3 class="regras-secao-titulo">
-            Parâmetros desta versão
-          </h3>
+          <h3 class="regras-secao-titulo">Parâmetros desta versão</h3>
 
           <template v-if="parametros.length">
             <div
@@ -251,10 +164,7 @@ const mensagemVazia = computed(() => {
             </div>
           </template>
 
-          <p
-            v-else-if="indicador.possuiParametros === false"
-            class="regras-aviso-consulta"
-          >
+          <p v-else-if="indicador.possuiParametros === false" class="regras-aviso-consulta">
             Este indicador não possui parâmetros configuráveis.
           </p>
 
@@ -262,10 +172,7 @@ const mensagemVazia = computed(() => {
             Os parâmetros desta versão não foram carregados.
           </p>
 
-          <details
-            v-if="versao.formula"
-            class="regras-calculo"
-          >
+          <details v-if="versao.formula" class="regras-calculo">
             <summary class="regras-formula-botao">
               <span>Método de cálculo desta versão</span>
 
@@ -288,9 +195,7 @@ const mensagemVazia = computed(() => {
             </div>
           </details>
 
-          <h3 class="regras-secao-titulo">
-            Motivo da alteração
-          </h3>
+          <h3 class="regras-secao-titulo">Motivo da alteração</h3>
 
           <p class="regras-texto-secundario">
             {{ versao.motivo || 'Não informado.' }}
@@ -302,12 +207,7 @@ const mensagemVazia = computed(() => {
         </p>
 
         <div class="regras-acoes">
-          <RouterLink
-            :to="{ name: 'Regras' }"
-            class="regras-botao"
-          >
-            Fechar
-          </RouterLink>
+          <RouterLink :to="{ name: 'Regras' }" class="regras-botao"> Fechar </RouterLink>
         </div>
       </section>
     </div>

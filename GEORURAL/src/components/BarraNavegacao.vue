@@ -11,31 +11,24 @@ const tema = ref(
 const itens = [
   {
     caminho: '/',
-    titulo: 'Ingestão de Fontes',
-    icone: 'upload',
-  },
-  {
-    caminho: '/verificar-dados-existentes',
-    titulo: 'Dados Existentes',
-    icone: 'arquivos',
+    titulo: 'Regras e Métodos',
+    icone: 'regras',
   },
   {
     caminho: '/imoveis',
     titulo: 'Imóveis',
     icone: 'mapa',
   },
-  {
-    caminho: '/regras',
-    titulo: 'Regras e Métodos',
-    icone: 'regras',
-  },
+
 ]
 
 function estaAtivo(caminho) {
   if (caminho === '/imoveis') {
     return (
       route.path === '/imoveis' ||
-      route.path.startsWith('/resultado/')
+      route.path.startsWith('/resultado/') ||
+      route.path === '/mapa-indicadores' ||
+      route.path.startsWith('/mapa-indicadores/')
     )
   }
 

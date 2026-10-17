@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { agruparIndicadores } from '../services/regraService'
 
 const props = defineProps({
   indicadores: {
@@ -22,33 +23,7 @@ const props = defineProps({
 
 const emit = defineEmits(['selecionar', 'tentar-novamente'])
 
-function possuiParametros(indicador) {
-  if (typeof indicador.possuiParametros === 'boolean') {
-    return indicador.possuiParametros
-  }
-
-  return (
-    Array.isArray(indicador.parametros) &&
-    indicador.parametros.length > 0
-  )
-}
-
-const grupos = computed(() => [
-  {
-    id: 'configuraveis',
-    titulo: 'Com valores a configurar',
-    descricao: 'Indicadores com parâmetros configuráveis.',
-    indicadores: props.indicadores.filter(possuiParametros),
-  },
-  {
-    id: 'consulta',
-    titulo: 'Sem valores a configurar',
-    descricao: 'Métodos de cálculo disponíveis para consulta.',
-    indicadores: props.indicadores.filter(
-      (indicador) => !possuiParametros(indicador),
-    ),
-  },
-])
+const grupos = computed(() => agruparIndicadores(props.indicadores))
 
 function estaSelecionado(indicador) {
   return indicador.id === props.selecionadoId
@@ -60,36 +35,17 @@ function selecionar(indicador) {
 </script>
 
 <template>
-  <aside
-    class="indicadores-lista"
-    aria-label="Lista de indicadores"
-    :aria-busy="carregando"
-  >
-    <div
-      v-if="carregando"
-      class="indicadores-estado"
-      role="status"
-    >
-      <span
-        class="indicadores-spinner"
-        aria-hidden="true"
-      ></span>
+  <aside class="indicadores-lista" aria-label="Lista de indicadores" :aria-busy="carregando">
+    <div v-if="carregando" class="indicadores-estado" role="status">
+      <span class="indicadores-spinner" aria-hidden="true"></span>
 
       <p>Carregando indicadores...</p>
     </div>
 
-    <div
-      v-else-if="erro"
-      class="indicadores-estado indicadores-estado--erro"
-      role="alert"
-    >
+    <div v-else-if="erro" class="indicadores-estado indicadores-estado--erro" role="alert">
       <p>{{ erro }}</p>
 
-      <button
-        type="button"
-        class="indicadores-recarregar"
-        @click="emit('tentar-novamente')"
-      >
+      <button type="button" class="indicadores-recarregar" @click="emit('tentar-novamente')">
         Tentar novamente
       </button>
     </div>
@@ -110,32 +66,21 @@ function selecionar(indicador) {
 
           <span class="indicadores-contagem">
             {{ grupo.indicadores.length }}
-            {{
-              grupo.indicadores.length === 1
-                ? 'indicador'
-                : 'indicadores'
-            }}
+            {{ grupo.indicadores.length === 1 ? 'indicador' : 'indicadores' }}
           </span>
         </header>
 
-        <p
-          v-if="!grupo.indicadores.length"
-          class="indicadores-vazio"
-        >
+        <p v-if="!grupo.indicadores.length" class="indicadores-vazio">
           Nenhum indicador disponível neste grupo.
         </p>
 
         <ul v-else class="indicadores-itens">
-          <li
-            v-for="indicador in grupo.indicadores"
-            :key="indicador.id"
-          >
+          <li v-for="indicador in grupo.indicadores" :key="indicador.id">
             <button
               type="button"
               class="indicadores-item"
               :class="{
-                'indicadores-item--ativo':
-                  estaSelecionado(indicador),
+                'indicadores-item--ativo': estaSelecionado(indicador),
               }"
               :aria-pressed="estaSelecionado(indicador)"
               @click="selecionar(indicador)"
@@ -145,28 +90,17 @@ function selecionar(indicador) {
                   {{ indicador.codigo }}
                 </span>
 
-                <span
-                  v-if="indicador.codigo && indicador.nome"
-                  aria-hidden="true"
-                >
-                  ·
-                </span>
+                <span v-if="indicador.codigo && indicador.nome" aria-hidden="true"> · </span>
 
                 <span>{{ indicador.nome }}</span>
               </span>
 
-              <span
-                v-if="indicador.descricao"
-                class="indicadores-item-descricao"
-              >
+              <span v-if="indicador.descricao" class="indicadores-item-descricao">
                 {{ indicador.descricao }}
               </span>
 
               <span
-                v-if="
-                  indicador.versaoVigente != null ||
-                  indicador.parametros?.length
-                "
+                v-if="indicador.versaoVigente != null || indicador.parametros?.length"
                 class="indicadores-item-metadados"
               >
                 <span v-if="indicador.versaoVigente != null">
@@ -176,11 +110,7 @@ function selecionar(indicador) {
 
                 <span v-if="indicador.parametros?.length">
                   {{ indicador.parametros.length }}
-                  {{
-                    indicador.parametros.length === 1
-                      ? 'parâmetro'
-                      : 'parâmetros'
-                  }}
+                  {{ indicador.parametros.length === 1 ? 'parâmetro' : 'parâmetros' }}
                 </span>
               </span>
             </button>

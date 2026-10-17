@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { formatarData } from '../services/regraService'
 import { RouterLink } from 'vue-router'
 
 const props = defineProps({
@@ -24,12 +25,7 @@ const versoes = computed(() => {
 
   if (!Array.isArray(lista)) return []
 
-  return [...lista].sort(
-    (a, b) =>
-      String(b.criadaEm ?? '').localeCompare(
-        String(a.criadaEm ?? ''),
-      ),
-  )
+  return [...lista].sort((a, b) => String(b.criadaEm ?? '').localeCompare(String(a.criadaEm ?? '')))
 })
 
 function identificadorVersao(versao) {
@@ -51,22 +47,7 @@ function estaVigente(versao) {
 
   if (props.indicador?.versaoVigente == null) return false
 
-  return (
-    String(props.indicador.versaoVigente) ===
-    String(identificadorVersao(versao))
-  )
-}
-
-function formatarData(valor) {
-  if (!valor) return '—'
-
-  const partes = String(valor).match(
-    /^(\d{4})-(\d{2})-(\d{2})/,
-  )
-
-  if (!partes) return '—'
-
-  return `${partes[3]}/${partes[2]}/${partes[1]}`
+  return String(props.indicador.versaoVigente) === String(identificadorVersao(versao))
 }
 
 function rotaDetalhe(versao) {
@@ -87,20 +68,10 @@ function rotaDetalhe(versao) {
     :aria-busy="carregando"
   >
     <div class="regras-historico-cabecalho">
-      <h3
-        id="titulo-historico-versoes"
-        class="regras-secao-titulo"
-      >
-        Histórico de versões
-      </h3>
+      <h3 id="titulo-historico-versoes" class="regras-secao-titulo">Histórico de versões</h3>
 
       <RouterLink
-        v-if="
-          indicador &&
-          !carregando &&
-          !erro &&
-          versoes.length > 1
-        "
+        v-if="indicador && !carregando && !erro && versoes.length > 1"
         :to="{
           name: 'RegraCompararVersoes',
           query: { indicador: indicador.id },
@@ -111,11 +82,7 @@ function rotaDetalhe(versao) {
       </RouterLink>
     </div>
 
-    <p
-      v-if="carregando"
-      class="regras-texto-secundario"
-      role="status"
-    >
+    <p v-if="carregando" class="regras-texto-secundario" role="status">
       Carregando histórico de versões...
     </p>
 
@@ -124,67 +91,43 @@ function rotaDetalhe(versao) {
         {{ erro }}
       </p>
 
-      <button
-        type="button"
-        class="regras-botao"
-        @click="emit('tentar-novamente')"
-      >
+      <button type="button" class="regras-botao" @click="emit('tentar-novamente')">
         Tentar novamente
       </button>
     </div>
 
-    <p
-      v-else-if="!indicador"
-      class="regras-texto-secundario"
-    >
+    <p v-else-if="!indicador" class="regras-texto-secundario">
       Selecione um indicador para consultar o histórico.
     </p>
 
-    <p
-      v-else-if="!versoes.length"
-      class="regras-texto-secundario"
-    >
-      Nenhuma versão carregada.
-    </p>
+    <p v-else-if="!versoes.length" class="regras-texto-secundario">Nenhuma versão carregada.</p>
 
     <ul v-else class="regras-historico-lista">
-      <li
-        v-for="versao in versoes"
-        :key="identificadorVersao(versao)"
-      >
-        <RouterLink
-          :to="rotaDetalhe(versao)"
-          class="regras-versao"
-        >
+      <li v-for="versao in versoes" :key="identificadorVersao(versao)">
+        <RouterLink :to="rotaDetalhe(versao)" class="regras-versao">
           <span class="regras-versao-numero">
             {{ nomeVersao(versao) }}
           </span>
 
           <span class="regras-versao-info">
-            <strong>
-              {{ indicador.codigo }} · {{ nomeVersao(versao) }}
-            </strong>
+            <strong> {{ indicador.codigo }} · {{ nomeVersao(versao) }} </strong>
 
             <small>
-              Criada em {{ formatarData(versao.criadaEm) }}
-              · {{ versao.autor || 'Autor não informado' }}
+              Criada em {{ formatarData(versao.criadaEm) }} ·
+              {{ versao.autor || 'Autor não informado' }}
             </small>
 
             <span v-if="versao.inicio">
               Vigência: {{ formatarData(versao.inicio) }}
 
-              <template v-if="versao.fim">
-                até {{ formatarData(versao.fim) }}
-              </template>
+              <template v-if="versao.fim"> até {{ formatarData(versao.fim) }} </template>
             </span>
 
             <span v-if="versao.motivo">
               {{ versao.motivo }}
             </span>
 
-            <small v-if="versao.usos != null">
-              Resultados vinculados: {{ versao.usos }}
-            </small>
+            <small v-if="versao.usos != null"> Resultados vinculados: {{ versao.usos }} </small>
           </span>
 
           <span
