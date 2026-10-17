@@ -10,15 +10,9 @@ import { criarMapa } from '../services/mapaRenderizacaoService'
 import {
   criarControleCamadas,
 } from '../services/camadasIndicadoresService'
-import {
-  modosVisualizacao,
-  prepararVisualizacao,
-  aplicarVisibilidadeImovel,
-} from '../services/visualizacaoMapaService'
-import {
-  criarControleTerreno,
-} from '../services/terrenoMapaService'
-
+import {modosVisualizacao,prepararVisualizacao,aplicarVisibilidadeImovel,} from '../services/visualizacaoMapaService'
+import {criarControleTerreno,} from '../services/terrenoMapaService'
+import ControlesCamera from './ControlesCamera.vue'
 defineOptions({
   name: 'MapaGeografico',
 })
@@ -351,7 +345,7 @@ defineExpose({
           {{ opcao.nome }}
         </button>
       </div>
-
+      <ControlesCamera v-if="pronto" :mapa="obterMapa()" @erro="informarErro"/>
       <div
         v-if="!carregando"
         class="mapa-geografico-legenda"

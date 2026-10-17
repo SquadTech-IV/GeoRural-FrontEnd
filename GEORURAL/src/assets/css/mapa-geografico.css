@@ -68,3 +68,10 @@
   font-size: 10px;
   line-height: 1.7;
 }
+
+.mapa-geografico-painel-controles {
+  max-height: calc(100% - 90px);
+  overflow-y: auto;
+  padding: 3px;
+  scrollbar-width: thin;
+}
