@@ -10,6 +10,11 @@ import { criarMapa } from '../services/mapaRenderizacaoService'
 import {
   criarControleCamadas,
 } from '../services/camadasIndicadoresService'
+import {
+  modosVisualizacao,
+  prepararVisualizacao,
+  aplicarVisibilidadeImovel,
+} from '../services/visualizacaoMapaService'
 
 defineOptions({
   name: 'MapaGeografico',
@@ -29,12 +34,18 @@ const props = defineProps({
 const emit = defineEmits([
   'carregado',
   'erro',
+  'modo-alterado',
 ])
 
 const containerMapa = ref(null)
 const carregando = ref(true)
+const pronto = ref(false)
 const mensagemErro = ref('')
+const mensagemModo = ref('')
+const modo = ref('completo')
+
 const legendaIndicadores = ref([])
+const mostrarImovelLegenda = ref(false)
 
 let instancia = null
 let controleCamadas = null
@@ -49,28 +60,92 @@ function informarErro(erro) {
   emit('erro', erro)
 }
 
-function atualizarIndicadores() {
-  if (!controleCamadas || desmontado) return
+function aplicarVisualizacao(novoModo) {
+  if (!instancia || !controleCamadas || desmontado) {
+    return false
+  }
 
   try {
-    legendaIndicadores.value =
-      controleCamadas.atualizar(props.indicadores)
+    const visualizacao = prepararVisualizacao({
+      limite: props.geojson,
+      indicadores: props.indicadores,
+      modo: novoModo,
+    })
+
+    const legenda = controleCamadas.atualizar(
+      visualizacao.indicadores,
+    )
+
+    aplicarVisibilidadeImovel(
+      instancia.mapa,
+      visualizacao.mostrarImovel,
+    )
+
+    legendaIndicadores.value = legenda
+
+    mostrarImovelLegenda.value =
+      visualizacao.mostrarImovel &&
+      visualizacao.possuiImovel
+
+    mensagemModo.value = visualizacao.mensagem
+    mensagemErro.value = ''
+
+    return true
   } catch (erro) {
+    informarErro(erro)
+    return false
+  }
+}
+
+function alterarModo(novoModo) {
+  if (!pronto.value || carregando.value) return
+
+  if (aplicarVisualizacao(novoModo)) {
+    modo.value = novoModo
+    emit('modo-alterado', novoModo)
+  }
+}
+
+function atualizarDados() {
+  if (!instancia || desmontado) return
+
+  try {
+    instancia.atualizarGeoJson(props.geojson)
+
+    if (!controleCamadas) return
+
+    if (!aplicarVisualizacao(modo.value)) {
+      controleCamadas.limpar()
+      instancia.atualizarGeoJson(null, false)
+
+      legendaIndicadores.value = []
+      mostrarImovelLegenda.value = false
+      mensagemModo.value = ''
+    }
+  } catch (erro) {
+    controleCamadas?.limpar()
+    instancia.atualizarGeoJson(null, false)
+
+    legendaIndicadores.value = []
+    mostrarImovelLegenda.value = false
+    mensagemModo.value = ''
+
     informarErro(erro)
   }
 }
 
-function atualizarImovel(valor) {
-  if (!instancia || desmontado) return
+function atualizarIndicadores() {
+  if (!controleCamadas || desmontado) return
 
-  try {
-    instancia.atualizarGeoJson(valor)
-  } catch (erro) {
-    informarErro(erro)
+  if (!aplicarVisualizacao(modo.value)) {
+    controleCamadas.limpar()
+    legendaIndicadores.value = []
   }
 }
 
 function destruirMapa() {
+  pronto.value = false
+
   controleCamadas?.limpar()
   controleCamadas = null
 
@@ -78,6 +153,7 @@ function destruirMapa() {
   instancia = null
 
   legendaIndicadores.value = []
+  mostrarImovelLegenda.value = false
 }
 
 function iniciarMapa() {
@@ -87,6 +163,7 @@ function iniciarMapa() {
 
   carregando.value = true
   mensagemErro.value = ''
+  mensagemModo.value = ''
 
   try {
     instancia = criarMapa({
@@ -99,8 +176,9 @@ function iniciarMapa() {
         controleCamadas = criarControleCamadas(mapa)
 
         carregando.value = false
+        pronto.value = true
 
-        atualizarIndicadores()
+        aplicarVisualizacao(modo.value)
 
         emit('carregado', mapa)
       },
@@ -122,7 +200,7 @@ function obterMapa() {
 
 watch(
   () => props.geojson,
-  atualizarImovel,
+  atualizarDados,
   { deep: true },
 )
 
@@ -142,6 +220,7 @@ onBeforeUnmount(() => {
 defineExpose({
   obterMapa,
   reiniciar: iniciarMapa,
+  alterarModo,
 })
 </script>
 
@@ -169,41 +248,75 @@ defineExpose({
       <span>Carregando mapa...</span>
     </div>
 
-    <div
-      v-if="!carregando"
-      class="mapa-geografico-legenda"
-      aria-label="Legenda das camadas"
-    >
-      <strong>Legenda</strong>
-
-      <div v-if="geojson">
-        <span
-          class="mapa-geografico-legenda-cor"
-          style="background: #b400ff"
-        ></span>
-
-        <span>Limite do imóvel</span>
+    <div class="mapa-geografico-painel-controles">
+      <div
+        class="mapa-geografico-modos"
+        role="group"
+        aria-label="Modo de visualização"
+      >
+        <button
+          v-for="opcao in modosVisualizacao"
+          :key="opcao.id"
+          type="button"
+          :disabled="!pronto || carregando"
+          :aria-pressed="modo === opcao.id"
+          :class="{
+            'mapa-geografico-modo--ativo':
+              modo === opcao.id,
+          }"
+          @click="alterarModo(opcao.id)"
+        >
+          {{ opcao.nome }}
+        </button>
       </div>
 
       <div
-        v-for="camada in legendaIndicadores"
-        :key="camada.id"
+        v-if="!carregando"
+        class="mapa-geografico-legenda"
+        aria-label="Legenda das camadas visíveis"
       >
-        <span
-          class="mapa-geografico-legenda-cor"
-          :style="{ background: camada.cor }"
-        ></span>
+        <strong>Legenda</strong>
 
-        <span>{{ camada.nome }}</span>
+        <div v-if="mostrarImovelLegenda">
+          <span
+            class="mapa-geografico-legenda-cor"
+            style="background: #b400ff"
+          ></span>
+
+          <span>Limite do imóvel</span>
+        </div>
+
+        <div
+          v-for="camada in legendaIndicadores"
+          :key="camada.id"
+        >
+          <span
+            class="mapa-geografico-legenda-cor"
+            :style="{ background: camada.cor }"
+          ></span>
+
+          <span>{{ camada.nome }}</span>
+        </div>
+
+        <p
+          v-if="
+            !mostrarImovelLegenda &&
+            !legendaIndicadores.length
+          "
+          class="mapa-geografico-legenda-vazia"
+        >
+          Nenhuma geometria visível.
+        </p>
       </div>
-
-      <p
-        v-if="!geojson && !legendaIndicadores.length"
-        class="mapa-geografico-legenda-vazia"
-      >
-        Nenhuma geometria recebida.
-      </p>
     </div>
+
+    <p
+      v-if="mensagemModo && !mensagemErro"
+      class="mapa-geografico-aviso-modo"
+      role="status"
+    >
+      {{ mensagemModo }}
+    </p>
 
     <div
       v-if="mensagemErro"
