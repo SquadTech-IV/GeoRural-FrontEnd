@@ -11,24 +11,15 @@ const tema = ref(
 const itens = [
   {
     caminho: '/',
-    titulo: 'Ingestão de Fontes',
-    icone: 'upload',
-  },
-  {
-    caminho: '/verificar-dados-existentes',
-    titulo: 'Dados Existentes',
-    icone: 'arquivos',
+    titulo: 'Regras e Métodos',
+    icone: 'regras',
   },
   {
     caminho: '/imoveis',
     titulo: 'Imóveis',
     icone: 'mapa',
   },
-  {
-    caminho: '/regras',
-    titulo: 'Regras e Métodos',
-    icone: 'regras',
-  },
+
 ]
 
 function estaAtivo(caminho) {

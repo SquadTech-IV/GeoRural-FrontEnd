@@ -15,6 +15,9 @@ import {
   prepararVisualizacao,
   aplicarVisibilidadeImovel,
 } from '../services/visualizacaoMapaService'
+import {
+  criarControleTerreno,
+} from '../services/terrenoMapaService'
 
 defineOptions({
   name: 'MapaGeografico',
@@ -35,20 +38,25 @@ const emit = defineEmits([
   'carregado',
   'erro',
   'modo-alterado',
+  'terreno-alterado',
 ])
 
 const containerMapa = ref(null)
 const carregando = ref(true)
 const pronto = ref(false)
+
 const mensagemErro = ref('')
 const mensagemModo = ref('')
+
 const modo = ref('completo')
+const terrenoAtivo = ref(false)
 
 const legendaIndicadores = ref([])
 const mostrarImovelLegenda = ref(false)
 
 let instancia = null
 let controleCamadas = null
+let controleTerreno = null
 let desmontado = false
 
 function informarErro(erro) {
@@ -106,6 +114,27 @@ function alterarModo(novoModo) {
   }
 }
 
+function alterarTerreno(ativo) {
+  if (
+    !pronto.value ||
+    carregando.value ||
+    !controleTerreno
+  ) {
+    return
+  }
+
+  try {
+    controleTerreno.definirAtivo(ativo)
+
+    terrenoAtivo.value = ativo
+    mensagemErro.value = ''
+
+    emit('terreno-alterado', ativo)
+  } catch (erro) {
+    informarErro(erro)
+  }
+}
+
 function atualizarDados() {
   if (!instancia || desmontado) return
 
@@ -146,6 +175,9 @@ function atualizarIndicadores() {
 function destruirMapa() {
   pronto.value = false
 
+  controleTerreno?.destruir()
+  controleTerreno = null
+
   controleCamadas?.limpar()
   controleCamadas = null
 
@@ -174,11 +206,23 @@ function iniciarMapa() {
         if (desmontado) return
 
         controleCamadas = criarControleCamadas(mapa)
+        controleTerreno = criarControleTerreno(mapa)
 
         carregando.value = false
         pronto.value = true
 
         aplicarVisualizacao(modo.value)
+
+        if (terrenoAtivo.value) {
+          try {
+            controleTerreno.definirAtivo(true, {
+              animar: false,
+            })
+          } catch (erro) {
+            terrenoAtivo.value = false
+            informarErro(erro)
+          }
+        }
 
         emit('carregado', mapa)
       },
@@ -221,6 +265,7 @@ defineExpose({
   obterMapa,
   reiniciar: iniciarMapa,
   alterarModo,
+  alterarTerreno,
 })
 </script>
 
@@ -249,6 +294,43 @@ defineExpose({
     </div>
 
     <div class="mapa-geografico-painel-controles">
+      <div
+        class="mapa-geografico-terreno"
+        role="group"
+        aria-label="Visualização do terreno"
+      >
+        <button
+          type="button"
+          :disabled="!pronto || carregando"
+          :aria-pressed="!terrenoAtivo"
+          @click="alterarTerreno(false)"
+        >
+          2D
+        </button>
+
+        <button
+          type="button"
+          :disabled="!pronto || carregando"
+          :aria-pressed="terrenoAtivo"
+          @click="alterarTerreno(true)"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m2 20 7-12 4 7 3-5 6 10H2Z" />
+            <path d="m6.5 12.3 2.5 1.7 2-2.3" />
+          </svg>
+
+          Relevo 3D
+        </button>
+      </div>
+
       <div
         class="mapa-geografico-modos"
         role="group"
@@ -306,6 +388,13 @@ defineExpose({
           class="mapa-geografico-legenda-vazia"
         >
           Nenhuma geometria visível.
+        </p>
+
+        <p
+          v-if="terrenoAtivo"
+          class="mapa-geografico-terreno-info"
+        >
+          Elevação DEM · escala vertical 1×
         </p>
       </div>
     </div>
