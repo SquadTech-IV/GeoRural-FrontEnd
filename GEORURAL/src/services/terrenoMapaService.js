@@ -1,3 +1,5 @@
+import { sincronizarSombreamento } from './baseMapaService'
+
 const SOURCE_TERRENO = 'terreno-dem'
 const SOURCE_SOMBREAMENTO = 'terreno-sombreamento'
 const LAYER_SOMBREAMENTO = 'camada-sombreamento'
@@ -5,43 +7,43 @@ const LAYER_SOMBREAMENTO = 'camada-sombreamento'
 function duracaoAnimacao(animar) {
   if (!animar) return 0
 
-  const movimentoReduzido =
-    typeof globalThis.matchMedia === 'function' &&
-    globalThis.matchMedia(
-      '(prefers-reduced-motion: reduce)',
-    ).matches
+  const movimentoReduzido = globalThis.matchMedia?.(
+    '(prefers-reduced-motion: reduce)',
+  ).matches
 
   return movimentoReduzido ? 0 : 600
 }
 
 export function criarControleTerreno(mapa) {
+  if (!mapa) {
+    throw new Error('O mapa precisa estar disponível para configurar o relevo.')
+  }
+
   let destruido = false
-  let sourceCriada = false
-  let layerCriada = false
+  let fonteCriada = false
+  let camadaCriada = false
 
   function prepararSombreamento() {
     const estilo = mapa.getStyle()
-    const sourceTerreno = estilo.sources[SOURCE_TERRENO]
+    const fonteTerreno = estilo.sources?.[SOURCE_TERRENO]
 
-    if (!sourceTerreno || sourceTerreno.type !== 'raster-dem') {
-      throw new Error(
-        'A fonte DEM do terreno não foi configurada no mapa.',
-      )
+    if (!fonteTerreno || fonteTerreno.type !== 'raster-dem') {
+      throw new Error('A fonte DEM do relevo não está disponível no mapa.')
     }
 
     if (!mapa.getSource(SOURCE_SOMBREAMENTO)) {
       mapa.addSource(SOURCE_SOMBREAMENTO, {
-        ...sourceTerreno,
+        ...fonteTerreno,
       })
 
-      sourceCriada = true
+      fonteCriada = true
     }
 
     if (!mapa.getLayer(LAYER_SOMBREAMENTO)) {
-      const primeiraCamadaDeDados = estilo.layers.find(
-        (layer) =>
-          layer.source === 'dados-geojson' ||
-          layer.id.startsWith('indicador-'),
+      const primeiraCamadaDados = estilo.layers?.find(
+        (camada) =>
+          camada.source === 'dados-geojson' ||
+          camada.id.startsWith('indicador-'),
       )
 
       mapa.addLayer(
@@ -60,10 +62,10 @@ export function criarControleTerreno(mapa) {
             'hillshade-illumination-direction': 315,
           },
         },
-        primeiraCamadaDeDados?.id,
+        primeiraCamadaDados?.id,
       )
 
-      layerCriada = true
+      camadaCriada = true
     }
   }
 
@@ -95,6 +97,8 @@ export function criarControleTerreno(mapa) {
       }
     }
 
+    sincronizarSombreamento(mapa)
+
     mapa.easeTo({
       pitch: ativo ? 45 : 0,
       duration: duracaoAnimacao(animar),
@@ -110,17 +114,11 @@ export function criarControleTerreno(mapa) {
       mapa.setTerrain(null)
     }
 
-    if (
-      layerCriada &&
-      mapa.getLayer(LAYER_SOMBREAMENTO)
-    ) {
+    if (camadaCriada && mapa.getLayer(LAYER_SOMBREAMENTO)) {
       mapa.removeLayer(LAYER_SOMBREAMENTO)
     }
 
-    if (
-      sourceCriada &&
-      mapa.getSource(SOURCE_SOMBREAMENTO)
-    ) {
+    if (fonteCriada && mapa.getSource(SOURCE_SOMBREAMENTO)) {
       mapa.removeSource(SOURCE_SOMBREAMENTO)
     }
   }
