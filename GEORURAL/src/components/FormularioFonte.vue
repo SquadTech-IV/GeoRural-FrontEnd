@@ -1,255 +1,59 @@
 <script setup>
 import {
-  computed,
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  ref,
-  watch,
+  computed, nextTick, onBeforeUnmount, onMounted, ref, watch,
 } from 'vue'
+import {
+  criarFormularioFonte, validarFonte, tiposFonte,
+  esferasFonte, possuiConjuntoDaFonte,
+} from '../services/fonteService'
 
 const props = defineProps({
-  fonte: {
-    type: Object,
-    default: null,
-  },
-  fontes: {
-    type: Array,
-    default: () => [],
-  },
-  conjuntos: {
-    type: Array,
-    default: () => [],
-  },
-  salvando: {
-    type: Boolean,
-    default: false,
-  },
-  erro: {
-    type: String,
-    default: '',
-  },
+  fonte: { type: Object, default: null },
+  fontes: { type: Array, default: () => [] },
+  conjuntos: { type: Array, default: () => [] },
+  salvando: { type: Boolean, default: false },
+  erro: { type: String, default: '' },
 })
-
 const emit = defineEmits(['fechar', 'salvar'])
-
 const nomeInput = ref(null)
 const formularioElement = ref(null)
 const tentouSalvar = ref(false)
-
-const tocados = ref({
-  nome: false,
-  sigla: false,
-  esfera: false,
-})
-
-const formulario = ref({
-  nome: '',
-  sigla: '',
-  esfera: '',
-  oferece: [],
-})
-
+const tocados = ref({})
+const formulario = ref({})
 const editando = computed(() => props.fonte?.id != null)
-
-const esferas = [
-  'Federal',
-  'Estadual',
-  'Municipal',
-  'Outra',
-]
-
-const tiposConjunto = [
-  {
-    nome: 'Imóvel rural (perímetro)',
-    indicadores: 'Base · todos',
-  },
-  {
-    nome: 'APP declarada',
-    indicadores: 'IAPP · ICV',
-  },
-  {
-    nome: 'Reserva Legal declarada',
-    indicadores: 'IRL',
-  },
-  {
-    nome: 'Vegetação nativa',
-    indicadores: 'ICV · IAPP',
-  },
-  {
-    nome: 'Limites de biomas',
-    indicadores: 'IRL',
-  },
-  {
-    nome: 'Áreas protegidas e territórios especiais',
-    indicadores: 'ISAP',
-  },
-  {
-    nome: 'Embargos ambientais',
-    indicadores: 'IAE',
-  },
-  {
-    nome: 'Desmatamento',
-    indicadores: 'IDesmat',
-  },
-  {
-    nome: 'Focos de calor',
-    indicadores: 'IFC',
-  },
-  {
-    nome: 'Malha municipal',
-    indicadores: 'Agregação',
-  },
-]
-
+const tiposConjunto = tiposFonte
+const esferas = computed(() => [...new Set([...esferasFonte, ...(props.fonte?.esfera ? [props.fonte.esfera] : [])])])
 let elementoAnterior
 let overflowAnterior
 
-watch(
-  () => props.fonte,
-  (fonte) => {
-    formulario.value = {
-      nome: fonte?.nome ?? '',
-      sigla: fonte?.sigla ?? '',
-      esfera: fonte?.esfera ?? '',
-      oferece: Array.isArray(fonte?.oferece)
-        ? [...fonte.oferece]
-        : [],
-    }
+watch(() => props.fonte, (fonte) => {
+  formulario.value = criarFormularioFonte(fonte)
+  tentouSalvar.value = false
+  tocados.value = {}
+}, { immediate: true })
 
-    tentouSalvar.value = false
-
-    tocados.value = {
-      nome: false,
-      sigla: false,
-      esfera: false,
-    }
-  },
-  { immediate: true },
-)
-
-function normalizarSigla(valor) {
-  return String(valor ?? '')
-    .trim()
-    .toLocaleLowerCase('pt-BR')
-}
-
-function pertenceAFonte(conjunto) {
-  return (
-    editando.value &&
-    String(conjunto.fonteId) === String(props.fonte.id)
-  )
-}
-
+const erros = computed(() => validarFonte(
+  formulario.value, props.fontes, props.fonte?.id, props.conjuntos,
+))
 function possuiConjuntoCadastrado(nome) {
-  return props.conjuntos.some(
-    (conjunto) =>
-      pertenceAFonte(conjunto) &&
-      conjunto.nome === nome,
-  )
+  return possuiConjuntoDaFonte(props.conjuntos, props.fonte?.id, nome)
 }
-
-const erros = computed(() => {
-  const resultado = {}
-  const nome = formulario.value.nome.trim()
-  const sigla = formulario.value.sigla.trim()
-  const esfera = formulario.value.esfera
-
-  if (!nome) {
-    resultado.nome = 'Informe o nome da fonte.'
-  } else if (nome.length > 200) {
-    resultado.nome = 'O nome deve ter no máximo 200 caracteres.'
-  }
-
-  if (!sigla) {
-    resultado.sigla = 'Informe a sigla da fonte.'
-  } else if (sigla.length > 30) {
-    resultado.sigla = 'A sigla deve ter no máximo 30 caracteres.'
-  } else if (
-    props.fontes.some((fonte) => {
-      const mesmaFonte =
-        editando.value &&
-        String(fonte.id) === String(props.fonte.id)
-
-      return (
-        !mesmaFonte &&
-        normalizarSigla(fonte.sigla) === normalizarSigla(sigla)
-      )
-    })
-  ) {
-    resultado.sigla = 'Já existe uma fonte com essa sigla.'
-  }
-
-  if (esfera && !esferas.includes(esfera)) {
-    resultado.esfera = 'Selecione uma esfera válida.'
-  }
-
-  const nomesPermitidos = new Set(
-    tiposConjunto.map((tipo) => tipo.nome),
-  )
-
-  if (
-    formulario.value.oferece.some(
-      (nomeTipo) => !nomesPermitidos.has(nomeTipo),
-    )
-  ) {
-    resultado.oferece = 'Selecione apenas conjuntos do catálogo.'
-  } else if (
-    props.conjuntos.some(
-      (conjunto) =>
-        pertenceAFonte(conjunto) &&
-        !formulario.value.oferece.includes(conjunto.nome),
-    )
-  ) {
-    resultado.oferece =
-      'Mantenha selecionados os tipos que possuem conjuntos cadastrados.'
-  }
-
-  return resultado
-})
-
 function erroVisivel(campo) {
-  return (
-    (tentouSalvar.value || tocados.value[campo]) &&
-    Boolean(erros.value[campo])
-  )
+  return Boolean((tentouSalvar.value || tocados.value[campo]) && erros.value[campo])
 }
-
-function fechar() {
-  if (props.salvando) return
-
-  emit('fechar')
-}
-
+function fechar() { if (!props.salvando) emit('fechar') }
 async function salvar() {
   if (props.salvando) return
-
   tentouSalvar.value = true
-
   if (Object.keys(erros.value).length) {
     await nextTick()
-
-    formularioElement.value
-      ?.querySelector('[aria-invalid="true"]')
-      ?.focus()
-
+    formularioElement.value?.querySelector('[aria-invalid="true"]:not(:disabled)')?.focus()
     return
   }
-
-  const dados = {
-    nome: formulario.value.nome.trim(),
-    sigla: formulario.value.sigla.trim(),
-    esfera: formulario.value.esfera,
-    oferece: [...new Set(formulario.value.oferece)],
-  }
-
-  if (editando.value) {
-    dados.id = props.fonte.id
-  }
-
+  const dados = { ...formulario.value, oferece: [...formulario.value.oferece] }
+  if (editando.value) dados.id = props.fonte.id
   emit('salvar', dados)
 }
-
 function tratarTeclado(evento) {
   if (evento.key === 'Escape') {
     evento.preventDefault()

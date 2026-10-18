@@ -1,17 +1,19 @@
 import api from './api'
 import { texto, validarId, validarCampo, exigirFormularioValido } from './cadastroService'
 
+export const esferasFonte = ['Federal', 'Estadual', 'Municipal', 'Outra']
+
 export const tiposFonte = [
-  { nome: 'Imóvel rural (perímetro)', icone: '🏞️', indicadores: 'base · todos' },
-  { nome: 'APP declarada', icone: '💧', indicadores: 'IAPP, ICV' },
+  { nome: 'Imóvel rural (perímetro)', icone: '🏞️', indicadores: 'Base · todos' },
+  { nome: 'APP declarada', icone: '💧', indicadores: 'IAPP · ICV' },
   { nome: 'Reserva Legal declarada', icone: '🌿', indicadores: 'IRL' },
-  { nome: 'Vegetação nativa', icone: '🌳', indicadores: 'ICV, IAPP' },
+  { nome: 'Vegetação nativa', icone: '🌳', indicadores: 'ICV · IAPP' },
   { nome: 'Limites de biomas', icone: '🌎', indicadores: 'IRL' },
   { nome: 'Áreas protegidas e territórios especiais', icone: '🛡️', indicadores: 'ISAP' },
   { nome: 'Embargos ambientais', icone: '⛔', indicadores: 'IAE' },
   { nome: 'Desmatamento', icone: '🪓', indicadores: 'IDesmat' },
   { nome: 'Focos de calor', icone: '🔥', indicadores: 'IFC' },
-  { nome: 'Malha municipal', icone: '🗺️', indicadores: 'agregação' },
+  { nome: 'Malha municipal', icone: '🗺️', indicadores: 'Agregação' },
 ]
 
 export const camposFonte = [
@@ -27,11 +29,11 @@ export function criarFormularioFonte(fonte = null) {
     esfera: fonte?.esfera ?? '',
     orgao: fonte?.orgao ?? null,
     descricao: fonte?.descricao ?? null,
-    oferece: [...(fonte?.oferece ?? [])],
+    oferece: Array.isArray(fonte?.oferece) ? [...fonte.oferece] : [],
   }
 }
 
-export function validarFonte(dados, fontes = [], id = null) {
+export function validarFonte(dados, fontes = [], id = null, conjuntos = []) {
   const erros = {}
   for (const campo of camposFonte) validarCampo(erros, campo.chave, dados[campo.chave], campo.limite, campo.obrigatorio)
   for (const campo of ['nome', 'sigla']) {
@@ -44,7 +46,18 @@ export function validarFonte(dados, fontes = [], id = null) {
   } else if (new Set(dados.oferece).size !== dados.oferece.length) {
     erros.oferece = 'Não repita os conjuntos selecionados.'
   }
+  if (Array.isArray(dados.oferece) && conjuntos.some((conjunto) =>
+    id != null && String(conjunto.fonteId) === String(id) && !dados.oferece.includes(conjunto.nome),
+  )) {
+    erros.oferece = 'Mantenha selecionados os tipos que possuem conjuntos cadastrados.'
+  }
   return erros
+}
+
+export function possuiConjuntoDaFonte(conjuntos, fonteId, nome) {
+  return fonteId != null && conjuntos.some((conjunto) =>
+    String(conjunto.fonteId) === String(fonteId) && conjunto.nome === nome,
+  )
 }
 
 export function prepararFonte(dados) {

@@ -8,6 +8,8 @@ import HistoricoVersoes from '../components/HistoricoVersoes.vue'
 import { regraService } from '../services/regraService'
 import { mensagemErroApi } from '../utils/mensagemErroApi'
 
+defineOptions({ name: 'RegrasPagina' })
+
 const router = useRouter()
 
 const salvandoVersao = ref(false)

@@ -13,9 +13,6 @@ import {
   validarFormularioConjunto,
   selecoesFormularioConjunto,
   conjuntosFornecidos,
-  sistemasReferencia,
-  coberturas,
-  periodicidades,
   formatosApi,
 } from '../services/conjuntoService'
 
