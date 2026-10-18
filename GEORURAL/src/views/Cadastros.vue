@@ -18,7 +18,7 @@ const {
   fontes, conjuntos, carregando, carregandoConjuntos,
   erro, erroConjuntos, salvandoFonte, salvandoConjunto,
   erroSalvarFonte, erroSalvarConjunto, alterandoStatus,
-  erroAlterarStatus, feedback,
+  erroAlterarStatus, feedback, conjuntoPersistido, arquivosConjuntoPendentes,
 } = controle
 
 onMounted(() => {
@@ -867,6 +867,8 @@ defineExpose({
   />
 
   <FormularioConjunto
+    :conjunto-persistido="conjuntoPersistido"
+    :arquivos-pendentes="arquivosConjuntoPendentes"
     v-if="formularioConjuntoAberto"
     :conjunto="conjuntoEmEdicao"
     :fontes="fontes"

@@ -1,6 +1,18 @@
 import api from './api'
 import { validarId } from './cadastroService'
 
+export function prepararArquivosUpload(arquivos) {
+  const lista = Array.from(arquivos ?? [])
+  if (!lista.length) throw new Error('Selecione pelo menos um arquivo.')
+  for (const arquivo of lista) {
+    if (!(arquivo instanceof File) || !arquivo.size) throw new Error('Selecione arquivos que não estejam vazios.')
+    if (!/\.(zip|gpkg|geojson)$/i.test(arquivo.name)) {
+      throw new Error(`Formato não aceito: ${arquivo.name}. Envie .zip, .gpkg ou .geojson.`)
+    }
+  }
+  return lista
+}
+
 export const arquivoService = {
   async listar(nome, situacao) {
     const params = {}
@@ -29,7 +41,7 @@ export const arquivoService = {
 
     formData.append('conjuntoId', String(id))
 
-    Array.from(arquivos).forEach((arquivo) => {
+    prepararArquivosUpload(arquivos).forEach((arquivo) => {
       formData.append('files', arquivo)
     })
 
