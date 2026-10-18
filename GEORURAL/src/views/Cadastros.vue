@@ -1,81 +1,34 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import FormularioFonte from '../components/FormularioFonte.vue'
 import FormularioConjunto from '../components/FormularioConjunto.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
 import ModalConfirmacao from '../components/ModalConfirmacao.vue'
+import { normalizarBusca as normalizar, formatarDataCadastro as formatarData, quantidadeConjuntos } from '../services/cadastroService'
+
+import { criarControleCadastros } from '../services/cadastrosControleService'
 
 defineOptions({
   name: 'CadastrosDados',
 })
 
-const props = defineProps({
-  fontes: {
-    type: Array,
-    default: () => [],
-  },
-  conjuntos: {
-    type: Array,
-    default: () => [],
-  },
-  carregando: {
-    type: Boolean,
-    default: false,
-  },
-  erro: {
-    type: String,
-    default: '',
-  },
-  carregandoConjuntos: {
-    type: Boolean,
-    default: false,
-  },
-  erroConjuntos: {
-    type: String,
-    default: '',
-  },
-  salvandoFonte: {
-    type: Boolean,
-    default: false,
-  },
-  erroSalvarFonte: {
-    type: String,
-    default: '',
-  },
-  salvandoConjunto: {
-    type: Boolean,
-    default: false,
-  },
-  erroSalvarConjunto: {
-    type: String,
-    default: '',
-  },
-  alterandoStatus: {
-    type: Boolean,
-    default: false,
-  },
-  erroAlterarStatus: {
-    type: String,
-    default: '',
-  },
-  feedback: {
-    type: Object,
-    default: null,
-  },
+const controle = criarControleCadastros()
+const {
+  fontes, conjuntos, carregando, carregandoConjuntos,
+  erro, erroConjuntos, salvandoFonte, salvandoConjunto,
+  erroSalvarFonte, erroSalvarConjunto, alterandoStatus,
+  erroAlterarStatus, feedback,
+} = controle
+
+onMounted(() => {
+  Promise.allSettled([
+    controle.carregarFontes(),
+    controle.carregarConjuntos(),
+  ])
 })
 
-const emit = defineEmits([
-  'nova-fonte',
-  'editar-fonte',
-  'alterar-status-fonte',
-  'tentar-novamente',
-  'salvar-fonte',
-  'salvar-conjunto',
-  'editar-conjunto',
-  'alterar-status-conjunto',
-  'tentar-novamente-conjuntos',
-])
+onBeforeUnmount(controle.destruir)
 
 const aba = ref('fontes')
 const buscaFonte = ref('')
@@ -100,9 +53,9 @@ let sequenciaNotificacao = 0
 
 const salvando = computed(
   () =>
-    props.salvandoFonte ||
-    props.salvandoConjunto ||
-    props.alterandoStatus ||
+    salvandoFonte.value ||
+    salvandoConjunto.value ||
+    alterandoStatus.value ||
     confirmacaoEnviada.value,
 )
 
@@ -114,7 +67,7 @@ const modalAberto = computed(
 )
 
 const processandoDesativacao = computed(
-  () => props.alterandoStatus || confirmacaoEnviada.value,
+  () => alterandoStatus.value || confirmacaoEnviada.value,
 )
 
 const mensagemDesativacao = computed(() => {
@@ -161,7 +114,7 @@ function fecharNotificacao() {
 }
 
 watch(
-  () => props.feedback,
+  () => feedback.value,
   (feedback) => {
     if (!feedback) return
 
@@ -171,7 +124,7 @@ watch(
 )
 
 watch(
-  () => props.erroAlterarStatus,
+  () => erroAlterarStatus.value,
   (erro) => {
     if (erro) {
       liberarTentativaDesativacao()
@@ -180,9 +133,9 @@ watch(
 )
 
 watch(
-  () => props.alterandoStatus,
+  () => alterandoStatus.value,
   (atual, anterior) => {
-    if (anterior && !atual && props.erroAlterarStatus) {
+    if (anterior && !atual && erroAlterarStatus.value) {
       liberarTentativaDesativacao()
     }
   },
@@ -216,18 +169,10 @@ function navegarAbas(evento) {
   }
 }
 
-function normalizar(valor) {
-  return String(valor ?? '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-}
-
 const fontesFiltradas = computed(() => {
   const termo = normalizar(buscaFonte.value)
 
-  return props.fontes.filter((fonte) =>
+  return fontes.value.filter((fonte) =>
     normalizar(`${fonte.nome ?? ''} ${fonte.sigla ?? ''}`)
       .includes(termo),
   )
@@ -236,7 +181,7 @@ const fontesFiltradas = computed(() => {
 const conjuntosFiltrados = computed(() => {
   const termo = normalizar(buscaConjunto.value)
 
-  return props.conjuntos.filter((conjunto) => {
+  return conjuntos.value.filter((conjunto) => {
     const correspondeBusca = normalizar(conjunto.nome).includes(termo)
 
     const correspondeFonte =
@@ -248,52 +193,24 @@ const conjuntosFiltrados = computed(() => {
 })
 
 function obterFonte(id) {
-  return props.fontes.find(
+  return fontes.value.find(
     (fonte) => String(fonte.id) === String(id),
   )
 }
 
-function tiposFornecidos(fonte) {
-  return Array.isArray(fonte.oferece) ? fonte.oferece : []
-}
-
 function quantidadeCadastrada(fonte) {
-  const nomesCadastrados = new Set(
-    props.conjuntos
-      .filter(
-        (conjunto) =>
-          String(conjunto.fonteId) === String(fonte.id),
-      )
-      .map((conjunto) => conjunto.nome),
-  )
-
-  return tiposFornecidos(fonte).filter((nome) =>
-    nomesCadastrados.has(nome),
-  ).length
-}
-
-function quantidadePendente(fonte) {
-  return tiposFornecidos(fonte).length - quantidadeCadastrada(fonte)
-}
-
-function formatarData(valor) {
-  const partes = String(valor ?? '')
-    .match(/^(\d{4})-(\d{2})-(\d{2})/)
-
-  return partes
-    ? `${partes[3]}/${partes[2]}/${partes[1]}`
-    : '—'
+  return quantidadeConjuntos(fonte, conjuntos.value)
 }
 
 function abrirFormularioFonte() {
-  if (props.carregando || salvando.value || modalAberto.value) {
+  if (carregando.value || salvando.value || modalAberto.value) {
     return
   }
 
   fonteEmEdicao.value = null
   formularioFonteAberto.value = true
 
-  emit('nova-fonte')
+  controle.limparErroFonte()
 }
 
 function editarFonte(fonte) {
@@ -302,26 +219,26 @@ function editarFonte(fonte) {
   fonteEmEdicao.value = fonte
   formularioFonteAberto.value = true
 
-  emit('editar-fonte', fonte)
+  controle.limparErroFonte()
 }
 
 function fecharFormularioFonte() {
-  if (props.salvandoFonte) return
+  if (salvandoFonte.value) return
 
   formularioFonteAberto.value = false
   fonteEmEdicao.value = null
 }
 
-function solicitarCadastroFonte(dados) {
+async function solicitarCadastroFonte(dados) {
   if (salvando.value) return
 
-  emit('salvar-fonte', dados)
+  if (await controle.salvarFonte(dados)) fecharFormularioFonte()
 }
 
 function abrirFormularioConjunto(fonte = null) {
   if (
-    props.carregando ||
-    props.carregandoConjuntos ||
+    carregando.value ||
+    carregandoConjuntos.value ||
     salvando.value ||
     modalAberto.value
   ) {
@@ -331,6 +248,7 @@ function abrirFormularioConjunto(fonte = null) {
   conjuntoEmEdicao.value = null
   fonteIdNovoConjunto.value = fonte?.id ?? null
   formularioConjuntoAberto.value = true
+  controle.limparErroConjunto()
 }
 
 function editarConjunto(conjunto) {
@@ -340,33 +258,34 @@ function editarConjunto(conjunto) {
   fonteIdNovoConjunto.value = conjunto.fonteId
   formularioConjuntoAberto.value = true
 
-  emit('editar-conjunto', conjunto)
+  controle.limparErroConjunto()
 }
 
 function fecharFormularioConjunto() {
-  if (props.salvandoConjunto) return
+  if (salvandoConjunto.value) return
 
   formularioConjuntoAberto.value = false
   fonteIdNovoConjunto.value = null
   conjuntoEmEdicao.value = null
 }
 
-function solicitarCadastroConjunto(dados) {
+async function solicitarCadastroConjunto(dados) {
   if (salvando.value) return
 
-  emit('salvar-conjunto', dados)
+  if (await controle.salvarConjunto(dados)) fecharFormularioConjunto()
 }
 
 function solicitarAlteracaoStatusFonte(fonte) {
   if (salvando.value || modalAberto.value) return
 
   if (fonte.ativo === false) {
-    emit('alterar-status-fonte', fonte)
+    controle.alterarStatusFonte(fonte)
     return
   }
 
   if (fonte.ativo !== true) return
 
+  erroAlterarStatus.value = ''
   confirmacaoEnviada.value = false
   desativacaoPendente.value = {
     tipo: 'fonte',
@@ -378,12 +297,13 @@ function solicitarAlteracaoStatusConjunto(conjunto) {
   if (salvando.value || modalAberto.value) return
 
   if (conjunto.ativo === false) {
-    emit('alterar-status-conjunto', conjunto)
+    controle.alterarStatusConjunto(conjunto)
     return
   }
 
   if (conjunto.ativo !== true) return
 
+  erroAlterarStatus.value = ''
   confirmacaoEnviada.value = false
   desativacaoPendente.value = {
     tipo: 'conjunto',
@@ -397,7 +317,7 @@ function cancelarDesativacao() {
   desativacaoPendente.value = null
 }
 
-function confirmarDesativacao() {
+async function confirmarDesativacao() {
   if (
     !desativacaoPendente.value ||
     processandoDesativacao.value
@@ -409,12 +329,12 @@ function confirmarDesativacao() {
 
   const { tipo, registro } = desativacaoPendente.value
 
-  emit(
-    tipo === 'fonte'
-      ? 'alterar-status-fonte'
-      : 'alterar-status-conjunto',
-    registro,
-  )
+  const sucesso = tipo === 'fonte'
+    ? await controle.alterarStatusFonte(registro)
+    : await controle.alterarStatusConjunto(registro)
+
+  if (sucesso) finalizarDesativacao()
+  else liberarTentativaDesativacao()
 }
 
 function finalizarDesativacao() {
@@ -494,7 +414,7 @@ defineExpose({
 
           <p>
             Cadastre os órgãos de origem e os conjuntos
-            que cada fonte fornece.
+            vinculados a cada fonte.
           </p>
         </div>
 
@@ -536,7 +456,7 @@ defineExpose({
             type="button"
             class="cadastros-botao cadastros-botao--principal"
             :disabled="salvando"
-            @click="emit('tentar-novamente')"
+            @click="controle.carregarFontes()"
           >
             Tentar novamente
           </button>
@@ -656,12 +576,7 @@ defineExpose({
                         }}
                       </span>
 
-                      <span
-                        v-if="quantidadePendente(fonte)"
-                        class="cadastros-chip cadastros-chip--aviso"
-                      >
-                        {{ quantidadePendente(fonte) }} a cadastrar
-                      </span>
+
                     </div>
                   </td>
 
@@ -719,7 +634,7 @@ defineExpose({
 
           <p>
             Consulte os conjuntos de cada fonte e
-            configure como os dados serão recebidos.
+            consulte seus metadados de origem.
           </p>
         </div>
 
@@ -761,7 +676,7 @@ defineExpose({
             type="button"
             class="cadastros-botao cadastros-botao--principal"
             :disabled="salvando"
-            @click="emit('tentar-novamente-conjuntos')"
+            @click="controle.carregarConjuntos()"
           >
             Tentar novamente
           </button>
@@ -842,7 +757,7 @@ defineExpose({
                 <tr>
                   <th scope="col">Conjunto</th>
                   <th scope="col">Fonte</th>
-                  <th scope="col">Entrada</th>
+                  <th scope="col">Tipo de camada</th>
                   <th scope="col">SRS</th>
                   <th scope="col">Cadastrado em</th>
                   <th scope="col">Ações</th>
@@ -891,25 +806,7 @@ defineExpose({
                   </td>
 
                   <td>
-                    <div class="cadastros-chips">
-                      <span
-                        v-if="conjunto.upload"
-                        class="cadastros-chip"
-                      >
-                        Upload
-                      </span>
-
-                      <span
-                        v-if="conjunto.api"
-                        class="cadastros-chip cadastros-chip--roxo"
-                      >
-                        API
-                      </span>
-
-                      <span v-if="!conjunto.upload && !conjunto.api">
-                        —
-                      </span>
-                    </div>
+                    {{ conjunto.tipoCamada }}
                   </td>
 
                   <td class="cadastros-mono">
@@ -925,7 +822,7 @@ defineExpose({
                       <button
                         type="button"
                         class="cadastros-botao"
-                        :disabled="salvando"
+                        :disabled="salvando || obterFonte(conjunto.fonteId)?.ativo !== true"
                         :aria-label="`Editar ${conjunto.nome}`"
                         @click="editarConjunto(conjunto)"
                       >
@@ -936,7 +833,7 @@ defineExpose({
                         v-if="typeof conjunto.ativo === 'boolean'"
                         type="button"
                         class="cadastros-botao"
-                        :disabled="salvando"
+                        :disabled="salvando || obterFonte(conjunto.fonteId)?.ativo !== true"
                         :class="{
                           'cadastros-botao--perigo': conjunto.ativo,
                         }"

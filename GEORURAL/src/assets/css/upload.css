@@ -121,3 +121,43 @@ hr {
   color: var(--cor-texto-secundario);
   font-size: 13px;
 }
+
+.upload-origem {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 10px;
+  color: var(--cor-texto);
+}
+
+.upload-origem legend {
+  padding: 0 8px;
+  font-weight: 600;
+}
+
+.upload-origem label {
+  font-size: 13px;
+}
+
+.upload-origem select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--cor-borda);
+  border-radius: 8px;
+  background: var(--cor-painel);
+  color: var(--cor-texto);
+  font: inherit;
+}
+
+.upload-origem p {
+  margin: 4px 0;
+  color: var(--cor-texto-secundario);
+  font-size: 12px;
+}
+
+.upload-origem select:focus-visible {
+  outline: 2px solid var(--cor-roxo);
+  outline-offset: 2px;
+}

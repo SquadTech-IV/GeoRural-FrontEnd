@@ -1,4 +1,5 @@
 import api from './api'
+import { validarId } from './cadastroService'
 
 export const arquivoService = {
   async listar(nome, situacao) {
@@ -7,28 +8,44 @@ export const arquivoService = {
     if (nome) params.nome = nome
     if (situacao) params.situacao = situacao
 
-    const response = await api.get('/api/arquivos', { params })
-    return response.data
+    const { data } = await api.get('/api/arquivos', {
+      params,
+    })
+
+    return data
   },
 
   async detalhe(id) {
-    const response = await api.get(`/api/arquivos/${id}`)
-    return response.data
+    const { data } = await api.get(
+      `/api/arquivos/${validarId(id)}`,
+    )
+
+    return data
   },
 
-  async enviar(arquivos) {
+  async enviar(arquivos, conjuntoId) {
+    const id = validarId(conjuntoId)
     const formData = new FormData()
+
+    formData.append('conjuntoId', String(id))
 
     Array.from(arquivos).forEach((arquivo) => {
       formData.append('files', arquivo)
     })
 
-    const response = await api.post('/api/ingestao/upload', formData)
-    return response.data
+    const { data } = await api.post(
+      '/api/ingestao/upload',
+      formData,
+    )
+
+    return data
   },
 
   async processar(id) {
-    const response = await api.post(`/api/arquivos/${id}/processar`)
-    return response.data
+    const { data } = await api.post(
+      `/api/arquivos/${validarId(id)}/processar`,
+    )
+
+    return data
   },
 }

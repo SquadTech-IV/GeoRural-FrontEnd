@@ -8,6 +8,17 @@ import {
   watch,
 } from 'vue'
 
+import {
+  criarFormularioConjunto,
+  validarFormularioConjunto,
+  selecoesFormularioConjunto,
+  conjuntosFornecidos,
+  sistemasReferencia,
+  coberturas,
+  periodicidades,
+  formatosApi,
+} from '../services/conjuntoService'
+
 const props = defineProps({
   conjunto: {
     type: Object,
@@ -41,37 +52,9 @@ const fonteSelect = ref(null)
 const formularioElement = ref(null)
 const tentouSalvar = ref(false)
 const tocados = ref({})
+const formulario = ref({})
 
 const editando = computed(() => props.conjunto?.id != null)
-
-const sistemasReferencia = [
-]
-
-const coberturas = [
-  'Brasil',
-  'Paraná',
-  'Região Sul',
-  'Municipal',
-  'Outro',
-]
-
-const periodicidades = [
-  'Diária',
-  'Semanal',
-  'Mensal',
-  'Trimestral',
-  'Anual',
-  'Sob demanda',
-  'Única',
-]
-
-const formatosApi = [
-  'GeoJSON',
-  'WFS / GML',
-  'Shapefile (.zip)',
-]
-
-const formulario = ref({})
 
 let elementoAnterior
 let overflowAnterior
@@ -79,28 +62,10 @@ let overflowAnterior
 watch(
   [() => props.conjunto, () => props.fonteId],
   ([conjunto, fonteId]) => {
-    const cobertura = conjunto?.cobertura ?? ''
-
-    const coberturaPadronizada =
-      cobertura !== 'Outro' && coberturas.includes(cobertura)
-
-    formulario.value = {
-      fonteId: conjunto?.fonteId ?? fonteId ?? '',
-      nome: conjunto?.nome ?? '',
-      srs: conjunto?.srs ?? '',
-      cobertura: cobertura
-        ? coberturaPadronizada
-          ? cobertura
-          : 'Outro'
-        : '',
-      coberturaPersonalizada: coberturaPadronizada ? '' : cobertura,
-      periodicidade: conjunto?.periodicidade ?? '',
-      upload: conjunto ? conjunto.upload === true : true,
-      api: conjunto?.api === true,
-      endpoint: conjunto?.endpoint ?? '',
-      formatoApi: conjunto?.formatoApi ?? 'GeoJSON',
-      autenticacao: '',
-    }
+    formulario.value = criarFormularioConjunto(
+      conjunto,
+      fonteId,
+    )
 
     tentouSalvar.value = false
     tocados.value = {}
@@ -119,153 +84,34 @@ const fonteSelecionada = computed(() =>
   ),
 )
 
-const conjuntosDisponiveis = computed(() => {
-  const oferece = fonteSelecionada.value?.oferece
+const conjuntosDisponiveis = computed(() =>
+  conjuntosFornecidos(
+    fonteSelecionada.value,
+    props.conjunto,
+  ),
+)
 
-  return Array.isArray(oferece)
-    ? [...new Set(oferece)]
-    : []
-})
+const camposSelecao = computed(() =>
+  selecoesFormularioConjunto(
+    props.fontes,
+    fonteSelecionada.value,
+    props.conjunto,
+  ),
+)
 
-const camposSelecao = computed(() => [
-  {
-    chave: 'fonteId',
-    titulo: 'Fonte',
-    opcoes: fontesAtivas.value.map((fonte) => ({
-      valor: fonte.id,
-      nome: `${fonte.sigla} — ${fonte.nome}`,
-    })),
-    ajuda: fontesAtivas.value.length
-      ? 'Selecione uma fonte ativa.'
-      : 'Cadastre ou reative uma fonte para continuar.',
-  },
-  {
-    chave: 'nome',
-    titulo: 'Conjunto',
-    opcoes: conjuntosDisponiveis.value.map((nome) => ({
-      valor: nome,
-      nome,
-    })),
-    ajuda: fonteSelecionada.value && !conjuntosDisponiveis.value.length
-      ? 'Edite a fonte e informe os conjuntos que ela fornece.'
-      : 'São exibidos apenas os conjuntos declarados pela fonte.',
-  },
-  {
-    chave: 'srs',
-    titulo: 'Sistema de referência',
-    opcoes: sistemasReferencia,
-  },
-  {
-    chave: 'cobertura',
-    titulo: 'Cobertura',
-    opcoes: coberturas.map((nome) => ({ valor: nome, nome })),
-  },
-  {
-    chave: 'periodicidade',
-    titulo: 'Periodicidade',
-    opcoes: periodicidades.map((nome) => ({ valor: nome, nome })),
-    ajuda:
-      'Frequência de atualização da fonte. A competência de cada arquivo é informada no upload.',
-  },
-])
-
-function normalizar(valor) {
-  return String(valor ?? '').trim().toLocaleLowerCase('pt-BR')
-}
-
-const erros = computed(() => {
-  const resultado = {}
-  const dados = formulario.value
-  const fonte = fonteSelecionada.value
-
-  if (!fonte) {
-    resultado.fonteId = 'Selecione uma fonte ativa.'
-  }
-
-  if (!dados.nome) {
-    resultado.nome = 'Selecione um conjunto.'
-  } else if (!conjuntosDisponiveis.value.includes(dados.nome)) {
-    resultado.nome =
-      'O conjunto deve ser fornecido pela fonte selecionada.'
-  } else if (
-    fonte &&
-    props.conjuntos.some((conjunto) => {
-      const mesmoRegistro =
-        editando.value &&
-        String(conjunto.id) === String(props.conjunto.id)
-
-      return (
-        !mesmoRegistro &&
-        String(conjunto.fonteId) === String(fonte.id) &&
-        normalizar(conjunto.nome) === normalizar(dados.nome)
-      )
-    })
-  ) {
-    resultado.nome =
-      'Esse conjunto já está cadastrado para a fonte.'
-  }
-
-  if (!sistemasReferencia.some((sistema) => sistema.valor === dados.srs)) {
-    resultado.srs = 'Selecione um sistema de referência válido.'
-  }
-
-  if (!coberturas.includes(dados.cobertura)) {
-    resultado.cobertura = 'Selecione a cobertura do conjunto.'
-  }
-
-  if (dados.cobertura === 'Outro') {
-    const descricao = dados.coberturaPersonalizada.trim()
-
-    if (!descricao) {
-      resultado.coberturaPersonalizada =
-        'Descreva a região abrangida pelo conjunto.'
-    } else if (descricao.length > 200) {
-      resultado.coberturaPersonalizada =
-        'A descrição deve ter no máximo 200 caracteres.'
-    }
-  }
-
-  if (!periodicidades.includes(dados.periodicidade)) {
-    resultado.periodicidade = 'Selecione uma periodicidade válida.'
-  }
-
-  if (!dados.upload && !dados.api) {
-    resultado.entrada = 'Selecione Upload, API ou ambas as opções.'
-  }
-
-  if (dados.api) {
-    const endpoint = dados.endpoint.trim()
-
-    if (!endpoint) {
-      resultado.endpoint = 'Informe o endpoint da API.'
-    } else {
-      try {
-        const url = new URL(endpoint)
-
-        if (!['http:', 'https:'].includes(url.protocol)) {
-          resultado.endpoint =
-            'O endpoint deve começar com http:// ou https://.'
-        } else if (url.username || url.password) {
-          resultado.endpoint =
-            'Informe a autenticação no campo próprio.'
-        }
-      } catch {
-        resultado.endpoint = 'Informe uma URL válida.'
-      }
-    }
-
-    if (!formatosApi.includes(dados.formatoApi)) {
-      resultado.formatoApi = 'Selecione um formato válido.'
-    }
-  }
-
-  return resultado
-})
+const erros = computed(() =>
+  validarFormularioConjunto(
+    formulario.value,
+    props.fontes,
+    props.conjuntos,
+    props.conjunto,
+  ),
+)
 
 function erroVisivel(campo) {
-  return (
+  return Boolean(
     (tentouSalvar.value || tocados.value[campo]) &&
-    Boolean(erros.value[campo])
+    erros.value[campo],
   )
 }
 
@@ -306,38 +152,22 @@ async function salvar() {
       formularioElement.value?.querySelectorAll(
         '[aria-invalid="true"]',
       ) ?? [],
-    ).find((elemento) => !elemento.matches(':disabled'))
+    ).find(
+      (elemento) =>
+        !elemento.matches(':disabled') &&
+        elemento.getClientRects().length,
+    )
 
     invalido?.focus()
     return
   }
 
-  const dados = formulario.value
-
   const payload = {
-    fonteId: fonteSelecionada.value.id,
-    nome: dados.nome,
-    srs: dados.srs,
-    cobertura: dados.cobertura === 'Outro'
-      ? dados.coberturaPersonalizada.trim()
-      : dados.cobertura,
-    periodicidade: dados.periodicidade,
-    upload: dados.upload,
-    api: dados.api,
-    endpoint: dados.api ? dados.endpoint.trim() : '',
-    formatoApi: dados.api ? dados.formatoApi : '',
+    ...formulario.value,
   }
 
   if (editando.value) {
     payload.id = props.conjunto.id
-
-    if (dados.api && dados.autenticacao.trim()) {
-      payload.autenticacao = dados.autenticacao.trim()
-    }
-  } else {
-    payload.autenticacao = dados.api
-      ? dados.autenticacao.trim()
-      : ''
   }
 
   emit('salvar', payload)
@@ -398,6 +228,7 @@ function registrarSelect(elemento, chave) {
 onMounted(async () => {
   elementoAnterior = document.activeElement
   overflowAnterior = document.body.style.overflow
+
   document.body.style.overflow = 'hidden'
 
   await nextTick()
@@ -409,7 +240,6 @@ onBeforeUnmount(() => {
   elementoAnterior?.focus()
 })
 </script>
-
 <template>
   <Teleport to="body">
     <div class="cadastros-overlay" @click.self="fechar">
