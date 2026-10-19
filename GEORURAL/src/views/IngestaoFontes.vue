@@ -1,15 +1,27 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from 'vue'
+
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import IconDocumentation from '../components/icons/IconDocumentation.vue'
 import IconUpload from '../components/icons/IconUpload.vue'
+
 import { arquivoService } from '../services/arquivoService'
 import { fonteService } from '../services/fonteService'
+
 import {
   conjuntoService,
   conjuntosParaUpload,
 } from '../services/conjuntoService'
-import { mensagemErroCadastro } from '../services/cadastroService'
+
+import {
+  mensagemErroCadastro,
+} from '../services/cadastroService'
 
 const fontes = ref([])
 const conjuntos = ref([])
@@ -41,7 +53,11 @@ const mensagemErro = ref('')
 const mensagemSucesso = ref('')
 const enviando = ref(false)
 
-const EXTENSOES_ACEITAS = ['.zip', '.gpkg', '.geojson']
+const EXTENSOES_ACEITAS = [
+  '.zip',
+  '.gpkg',
+  '.geojson',
+]
 
 watch(fonteId, () => {
   conjuntoId.value = ''
@@ -65,7 +81,10 @@ async function carregarOrigens() {
 
     if (origemAbort.signal.aborted) return
 
-    fontes.value = listaFontes.filter((fonte) => fonte.ativo)
+    fontes.value = listaFontes.filter(
+      (fonte) => fonte.ativo,
+    )
+
     conjuntos.value = listaConjuntos
   } catch (erro) {
     if (!origemAbort.signal.aborted) {
@@ -120,7 +139,9 @@ async function carregarArquivos() {
 }
 
 async function handleArquivoSelecionado(event) {
-  const selecionados = Array.from(event.target.files || [])
+  const selecionados = Array.from(
+    event.target.files || [],
+  )
 
   event.target.value = ''
 
@@ -129,6 +150,7 @@ async function handleArquivoSelecionado(event) {
   if (!origemValida.value) {
     mensagemErro.value =
       'Selecione uma fonte e um conjunto ativos antes do envio.'
+
     return
   }
 
@@ -294,14 +316,15 @@ onBeforeUnmount(() => {
           Carregando fontes e conjuntos...
         </p>
 
-        <p
-          v-else-if="!erroOrigem && !fontes.length"
-        >
+        <p v-else-if="!erroOrigem && !fontes.length">
           Cadastre ou reative uma fonte em Fontes e conjuntos.
         </p>
 
         <p
-          v-else-if="fonteId && !conjuntosDisponiveis.length"
+          v-else-if="
+            fonteId &&
+            !conjuntosDisponiveis.length
+          "
         >
           Esta fonte não possui conjuntos ativos.
           Cadastre ou reative um conjunto.
@@ -333,6 +356,7 @@ onBeforeUnmount(() => {
           <IconUpload
             class="Card-Enviar-Arquivos-Icone"
           />
+
           Arraste o arquivo do imóvel aqui ou clique para selecionar
         </p>
 

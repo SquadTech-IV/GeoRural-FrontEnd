@@ -1,11 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-import IngestaoFontes from '../views/IngestaoFontes.vue'
-import VerificarDadosExistentes from '../views/VerificarDadosExistentes.vue'
 import ListaImoveis from '../views/ListaImoveis.vue'
-import MapaResultado from '../views/MapaResultado.vue'
+import MapaIndicadores from '../views/MapaIndicadores.vue'
 import Regras from '../views/Regras.vue'
 import Cadastros from '../views/Cadastros.vue'
+import IngestaoFontes from '../views/IngestaoFontes.vue'
 
 import ModalSalvarRegras from '../components/ModalSalvarRegras.vue'
 import ModalDetalheVersao from '../components/ModalDetalheVersao.vue'
@@ -16,14 +15,24 @@ const router = createRouter({
 
   routes: [
     {
-      path: '/',
+      path: '/cadastros',
+      name: 'Cadastros',
+      component: Cadastros,
+    },
+    {
+      path: '/ingestao-fontes',
       name: 'IngestaoFontes',
       component: IngestaoFontes,
     },
     {
-      path: '/verificar-dados-existentes',
-      name: 'VerificarDadosExistentes',
-      component: VerificarDadosExistentes,
+      path: '/resultado/:car',
+      name: 'Resultado',
+      redirect: (to) => ({
+        name: 'MapaIndicadores',
+        params: {
+          car: to.params.car,
+        },
+      }),
     },
     {
       path: '/imoveis',
@@ -31,21 +40,16 @@ const router = createRouter({
       component: ListaImoveis,
     },
     {
-      path: '/resultado/:car',
-      name: 'Resultado',
-      component: MapaResultado,
+      path: '/mapa-indicadores/:car?',
+      name: 'MapaIndicadores',
+      component: MapaIndicadores,
       props: true,
     },
     {
-      path: '/cadastros',
-      name: 'Cadastros',
-      component: Cadastros,
-    },
-    {
-      path: '/regras',
+      path: '/',
       name: 'Regras',
+      alias: '/regras',
       component: Regras,
-
       children: [
         {
           path: 'nova-versao',

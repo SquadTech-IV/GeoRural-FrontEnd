@@ -9,17 +9,12 @@ const tema = ref(
 )
 
 const itens = [
-  // {
-  //   caminho: '/',
-  //   titulo: 'Ingestão de Fontes',
-  //   icone: 'upload',
-  // },
-  // {
-  //   caminho: '/verificar-dados-existentes',
-  //   titulo: 'Dados Existentes',
-  //   icone: 'arquivos',
-  // },
-    {
+  {
+    caminho: '/',
+    titulo: 'Regras e Métodos',
+    icone: 'regras',
+  },
+  {
     caminho: '/cadastros',
     titulo: 'Fontes e conjuntos',
     icone: 'cadastros',
@@ -29,24 +24,22 @@ const itens = [
     titulo: 'Imóveis',
     icone: 'mapa',
   },
-  {
-    caminho: '/regras',
-    titulo: 'Regras e Métodos',
-    icone: 'regras',
-  },
-
 ]
 
 function estaAtivo(caminho) {
   if (caminho === '/') {
-    return route.path === '/'
+    return route.matched.some(
+      (registro) => registro.name === 'Regras',
+    )
   }
 
-  if (
-    caminho === '/imoveis' &&
-    route.path.startsWith('/resultado/')
-  ) {
-    return true
+  if (caminho === '/imoveis') {
+    return (
+      route.path === '/imoveis' ||
+      route.path.startsWith('/resultado/') ||
+      route.path === '/mapa-indicadores' ||
+      route.path.startsWith('/mapa-indicadores/')
+    )
   }
 
   return (
@@ -63,7 +56,7 @@ function alternarTema() {
   try {
     localStorage.setItem('georural-tema', tema.value)
   } catch {
-    // A troca de tema funciona mesmo sem acesso ao armazenamento.
+    // Mantém a troca de tema mesmo sem acesso ao armazenamento.
   }
 }
 </script>
@@ -189,6 +182,7 @@ function alternarTema() {
 
             <template v-else>
               <circle cx="12" cy="12" r="4" />
+
               <path
                 d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"
               />
