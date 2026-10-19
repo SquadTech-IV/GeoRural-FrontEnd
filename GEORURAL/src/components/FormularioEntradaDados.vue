@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
+import SeletorMetodoEntrada from './SeletorMetodoEntrada.vue'
 
 const props = defineProps({
   fontes: {
@@ -22,6 +23,7 @@ const props = defineProps({
 
 const emit = defineEmits(['configurar'])
 
+const metodo = ref('upload')
 const fonteId = ref('')
 const conjuntoId = ref('')
 const formato = ref('')
@@ -115,6 +117,26 @@ const tamanhoArquivo = computed(() => {
   })} MB`
 })
 
+const podeContinuar = computed(() => {
+  if (
+    bloqueado.value ||
+    !fonteSelecionada.value ||
+    !conjuntoSelecionado.value
+  ) {
+    return false
+  }
+
+  if (metodo.value === 'api') {
+    return true
+  }
+
+  return Boolean(
+    formato.value &&
+    abrangencia.value.trim() &&
+    arquivo.value,
+  )
+})
+
 watch(fonteId, () => {
   conjuntoId.value = ''
 })
@@ -145,7 +167,11 @@ watch(conjuntosDisponiveis, conjuntos => {
 })
 
 watch(formato, () => {
-  removerArquivo()
+  limparArquivo()
+})
+
+watch(metodo, () => {
+  arrastando.value = false
 })
 
 function abrirSeletor() {
@@ -155,6 +181,8 @@ function abrirSeletor() {
 }
 
 function selecionarArquivo(evento) {
+  if (bloqueado.value) return
+
   const selecionado = evento.target.files?.[0]
 
   if (selecionado) {
@@ -180,9 +208,7 @@ function marcarArraste() {
   arrastando.value = true
 }
 
-function removerArquivo() {
-  if (bloqueado.value) return
-
+function limparArquivo() {
   arquivo.value = null
 
   if (inputArquivo.value) {
@@ -190,16 +216,30 @@ function removerArquivo() {
   }
 }
 
-function configurar() {
+function removerArquivo() {
   if (bloqueado.value) return
 
-  emit('configurar', {
-    fonteId: fonteSelecionada.value?.id ?? null,
-    conjuntoId: conjuntoSelecionado.value?.id ?? null,
-    formato: formato.value,
-    abrangencia: abrangencia.value.trim(),
-    arquivo: arquivo.value,
-  })
+  limparArquivo()
+}
+
+function configurar() {
+  if (!podeContinuar.value) return
+
+  const dados = {
+    metodo: metodo.value,
+    fonteId: fonteSelecionada.value.id,
+    conjuntoId: conjuntoSelecionado.value.id,
+  }
+
+  if (metodo.value === 'upload') {
+    Object.assign(dados, {
+      formato: formato.value,
+      abrangencia: abrangencia.value.trim(),
+      arquivo: arquivo.value,
+    })
+  }
+
+  emit('configurar', dados)
 }
 </script>
 
@@ -213,8 +253,7 @@ function configurar() {
       <h2 id="entrada-titulo">Nova ingestão</h2>
 
       <p>
-        Escolha a fonte, o conjunto de destino e o arquivo
-        que deseja importar.
+        Escolha a forma de entrada e o conjunto de destino.
       </p>
     </header>
 
@@ -234,6 +273,11 @@ function configurar() {
         <legend class="entrada-somente-leitor">
           Configuração da entrada de dados
         </legend>
+
+        <SeletorMetodoEntrada
+          v-model="metodo"
+          :desabilitado="bloqueado"
+        />
 
         <div class="entrada-grade">
           <div class="entrada-campo">
@@ -311,136 +355,157 @@ function configurar() {
               }}
             </p>
           </div>
+        </div>
 
-          <div class="entrada-campo">
-            <label for="entrada-formato">
-              Formato do arquivo
-            </label>
+        <div
+          v-show="metodo === 'upload'"
+          :inert="metodo !== 'upload'"
+        >
+          <div class="entrada-grade">
+            <div class="entrada-campo">
+              <label for="entrada-formato">
+                Formato do arquivo
+              </label>
 
-            <select
-              id="entrada-formato"
-              v-model="formato"
-              required
-            >
-              <option value="" disabled>
-                Selecione um formato
-              </option>
-
-              <option
-                v-for="item in formatos"
-                :key="item.valor"
-                :value="item.valor"
+              <select
+                id="entrada-formato"
+                v-model="formato"
+                :required="metodo === 'upload'"
+                :disabled="metodo !== 'upload'"
               >
-                {{ item.nome }}
-              </option>
-            </select>
+                <option value="" disabled>
+                  Selecione um formato
+                </option>
+
+                <option
+                  v-for="item in formatos"
+                  :key="item.valor"
+                  :value="item.valor"
+                >
+                  {{ item.nome }}
+                </option>
+              </select>
+            </div>
+
+            <div class="entrada-campo">
+              <label for="entrada-abrangencia">
+                Abrangência
+              </label>
+
+              <input
+                id="entrada-abrangencia"
+                v-model="abrangencia"
+                type="text"
+                maxlength="200"
+                :required="metodo === 'upload'"
+                :disabled="metodo !== 'upload'"
+                placeholder="Ex.: Estado do Paraná"
+              />
+            </div>
           </div>
 
           <div class="entrada-campo">
-            <label for="entrada-abrangencia">
-              Abrangência
+            <label for="entrada-arquivo">
+              Arquivo
             </label>
 
             <input
-              id="entrada-abrangencia"
-              v-model="abrangencia"
-              type="text"
-              maxlength="200"
-              required
-              placeholder="Ex.: Estado do Paraná"
+              id="entrada-arquivo"
+              ref="inputArquivo"
+              class="entrada-somente-leitor"
+              type="file"
+              tabindex="-1"
+              :disabled="metodo !== 'upload'"
+              :accept="formatoSelecionado?.extensoes"
+              @change="selecionarArquivo"
             />
+
+            <button
+              type="button"
+              class="entrada-drop"
+              :class="{
+                'entrada-drop--arrastando': arrastando,
+                'entrada-drop--selecionado': arquivo,
+              }"
+              :disabled="metodo !== 'upload'"
+              aria-describedby="entrada-arquivo-ajuda"
+              @click="abrirSeletor"
+              @dragenter.prevent="marcarArraste"
+              @dragover.prevent="marcarArraste"
+              @dragleave.prevent="arrastando = false"
+              @drop.prevent="receberArquivo"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M12 16V4" />
+                <path d="m7 9 5-5 5 5" />
+                <path d="M4 16v4h16v-4" />
+              </svg>
+
+              <strong>
+                {{
+                  arquivo
+                    ? arquivo.name
+                    : 'Arraste um arquivo ou clique para selecionar'
+                }}
+              </strong>
+
+              <span>
+                {{
+                  arquivo
+                    ? `${tamanhoArquivo} · Clique para substituir`
+                    : 'Selecione o arquivo que deseja importar.'
+                }}
+              </span>
+            </button>
+
+            <p
+              id="entrada-arquivo-ajuda"
+              class="entrada-ajuda"
+            >
+              Para Shapefile, utilize um ZIP com os arquivos
+              associados.
+            </p>
+
+            <button
+              v-if="arquivo"
+              type="button"
+              class="entrada-remover"
+              @click="removerArquivo"
+            >
+              Remover arquivo
+            </button>
           </div>
         </div>
 
-        <div class="entrada-campo">
-          <label for="entrada-arquivo">
-            Arquivo
-          </label>
+        <div
+          v-if="metodo === 'api'"
+          class="entrada-api"
+        >
+          <h3>Entrada por API</h3>
 
-          <input
-            id="entrada-arquivo"
-            ref="inputArquivo"
-            class="entrada-somente-leitor"
-            type="file"
-            tabindex="-1"
-            :accept="formatoSelecionado?.extensoes"
-            @change="selecionarArquivo"
-          />
-
-          <button
-            type="button"
-            class="entrada-drop"
-            :class="{
-              'entrada-drop--arrastando': arrastando,
-              'entrada-drop--selecionado': arquivo,
-            }"
-            aria-describedby="entrada-arquivo-ajuda"
-            @click="abrirSeletor"
-            @dragenter.prevent="marcarArraste"
-            @dragover.prevent="marcarArraste"
-            @dragleave.prevent="arrastando = false"
-            @drop.prevent="receberArquivo"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M12 16V4" />
-              <path d="m7 9 5-5 5 5" />
-              <path d="M4 16v4h16v-4" />
-            </svg>
-
-            <strong>
-              {{
-                arquivo
-                  ? arquivo.name
-                  : 'Arraste um arquivo ou clique para selecionar'
-              }}
-            </strong>
-
-            <span>
-              {{
-                arquivo
-                  ? `${tamanhoArquivo} · Clique para substituir`
-                  : 'Selecione o arquivo que deseja importar.'
-              }}
-            </span>
-          </button>
-
-          <p
-            id="entrada-arquivo-ajuda"
-            class="entrada-ajuda"
-          >
-            Para Shapefile, utilize um ZIP com os arquivos
-            associados.
+          <p>
+            Selecione a fonte e o conjunto que deseja utilizar.
+            A conexão será verificada na próxima etapa.
           </p>
 
-          <button
-            v-if="arquivo"
-            type="button"
-            class="entrada-remover"
-            @click="removerArquivo"
-          >
-            Remover arquivo
-          </button>
+          <p class="entrada-ajuda">
+            Não é necessário selecionar um arquivo neste método.
+          </p>
         </div>
 
         <footer class="entrada-rodape">
           <button
             type="submit"
             class="entrada-botao"
-            :disabled="
-              !fonteSelecionada ||
-              !conjuntoSelecionado ||
-              !formato ||
-              !abrangencia.trim() ||
-              !arquivo
-            "
+            :disabled="!podeContinuar"
           >
             Continuar
           </button>

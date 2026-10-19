@@ -68,6 +68,8 @@
   overflow-wrap: anywhere;
 }
 
+
+
 @media (max-width: 640px) {
   .ingestao-pagina {
     padding: 24px 16px 48px;

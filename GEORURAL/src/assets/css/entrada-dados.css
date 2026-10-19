@@ -193,6 +193,34 @@
   border: 0;
 }
 
+.entrada-api {
+  padding: 18px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 10px;
+  background: var(--cor-painel-secundario, #f0edf5);
+}
+
+.entrada-api h3 {
+  margin: 0 0 8px;
+  color: var(--cor-roxo, #8520bd);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.entrada-api p {
+  margin: 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.entrada-api .entrada-ajuda {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+
+
 @media (max-width: 640px) {
   .entrada-card {
     padding: 18px;
