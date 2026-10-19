@@ -1,7 +1,6 @@
 import { ref } from 'vue'
 import { fonteService } from './fonteService'
 import { conjuntoService } from './conjuntoService'
-import { criarFluxoConjuntoUpload } from './conjuntoUploadService'
 import { mensagemErroCadastro } from './cadastroService'
 
 export function criarControleCadastros() {
@@ -24,14 +23,6 @@ export function criarControleCadastros() {
   const erroAlterarStatus = ref('')
 
   const feedback = ref(null)
-  const conjuntoPersistido = ref(null)
-  const arquivosConjuntoPendentes = ref(null)
-  const fluxoConjunto = criarFluxoConjuntoUpload((registro) => {
-    if (!destruido) {
-      substituir(conjuntos, registro)
-      conjuntoPersistido.value = registro
-    }
-  })
 
   let leituraFontes = null
   let leituraConjuntos = null
@@ -58,13 +49,7 @@ export function criarControleCadastros() {
     }
   }
 
-  async function ler(
-    service,
-    lista,
-    ocupado,
-    falha,
-    tipo,
-  ) {
+  async function ler(service, lista, ocupado, falha, tipo) {
     if (destruido) return
 
     if (tipo === 'fontes') {
@@ -95,6 +80,7 @@ export function criarControleCadastros() {
     } catch (erroConsulta) {
       if (!destruido && !controle.signal.aborted) {
         falha.value = mensagemErroCadastro(erroConsulta)
+        notificar(falha.value, 'erro')
       }
     } finally {
       const consultaAtual = tipo === 'fontes'
@@ -187,40 +173,18 @@ export function criarControleCadastros() {
     )
   }
 
-  async function salvarConjunto(dados) {
-    if (destruido || salvandoConjunto.value || salvandoFonte.value || alterandoStatus.value) return false
-    salvandoConjunto.value = true
-    erroSalvarConjunto.value = ''
-    try {
-      const resultado = await fluxoConjunto.salvar(dados)
-      if (destruido) return false
-      const mensagem = resultado.quantidade
-        ? `Conjunto salvo e ${resultado.quantidade} arquivo(s) enviado(s) com sucesso.`
-        : 'Conjunto salvo com sucesso.'
-      notificar(mensagem)
-      return true
-    } catch (erroSalvar) {
-      if (!destruido) {
-        if (erroSalvar.registro) {
-          arquivosConjuntoPendentes.value = erroSalvar.arquivosPendentes
-          erroSalvarConjunto.value = `${erroSalvar.message} ${mensagemErroCadastro(erroSalvar.cause)} Ao tentar novamente, o cadastro existente será atualizado.`
-        } else {
-          erroSalvarConjunto.value = mensagemErroCadastro(erroSalvar)
-        }
-        notificar(erroSalvarConjunto.value, 'erro')
-      }
-      return false
-    } finally {
-      salvandoConjunto.value = false
-    }
+  function salvarConjunto(dados) {
+    return salvar(
+      conjuntoService,
+      conjuntos,
+      salvandoConjunto,
+      erroSalvarConjunto,
+      dados,
+      'Conjunto',
+    )
   }
 
-  async function alterar(
-    service,
-    lista,
-    registro,
-    nome,
-  ) {
+  async function alterar(service, lista, registro, nome) {
     if (
       destruido ||
       alterandoStatus.value ||
@@ -234,9 +198,7 @@ export function criarControleCadastros() {
     erroAlterarStatus.value = ''
 
     try {
-      const atualizado = await service.alterarStatus(
-        registro,
-      )
+      const atualizado = await service.alterarStatus(registro)
 
       if (destruido) return false
 
@@ -287,8 +249,6 @@ export function criarControleCadastros() {
     alterandoStatus,
     erroAlterarStatus,
     feedback,
-    conjuntoPersistido,
-    arquivosConjuntoPendentes,
     carregarFontes,
     carregarConjuntos,
     salvarFonte,
@@ -311,9 +271,6 @@ export function criarControleCadastros() {
 
     limparErroConjunto: () => {
       erroSalvarConjunto.value = ''
-      conjuntoPersistido.value = null
-      arquivosConjuntoPendentes.value = null
-      fluxoConjunto.limpar()
     },
 
     destruir,

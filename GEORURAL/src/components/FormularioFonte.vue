@@ -1,59 +1,133 @@
 <script setup>
 import {
-  computed, nextTick, onBeforeUnmount, onMounted, ref, watch,
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
 } from 'vue'
+
 import {
-  criarFormularioFonte, validarFonte, tiposFonte,
-  esferasFonte, possuiConjuntoDaFonte,
+  criarFormularioFonte,
+  validarFonte,
+  tiposFonte,
+  esferasFonte,
+  possuiConjuntoDaFonte,
 } from '../services/fonteService'
 
 const props = defineProps({
-  fonte: { type: Object, default: null },
-  fontes: { type: Array, default: () => [] },
-  conjuntos: { type: Array, default: () => [] },
-  salvando: { type: Boolean, default: false },
-  erro: { type: String, default: '' },
+  fonte: {
+    type: Object,
+    default: null,
+  },
+  fontes: {
+    type: Array,
+    default: () => [],
+  },
+  conjuntos: {
+    type: Array,
+    default: () => [],
+  },
+  salvando: {
+    type: Boolean,
+    default: false,
+  },
 })
-const emit = defineEmits(['fechar', 'salvar'])
+
+const emit = defineEmits(['fechar', 'salvar', 'erro'])
+
 const nomeInput = ref(null)
 const formularioElement = ref(null)
 const tentouSalvar = ref(false)
 const tocados = ref({})
 const formulario = ref({})
+
 const editando = computed(() => props.fonte?.id != null)
 const tiposConjunto = tiposFonte
-const esferas = computed(() => [...new Set([...esferasFonte, ...(props.fonte?.esfera ? [props.fonte.esfera] : [])])])
+
+const esferas = computed(() => [
+  ...new Set([
+    ...esferasFonte,
+    ...(props.fonte?.esfera ? [props.fonte.esfera] : []),
+  ]),
+])
+
 let elementoAnterior
 let overflowAnterior
 
-watch(() => props.fonte, (fonte) => {
-  formulario.value = criarFormularioFonte(fonte)
-  tentouSalvar.value = false
-  tocados.value = {}
-}, { immediate: true })
+watch(
+  () => props.fonte,
+  (fonte) => {
+    formulario.value = criarFormularioFonte(fonte)
+    tentouSalvar.value = false
+    tocados.value = {}
+  },
+  { immediate: true },
+)
 
-const erros = computed(() => validarFonte(
-  formulario.value, props.fontes, props.fonte?.id, props.conjuntos,
-))
+const erros = computed(() =>
+  validarFonte(
+    formulario.value,
+    props.fontes,
+    props.fonte?.id,
+    props.conjuntos,
+  ),
+)
+
 function possuiConjuntoCadastrado(nome) {
-  return possuiConjuntoDaFonte(props.conjuntos, props.fonte?.id, nome)
+  return possuiConjuntoDaFonte(
+    props.conjuntos,
+    props.fonte?.id,
+    nome,
+  )
 }
+
 function erroVisivel(campo) {
-  return Boolean((tentouSalvar.value || tocados.value[campo]) && erros.value[campo])
+  return Boolean(
+    (tentouSalvar.value || tocados.value[campo]) &&
+    erros.value[campo],
+  )
 }
-function fechar() { if (!props.salvando) emit('fechar') }
+
+function fechar() {
+  if (!props.salvando) {
+    emit('fechar')
+  }
+}
+
 async function salvar() {
   if (props.salvando) return
+
   tentouSalvar.value = true
+
   if (Object.keys(erros.value).length) {
+    emit(
+      'erro',
+      [...new Set(Object.values(erros.value))].join(' '),
+    )
+
     await nextTick()
-    formularioElement.value?.querySelector('[aria-invalid="true"]:not(:disabled)')?.focus()
+
+    formularioElement.value
+      ?.querySelector('[aria-invalid="true"]:not(:disabled)')
+      ?.focus()
+
     return
   }
-  const dados = { ...formulario.value, oferece: [...formulario.value.oferece] }
-  if (editando.value) dados.id = props.fonte.id
+
+  const dados = {
+    ...formulario.value,
+    oferece: [...formulario.value.oferece],
+  }
+
+  if (editando.value) {
+    dados.id = props.fonte.id
+  }
+
   emit('salvar', dados)
 }
+
 function tratarTeclado(evento) {
   if (evento.key === 'Escape') {
     evento.preventDefault()
@@ -105,7 +179,6 @@ function tratarTeclado(evento) {
 onMounted(async () => {
   elementoAnterior = document.activeElement
   overflowAnterior = document.body.style.overflow
-
   document.body.style.overflow = 'hidden'
 
   await nextTick()
@@ -133,7 +206,9 @@ onBeforeUnmount(() => {
       >
         <header class="cadastros-modal-cabecalho">
           <div>
-            <h2 id="titulo-formulario-fonte"> Nova fonte </h2>
+            <h2 id="titulo-formulario-fonte">
+              Nova fonte
+            </h2>
           </div>
 
           <button
@@ -192,22 +267,9 @@ onBeforeUnmount(() => {
                     'fonte-campo--invalido': erroVisivel('nome'),
                   }"
                   :aria-invalid="erroVisivel('nome')"
-                  :aria-describedby="
-                    erroVisivel('nome')
-                      ? 'erro-fonte-nome'
-                      : undefined
-                  "
                   placeholder="Informe o nome do órgão ou instituição"
                   @blur="tocados.nome = true"
                 />
-
-                <p
-                  v-if="erroVisivel('nome')"
-                  id="erro-fonte-nome"
-                  class="fonte-erro-campo"
-                >
-                  {{ erros.nome }}
-                </p>
               </div>
 
               <div class="cadastros-duas-colunas">
@@ -224,22 +286,9 @@ onBeforeUnmount(() => {
                       'fonte-campo--invalido': erroVisivel('sigla'),
                     }"
                     :aria-invalid="erroVisivel('sigla')"
-                    :aria-describedby="
-                      erroVisivel('sigla')
-                        ? 'erro-fonte-sigla'
-                        : undefined
-                    "
                     placeholder="Informe a sigla"
                     @blur="tocados.sigla = true"
                   />
-
-                  <p
-                    v-if="erroVisivel('sigla')"
-                    id="erro-fonte-sigla"
-                    class="fonte-erro-campo"
-                  >
-                    {{ erros.sigla }}
-                  </p>
                 </div>
 
                 <div class="cadastros-campo">
@@ -254,11 +303,6 @@ onBeforeUnmount(() => {
                       'fonte-campo--invalido': erroVisivel('esfera'),
                     }"
                     :aria-invalid="erroVisivel('esfera')"
-                    :aria-describedby="
-                      erroVisivel('esfera')
-                        ? 'erro-fonte-esfera'
-                        : undefined
-                    "
                     @blur="tocados.esfera = true"
                   >
                     <option value="">Selecione</option>
@@ -271,14 +315,6 @@ onBeforeUnmount(() => {
                       {{ esfera }}
                     </option>
                   </select>
-
-                  <p
-                    v-if="erroVisivel('esfera')"
-                    id="erro-fonte-esfera"
-                    class="fonte-erro-campo"
-                  >
-                    {{ erros.esfera }}
-                  </p>
                 </div>
               </div>
 
@@ -335,27 +371,8 @@ onBeforeUnmount(() => {
                       : 'conjuntos selecionados'
                   }}
                 </p>
-
-                <p
-                  v-if="tentouSalvar && erros.oferece"
-                  class="fonte-erro-campo"
-                >
-                  {{ erros.oferece }}
-                </p>
               </fieldset>
             </fieldset>
-
-            <p
-              v-if="tentouSalvar && Object.keys(erros).length"
-              class="fonte-validacao-resumo"
-              role="alert"
-            >
-              Revise os campos indicados antes de salvar.
-            </p>
-
-            <p v-if="erro" class="cadastros-erro" role="alert">
-              {{ erro }}
-            </p>
 
             <p
               v-if="salvando"

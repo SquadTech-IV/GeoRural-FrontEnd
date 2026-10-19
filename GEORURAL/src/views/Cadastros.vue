@@ -1,24 +1,46 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from 'vue'
+
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import FormularioFonte from '../components/FormularioFonte.vue'
 import FormularioConjunto from '../components/FormularioConjunto.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
 import ModalConfirmacao from '../components/ModalConfirmacao.vue'
-import { normalizarBusca as normalizar, formatarDataCadastro as formatarData, quantidadeConjuntos } from '../services/cadastroService'
 
-import { criarControleCadastros } from '../services/cadastrosControleService'
+import {
+  normalizarBusca as normalizar,
+  formatarDataCadastro as formatarData,
+  quantidadeConjuntos,
+} from '../services/cadastroService'
+
+import {
+  criarControleCadastros,
+} from '../services/cadastrosControleService'
 
 defineOptions({
   name: 'CadastrosDados',
 })
 
 const controle = criarControleCadastros()
+
 const {
-  fontes, conjuntos, carregando, carregandoConjuntos,
-  erro, erroConjuntos, salvandoFonte, salvandoConjunto,
-  erroSalvarFonte, erroSalvarConjunto, alterandoStatus,
-  erroAlterarStatus, feedback, conjuntoPersistido, arquivosConjuntoPendentes,
+  fontes,
+  conjuntos,
+  carregando,
+  carregandoConjuntos,
+  erro,
+  erroConjuntos,
+  salvandoFonte,
+  salvandoConjunto,
+  alterandoStatus,
+  erroAlterarStatus,
+  feedback,
 } = controle
 
 onMounted(() => {
@@ -115,18 +137,18 @@ function fecharNotificacao() {
 
 watch(
   () => feedback.value,
-  (feedback) => {
-    if (!feedback) return
+  (retorno) => {
+    if (!retorno) return
 
-    notificar(feedback.mensagem, feedback.tipo)
+    notificar(retorno.mensagem, retorno.tipo)
   },
   { immediate: true },
 )
 
 watch(
   () => erroAlterarStatus.value,
-  (erro) => {
-    if (erro) {
+  (mensagem) => {
+    if (mensagem) {
       liberarTentativaDesativacao()
     }
   },
@@ -159,7 +181,9 @@ function navegarAbas(evento) {
   } else if (evento.key === 'End') {
     aba.value = 'conjuntos'
   } else {
-    aba.value = aba.value === 'fontes' ? 'conjuntos' : 'fontes'
+    aba.value = aba.value === 'fontes'
+      ? 'conjuntos'
+      : 'fontes'
   }
 
   if (aba.value === 'fontes') {
@@ -182,7 +206,8 @@ const conjuntosFiltrados = computed(() => {
   const termo = normalizar(buscaConjunto.value)
 
   return conjuntos.value.filter((conjunto) => {
-    const correspondeBusca = normalizar(conjunto.nome).includes(termo)
+    const correspondeBusca =
+      normalizar(conjunto.nome).includes(termo)
 
     const correspondeFonte =
       filtroFonte.value === '' ||
@@ -209,7 +234,6 @@ function abrirFormularioFonte() {
 
   fonteEmEdicao.value = null
   formularioFonteAberto.value = true
-
   controle.limparErroFonte()
 }
 
@@ -218,7 +242,6 @@ function editarFonte(fonte) {
 
   fonteEmEdicao.value = fonte
   formularioFonteAberto.value = true
-
   controle.limparErroFonte()
 }
 
@@ -232,7 +255,9 @@ function fecharFormularioFonte() {
 async function solicitarCadastroFonte(dados) {
   if (salvando.value) return
 
-  if (await controle.salvarFonte(dados)) fecharFormularioFonte()
+  if (await controle.salvarFonte(dados)) {
+    fecharFormularioFonte()
+  }
 }
 
 function abrirFormularioConjunto(fonte = null) {
@@ -257,7 +282,6 @@ function editarConjunto(conjunto) {
   conjuntoEmEdicao.value = conjunto
   fonteIdNovoConjunto.value = conjunto.fonteId
   formularioConjuntoAberto.value = true
-
   controle.limparErroConjunto()
 }
 
@@ -272,7 +296,9 @@ function fecharFormularioConjunto() {
 async function solicitarCadastroConjunto(dados) {
   if (salvando.value) return
 
-  if (await controle.salvarConjunto(dados)) fecharFormularioConjunto()
+  if (await controle.salvarConjunto(dados)) {
+    fecharFormularioConjunto()
+  }
 }
 
 function solicitarAlteracaoStatusFonte(fonte) {
@@ -287,6 +313,7 @@ function solicitarAlteracaoStatusFonte(fonte) {
 
   erroAlterarStatus.value = ''
   confirmacaoEnviada.value = false
+
   desativacaoPendente.value = {
     tipo: 'fonte',
     registro: fonte,
@@ -305,6 +332,7 @@ function solicitarAlteracaoStatusConjunto(conjunto) {
 
   erroAlterarStatus.value = ''
   confirmacaoEnviada.value = false
+
   desativacaoPendente.value = {
     tipo: 'conjunto',
     registro: conjunto,
@@ -333,8 +361,11 @@ async function confirmarDesativacao() {
     ? await controle.alterarStatusFonte(registro)
     : await controle.alterarStatusConjunto(registro)
 
-  if (sucesso) finalizarDesativacao()
-  else liberarTentativaDesativacao()
+  if (sucesso) {
+    finalizarDesativacao()
+  } else {
+    liberarTentativaDesativacao()
+  }
 }
 
 function finalizarDesativacao() {
@@ -447,11 +478,7 @@ defineExpose({
         <div
           v-else-if="erro"
           class="cadastros-estado cadastros-estado--erro"
-          role="alert"
         >
-          <h3>Não foi possível carregar as fontes</h3>
-          <p>{{ erro }}</p>
-
           <button
             type="button"
             class="cadastros-botao cadastros-botao--principal"
@@ -556,9 +583,7 @@ defineExpose({
                   </td>
 
                   <td>
-                    <span
-                      class="cadastros-chip cadastros-chip--roxo"
-                    >
+                    <span class="cadastros-chip cadastros-chip--roxo">
                       {{ fonte.sigla }}
                     </span>
                   </td>
@@ -575,8 +600,6 @@ defineExpose({
                             : 'cadastrados'
                         }}
                       </span>
-
-
                     </div>
                   </td>
 
@@ -667,11 +690,7 @@ defineExpose({
         <div
           v-else-if="erroConjuntos"
           class="cadastros-estado cadastros-estado--erro"
-          role="alert"
         >
-          <h3>Não foi possível carregar os conjuntos</h3>
-          <p>{{ erroConjuntos }}</p>
-
           <button
             type="button"
             class="cadastros-botao cadastros-botao--principal"
@@ -798,9 +817,7 @@ defineExpose({
                   </td>
 
                   <td>
-                    <span
-                      class="cadastros-chip cadastros-chip--roxo"
-                    >
+                    <span class="cadastros-chip cadastros-chip--roxo">
                       {{ obterFonte(conjunto.fonteId)?.sigla || '—' }}
                     </span>
                   </td>
@@ -822,7 +839,10 @@ defineExpose({
                       <button
                         type="button"
                         class="cadastros-botao"
-                        :disabled="salvando || obterFonte(conjunto.fonteId)?.ativo !== true"
+                        :disabled="
+                          salvando ||
+                          obterFonte(conjunto.fonteId)?.ativo !== true
+                        "
                         :aria-label="`Editar ${conjunto.nome}`"
                         @click="editarConjunto(conjunto)"
                       >
@@ -833,7 +853,10 @@ defineExpose({
                         v-if="typeof conjunto.ativo === 'boolean'"
                         type="button"
                         class="cadastros-botao"
-                        :disabled="salvando || obterFonte(conjunto.fonteId)?.ativo !== true"
+                        :disabled="
+                          salvando ||
+                          obterFonte(conjunto.fonteId)?.ativo !== true
+                        "
                         :class="{
                           'cadastros-botao--perigo': conjunto.ativo,
                         }"
@@ -861,23 +884,21 @@ defineExpose({
     :fontes="fontes"
     :conjuntos="conjuntos"
     :salvando="salvandoFonte"
-    :erro="erroSalvarFonte"
     @fechar="fecharFormularioFonte"
     @salvar="solicitarCadastroFonte"
+    @erro="(mensagem) => notificar(mensagem, 'erro')"
   />
 
   <FormularioConjunto
-    :conjunto-persistido="conjuntoPersistido"
-    :arquivos-pendentes="arquivosConjuntoPendentes"
     v-if="formularioConjuntoAberto"
     :conjunto="conjuntoEmEdicao"
     :fontes="fontes"
     :conjuntos="conjuntos"
     :fonte-id="fonteIdNovoConjunto"
     :salvando="salvandoConjunto"
-    :erro="erroSalvarConjunto"
     @fechar="fecharFormularioConjunto"
     @salvar="solicitarCadastroConjunto"
+    @erro="(mensagem) => notificar(mensagem, 'erro')"
   />
 
   <ModalConfirmacao
@@ -890,7 +911,6 @@ defineExpose({
     :mensagem="mensagemDesativacao"
     :aviso="avisoDesativacao"
     :processando="processandoDesativacao"
-    :erro="erroAlterarStatus"
     @cancelar="cancelarDesativacao"
     @confirmar="confirmarDesativacao"
   />

@@ -1,5 +1,10 @@
 <script setup>
-import {nextTick,onBeforeUnmount,onMounted,ref,} from 'vue'
+import {
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+} from 'vue'
 
 const props = defineProps({
   titulo: {
@@ -17,10 +22,6 @@ const props = defineProps({
   processando: {
     type: Boolean,
     default: false,
-  },
-  erro: {
-    type: String,
-    default: '',
   },
 })
 
@@ -156,10 +157,6 @@ onBeforeUnmount(() => {
 
           <p v-if="aviso" class="confirmacao-aviso">
             {{ aviso }}
-          </p>
-
-          <p v-if="erro" class="cadastros-erro" role="alert">
-            {{ erro }}
           </p>
 
           <p

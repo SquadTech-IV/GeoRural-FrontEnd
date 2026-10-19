@@ -10,11 +10,20 @@ import {
 
 import {
   criarFormularioConjunto,
+  criarDadosConjunto,
   validarFormularioConjunto,
   selecoesFormularioConjunto,
   conjuntosFornecidos,
   formatosApi,
 } from '../services/conjuntoService'
+
+import {
+  catalogoConjuntoService,
+} from '../services/catalogoConjuntoService'
+
+import {
+  mensagemErroCadastro,
+} from '../services/cadastroService'
 
 const props = defineProps({
   conjunto: {
@@ -37,14 +46,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  erro: {
-    type: String,
-    default: '',
-  },
 })
 
-const emit = defineEmits(['fechar', 'salvar'])
+const emit = defineEmits(['fechar', 'salvar', 'erro'])
 
+const catalogo = ref([])
+const carregandoCatalogo = ref(false)
+const erroCatalogo = ref(false)
+const catalogoAbort = new AbortController()
+
+const registroAtual = computed(() => props.conjunto)
 const fonteSelect = ref(null)
 const formularioElement = ref(null)
 const tentouSalvar = ref(false)
@@ -55,6 +66,30 @@ const editando = computed(() => props.conjunto?.id != null)
 
 let elementoAnterior
 let overflowAnterior
+
+async function carregarCatalogo() {
+  if (carregandoCatalogo.value) return
+
+  carregandoCatalogo.value = true
+  erroCatalogo.value = false
+
+  try {
+    const tipos = await catalogoConjuntoService.listar({
+      signal: catalogoAbort.signal,
+    })
+
+    if (!catalogoAbort.signal.aborted) {
+      catalogo.value = tipos
+    }
+  } catch (erro) {
+    if (!catalogoAbort.signal.aborted) {
+      erroCatalogo.value = true
+      emit('erro', mensagemErroCadastro(erro))
+    }
+  } finally {
+    carregandoCatalogo.value = false
+  }
+}
 
 watch(
   [() => props.conjunto, () => props.fonteId],
@@ -84,7 +119,9 @@ const fonteSelecionada = computed(() =>
 const conjuntosDisponiveis = computed(() =>
   conjuntosFornecidos(
     fonteSelecionada.value,
-    props.conjunto,
+    registroAtual.value,
+    catalogo.value,
+    props.conjuntos,
   ),
 )
 
@@ -92,7 +129,9 @@ const camposSelecao = computed(() =>
   selecoesFormularioConjunto(
     props.fontes,
     fonteSelecionada.value,
-    props.conjunto,
+    registroAtual.value,
+    catalogo.value,
+    props.conjuntos,
   ),
 )
 
@@ -101,7 +140,8 @@ const erros = computed(() =>
     formulario.value,
     props.fontes,
     props.conjuntos,
-    props.conjunto,
+    registroAtual.value,
+    catalogo.value,
   ),
 )
 
@@ -143,6 +183,11 @@ async function salvar() {
   tentouSalvar.value = true
 
   if (Object.keys(erros.value).length) {
+    emit(
+      'erro',
+      [...new Set(Object.values(erros.value))].join(' '),
+    )
+
     await nextTick()
 
     const invalido = Array.from(
@@ -159,13 +204,11 @@ async function salvar() {
     return
   }
 
-  const payload = {
-    ...formulario.value,
-  }
-
-  if (editando.value) {
-    payload.id = props.conjunto.id
-  }
+  const payload = criarDadosConjunto(
+    formulario.value,
+    catalogo.value,
+    registroAtual.value,
+  )
 
   emit('salvar', payload)
 }
@@ -223,9 +266,10 @@ function registrarSelect(elemento, chave) {
 }
 
 onMounted(async () => {
+  carregarCatalogo()
+
   elementoAnterior = document.activeElement
   overflowAnterior = document.body.style.overflow
-
   document.body.style.overflow = 'hidden'
 
   await nextTick()
@@ -233,10 +277,12 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  catalogoAbort.abort()
   document.body.style.overflow = overflowAnterior
   elementoAnterior?.focus()
 })
 </script>
+
 <template>
   <Teleport to="body">
     <div class="cadastros-overlay" @click.self="fechar">
@@ -253,7 +299,11 @@ onBeforeUnmount(() => {
         <header class="cadastros-modal-cabecalho">
           <div>
             <h2 id="titulo-formulario-conjunto">
-              {{ editando ? 'Editar conjunto de dados' : 'Novo conjunto de dados' }}
+              {{
+                editando
+                  ? 'Editar conjunto de dados'
+                  : 'Novo conjunto de dados'
+              }}
             </h2>
           </div>
 
@@ -318,11 +368,9 @@ onBeforeUnmount(() => {
                     "
                     :aria-invalid="erroVisivel(campo.chave)"
                     :aria-describedby="
-                      erroVisivel(campo.chave)
-                        ? `erro-conjunto-${campo.chave}`
-                        : campo.ajuda
-                          ? `ajuda-conjunto-${campo.chave}`
-                          : undefined
+                      campo.ajuda
+                        ? `ajuda-conjunto-${campo.chave}`
+                        : undefined
                     "
                     :class="{
                       'conjunto-campo--invalido':
@@ -349,14 +397,6 @@ onBeforeUnmount(() => {
                   >
                     {{ campo.ajuda }}
                   </p>
-
-                  <p
-                    v-if="erroVisivel(campo.chave)"
-                    :id="`erro-conjunto-${campo.chave}`"
-                    class="conjunto-erro-campo"
-                  >
-                    {{ erros[campo.chave] }}
-                  </p>
                 </div>
 
                 <div
@@ -378,27 +418,45 @@ onBeforeUnmount(() => {
                     maxlength="200"
                     placeholder="Informe a região abrangida"
                     :aria-invalid="erroVisivel('coberturaPersonalizada')"
-                    :aria-describedby="
-                      erroVisivel('coberturaPersonalizada')
-                        ? 'erro-conjunto-cobertura-personalizada'
-                        : undefined
-                    "
                     :class="{
                       'conjunto-campo--invalido':
                         erroVisivel('coberturaPersonalizada'),
                     }"
                     @blur="tocar('coberturaPersonalizada')"
                   />
-
-                  <p
-                    v-if="erroVisivel('coberturaPersonalizada')"
-                    id="erro-conjunto-cobertura-personalizada"
-                    class="conjunto-erro-campo"
-                  >
-                    {{ erros.coberturaPersonalizada }}
-                  </p>
                 </div>
               </template>
+
+              <p
+                v-if="carregandoCatalogo"
+                class="cadastros-ajuda"
+                role="status"
+              >
+                Carregando tipos de conjunto...
+              </p>
+
+              <button
+                v-if="erroCatalogo"
+                type="button"
+                class="cadastros-botao"
+                :disabled="carregandoCatalogo || salvando"
+                @click="carregarCatalogo"
+              >
+                Tentar carregar os tipos novamente
+              </button>
+
+              <p
+                v-if="
+                  fonteSelecionada &&
+                  !carregandoCatalogo &&
+                  !erroCatalogo &&
+                  !conjuntosDisponiveis.length
+                "
+                class="cadastros-ajuda"
+              >
+                Nenhum tipo disponível. Confira se o catálogo foi
+                preenchido e se a fonte já possui conjuntos desses tipos.
+              </p>
 
               <fieldset class="cadastros-entrada">
                 <legend>Como o dado chega</legend>
@@ -411,11 +469,6 @@ onBeforeUnmount(() => {
                     }"
                     :aria-pressed="formulario.upload"
                     :aria-invalid="erroVisivel('entrada')"
-                    :aria-describedby="
-                      erroVisivel('entrada')
-                        ? 'erro-conjunto-entrada'
-                        : undefined
-                    "
                     @click="alternarEntrada('upload')"
                   >
                     <svg
@@ -462,14 +515,6 @@ onBeforeUnmount(() => {
                 <p class="cadastros-ajuda">
                   Selecione uma ou ambas as formas de entrada.
                 </p>
-
-                <p
-                  v-if="erroVisivel('entrada')"
-                  id="erro-conjunto-entrada"
-                  class="conjunto-erro-campo"
-                >
-                  {{ erros.entrada }}
-                </p>
               </fieldset>
 
               <section
@@ -491,25 +536,12 @@ onBeforeUnmount(() => {
                     required
                     placeholder="https://..."
                     :aria-invalid="erroVisivel('endpoint')"
-                    :aria-describedby="
-                      erroVisivel('endpoint')
-                        ? 'erro-conjunto-endpoint'
-                        : undefined
-                    "
                     :class="{
                       'conjunto-campo--invalido':
                         erroVisivel('endpoint'),
                     }"
                     @blur="tocar('endpoint')"
                   />
-
-                  <p
-                    v-if="erroVisivel('endpoint')"
-                    id="erro-conjunto-endpoint"
-                    class="conjunto-erro-campo"
-                  >
-                    {{ erros.endpoint }}
-                  </p>
                 </div>
 
                 <div class="cadastros-duas-colunas">
@@ -523,11 +555,6 @@ onBeforeUnmount(() => {
                       v-model="formulario.formatoApi"
                       required
                       :aria-invalid="erroVisivel('formatoApi')"
-                      :aria-describedby="
-                        erroVisivel('formatoApi')
-                          ? 'erro-conjunto-formato-api'
-                          : undefined
-                      "
                       :class="{
                         'conjunto-campo--invalido':
                           erroVisivel('formatoApi'),
@@ -542,14 +569,6 @@ onBeforeUnmount(() => {
                         {{ formato }}
                       </option>
                     </select>
-
-                    <p
-                      v-if="erroVisivel('formatoApi')"
-                      id="erro-conjunto-formato-api"
-                      class="conjunto-erro-campo"
-                    >
-                      {{ erros.formatoApi }}
-                    </p>
                   </div>
 
                   <div class="cadastros-campo">
@@ -563,7 +582,9 @@ onBeforeUnmount(() => {
                       type="password"
                       autocomplete="new-password"
                       :placeholder="
-                        editando ? 'Informe para substituir' : 'Chave ou token'
+                        editando
+                          ? 'Informe para substituir'
+                          : 'Chave ou token'
                       "
                     />
 
@@ -576,19 +597,15 @@ onBeforeUnmount(() => {
             </fieldset>
 
             <p
-              v-if="tentouSalvar && Object.keys(erros).length"
-              class="conjunto-validacao-resumo"
-              role="alert"
+              v-if="salvando"
+              class="cadastros-ajuda"
+              role="status"
             >
-              Revise os campos indicados antes de salvar.
-            </p>
-
-            <p v-if="erro" class="cadastros-erro" role="alert">
-              {{ erro }}
-            </p>
-
-            <p v-if="salvando" class="cadastros-ajuda" role="status">
-              {{ editando ? 'Salvando alterações...' : 'Salvando conjunto...' }}
+              {{
+                editando
+                  ? 'Salvando alterações...'
+                  : 'Salvando conjunto...'
+              }}
             </p>
           </div>
 

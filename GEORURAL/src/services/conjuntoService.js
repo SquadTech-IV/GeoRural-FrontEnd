@@ -211,3 +211,20 @@ export const conjuntoService = {
     return adaptarConjunto(data)
   },
 }
+export function criarDadosConjunto(
+  formulario,
+  catalogo = [],
+  registroAtual = null,
+) {
+  const tipo = catalogo.find(
+    (item) => item.nome === formulario.nome,
+  )
+
+  return {
+    ...formulario,
+    ...(tipo ? { tipoCamada: tipo.codigo } : {}),
+    ...(registroAtual?.id != null
+      ? { id: registroAtual.id }
+      : {}),
+  }
+}

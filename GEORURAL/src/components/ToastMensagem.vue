@@ -1,5 +1,9 @@
 <script setup>
-import { computed, onBeforeUnmount, watch } from 'vue'
+import {
+  computed,
+  onBeforeUnmount,
+  watch,
+} from 'vue'
 
 const props = defineProps({
   mensagem: {
@@ -88,9 +92,7 @@ onBeforeUnmount(cancelarTemporizador)
           </template>
 
           <template v-else>
-            <path
-              d="m12 3 10 18H2L12 3Z"
-            />
+            <path d="m12 3 10 18H2L12 3Z" />
             <path d="M12 9v5m0 3h.01" />
           </template>
         </svg>
