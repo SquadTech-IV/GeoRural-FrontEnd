@@ -7,6 +7,7 @@ import Regras from '../views/Regras.vue'
 import ModalSalvarRegras from '../components/ModalSalvarRegras.vue'
 import ModalDetalheVersao from '../components/ModalDetalheVersao.vue'
 import ModalCompararVersoes from '../components/ModalCompararVersoes.vue'
+import RastreabilidadeDados from '../views/RastreabilidadeDados.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -54,6 +55,11 @@ const router = createRouter({
           component: ModalCompararVersoes,
         },
       ],
+    },
+    {
+      path: '/rastreabilidade',
+      name: 'Rastreabilidade',
+      component: RastreabilidadeDados,
     },
   ],
 })
