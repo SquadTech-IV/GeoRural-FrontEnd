@@ -1,12 +1,7 @@
 <script setup>
-import {
-  onBeforeUnmount,
-  onMounted,
-  watch,
-} from 'vue'
+import { onBeforeUnmount } from 'vue'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
-import ListaArquivosConjunto from '../components/ListaArquivosConjunto.vue'
 import LinhaTempoZonas from '../components/LinhaTempoZonas.vue'
 import DetalheMovimentacao from '../components/DetalheMovimentacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
@@ -15,54 +10,27 @@ import {
   criarConsultaRastreabilidade,
 } from '../services/rastreabilidadeConsultaService'
 
-import {
-  criarConsultaMovimentacao,
-} from '../services/movimentacaoConsultaService'
+defineProps({
+  conjuntos: {
+    type: Array,
+    default: () => [],
+  },
+})
 
 const controle = criarConsultaRastreabilidade()
 
 const {
-  conjuntos,
-  arquivos,
-  trajetoria,
   conjuntoId,
-  arquivoId,
-  conjuntoSelecionado,
-  arquivoSelecionado,
-  carregandoConjuntos,
-  carregandoArquivos,
-  carregandoTrajetoria,
-  erroConjuntos,
-  erroArquivos,
-  erroTrajetoria,
+  trajetoria,
+  carregando,
+  falhou,
   feedback,
+  detalheAberto,
+  camposDetalhe,
+  eventoSelecionado,
 } = controle
 
-const movimentacao = criarConsultaMovimentacao(
-  controle.notificarErro,
-)
-
-const {
-  aberto: detalheAberto,
-  carregando: carregandoMovimentacao,
-  falhou: erroMovimentacao,
-  campos: camposMovimentacao,
-} = movimentacao
-
-watch(
-  [conjuntoId, arquivoId],
-  () => movimentacao.fechar(),
-  { flush: 'sync' },
-)
-
-onMounted(() => {
-  controle.carregarConjuntos()
-})
-
-onBeforeUnmount(() => {
-  controle.destruir()
-  movimentacao.destruir()
-})
+onBeforeUnmount(controle.destruir)
 </script>
 
 <template>
@@ -74,8 +42,8 @@ onBeforeUnmount(() => {
         <h1>Trajetória no datalake</h1>
 
         <p>
-          Consulte os arquivos de cada conjunto e acompanhe
-          sua trajetória pelas zonas do Data Lake.
+          Consulte a trajetória do conjunto e os eventos
+          registrados nas zonas do Data Lake.
         </p>
       </div>
     </header>
@@ -87,124 +55,128 @@ onBeforeUnmount(() => {
 
       <select
         id="rastreabilidade-conjunto"
-        :value="conjuntoId"
-        :disabled="carregandoConjuntos || !conjuntos.length"
-        @change="
-          controle.selecionarConjunto($event.target.value)
-        "
+        v-model="conjuntoId"
+        :disabled="!conjuntos.length"
+        @change="controle.consultar()"
       >
-        <option value="">
-          {{
-            carregandoConjuntos
-              ? 'Carregando conjuntos...'
-              : 'Selecione um conjunto'
-          }}
+        <option value="" disabled>
+          Selecione um conjunto
         </option>
 
         <option
           v-for="conjunto in conjuntos"
           :key="conjunto.id"
-          :value="conjunto.id"
+          :value="String(conjunto.id)"
         >
           {{ conjunto.nome }}
         </option>
       </select>
 
       <p
-        v-if="carregandoConjuntos"
+        v-if="!conjuntos.length"
         class="rastreabilidade-ajuda"
         role="status"
       >
-        Aguarde enquanto os conjuntos são consultados.
-      </p>
-
-      <button
-        v-else-if="erroConjuntos"
-        type="button"
-        class="rastreabilidade-botao"
-        @click="controle.carregarConjuntos()"
-      >
-        Tentar novamente
-      </button>
-
-      <p
-        v-else-if="!conjuntos.length"
-        class="rastreabilidade-ajuda"
-        role="status"
-      >
-        Nenhum conjunto disponível para consulta.
+        Nenhum conjunto disponível para seleção.
       </p>
     </div>
 
-    <div class="rastreabilidade-colunas">
-      <ListaArquivosConjunto
-        :arquivos="arquivos"
-        :selecionado="arquivoId"
-        :carregando="carregandoArquivos"
-        :falhou="erroArquivos"
-        :possui-conjunto="Boolean(conjuntoSelecionado)"
-        @selecionar="controle.selecionarArquivo"
-        @tentar-novamente="controle.tentarArquivosNovamente"
-      />
+    <div
+      v-if="carregando"
+      class="rastreabilidade-estado"
+      role="status"
+    >
+      Consultando trajetória...
+    </div>
+
+    <div
+      v-else-if="falhou"
+      class="rastreabilidade-estado"
+    >
+      <button
+        type="button"
+        class="rastreabilidade-botao"
+        @click="controle.tentarNovamente()"
+      >
+        Tentar novamente
+      </button>
+    </div>
+
+    <div
+      v-else-if="trajetoria"
+      class="rastreabilidade-colunas"
+    >
+      <section
+        class="rastreabilidade-lista"
+        aria-labelledby="titulo-eventos"
+      >
+        <h2
+          id="titulo-eventos"
+          class="rastreabilidade-lista-titulo"
+        >
+          Movimentações do conjunto
+        </h2>
+
+        <p
+          v-if="!trajetoria.eventos.length"
+          class="rastreabilidade-estado"
+          role="status"
+        >
+          Nenhuma movimentação registrada.
+        </p>
+
+        <div v-else class="rastreabilidade-arquivos">
+          <button
+            v-for="evento in trajetoria.eventos"
+            :key="evento.chave"
+            type="button"
+            class="rastreabilidade-arquivo"
+            :class="{
+              'rastreabilidade-arquivo--ativo':
+                eventoSelecionado === evento.chave,
+            }"
+            :aria-pressed="
+              eventoSelecionado === evento.chave
+            "
+            @click="controle.abrirEvento(evento.chave)"
+          >
+            <span class="rastreabilidade-arquivo-informacoes">
+              <strong :title="evento.titulo">
+                {{ evento.titulo }}
+              </strong>
+
+              <small>
+                {{ evento.dataFormatada }}
+              </small>
+            </span>
+          </button>
+        </div>
+      </section>
 
       <section
         class="rastreabilidade-detalhe"
         aria-labelledby="titulo-trajetoria"
-        :aria-busy="carregandoTrajetoria"
       >
         <h2 id="titulo-trajetoria">
-          {{
-            arquivoSelecionado
-              ? arquivoSelecionado.nome
-              : 'Trajetória do arquivo'
-          }}
+          {{ trajetoria.conjuntoNome }}
         </h2>
 
-        <div
-          v-if="carregandoTrajetoria"
-          class="rastreabilidade-estado"
-          role="status"
-        >
-          Consultando trajetória...
-        </div>
-
-        <div
-          v-else-if="!arquivoSelecionado"
-          class="rastreabilidade-estado"
-        >
-          Selecione um arquivo para consultar sua trajetória.
-        </div>
-
-        <div
-          v-else-if="erroTrajetoria"
-          class="rastreabilidade-estado"
-        >
-          <button
-            type="button"
-            class="rastreabilidade-botao"
-            @click="controle.tentarTrajetoriaNovamente()"
-          >
-            Tentar novamente
-          </button>
-        </div>
-
         <LinhaTempoZonas
-          v-else-if="trajetoria"
           :trajetoria="trajetoria"
           @erro="controle.notificarErro"
-          @detalhar="movimentacao.consultar"
         />
       </section>
     </div>
+
+    <p v-else class="rastreabilidade-estado">
+      Selecione um conjunto para consultar sua trajetória.
+    </p>
   </main>
 
   <DetalheMovimentacao
     v-if="detalheAberto"
-    :carregando="carregandoMovimentacao"
-    :falhou="erroMovimentacao"
-    :campos="camposMovimentacao"
-    @fechar="movimentacao.fechar"
-    @tentar-novamente="movimentacao.tentarNovamente"
+    :campos="camposDetalhe"
+    @fechar="controle.fecharDetalhe"
   />
 
   <ToastMensagem

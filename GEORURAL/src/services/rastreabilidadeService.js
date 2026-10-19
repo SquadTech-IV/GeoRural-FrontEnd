@@ -4,165 +4,233 @@ import {
   prepararErroConsulta,
 } from './rastreabilidadeErroService'
 
-const ROTAS = {
-  conjuntos: '/api/rastreabilidade/conjuntos',
+const ZONAS = [
+  'BRUTA',
+  'QUARENTENA',
+  'TRATADA',
+  'PUBLICADA',
+]
 
-  arquivos: (conjuntoId) =>
-    `/api/rastreabilidade/conjuntos/${conjuntoId}/arquivos`,
+const CONCLUIDOS = new Set([
+  'CONCLUIDO',
+  'CONCLUIDA',
+  'SUCESSO',
+  'APROVADO',
+  'PROCESSADO',
+  'PUBLICADO',
+  'RECEBIDO',
+  'FINALIZADO',
+  'OK',
+])
 
-  trajetoria: (arquivoId) =>
-    `/api/rastreabilidade/arquivos/${arquivoId}/trajetoria`,
+const EM_ANDAMENTO = new Set([
+  'PENDENTE',
+  'EM_ANDAMENTO',
+  'PROCESSANDO',
+  'VALIDANDO',
+  'EM_EXECUCAO',
+  'EM_TRATAMENTO',
+  'INICIADO',
+])
 
-  movimentacao: (movimentacaoId) =>
-    `/api/rastreabilidade/movimentacoes/${movimentacaoId}`,
-}
-
-function validarId(valor, nome) {
+function validarId(valor) {
   const id = String(valor ?? '').trim()
 
   if (!/^[1-9]\d*$/.test(id)) {
     throw new Error(
-      `Informe um identificador válido para ${nome}.`,
+      'Informe um ID de conjunto positivo válido.',
     )
   }
 
   return id
 }
 
-async function consultar(caminho, signal, mensagemErro) {
-  try {
-    const resposta = await api.get(caminho, {
-      signal,
-    })
-
-    return resposta.data
-  } catch (erro) {
-    throw prepararErroConsulta(erro, mensagemErro)
-  }
+function texto(valor) {
+  return valor == null ? '' : String(valor).trim()
 }
 
-function normalizarLista(dados, nome) {
-  const lista = Array.isArray(dados)
-    ? dados
-    : dados?.content
+function dataFormatada(valor) {
+  const original = texto(valor)
 
-  if (!Array.isArray(lista)) {
-    throw new Error(
-      `O servidor retornou uma lista de ${nome} inválida.`,
-    )
+  if (!original) return 'Não informada'
+
+  const data = new Date(original)
+
+  if (Number.isNaN(data.getTime())) {
+    return original
   }
 
-  if (
-    lista.some(
-      (item) =>
-        !item ||
-        typeof item !== 'object' ||
-        Array.isArray(item),
-    )
-  ) {
-    throw new Error(
-      `O servidor retornou registros de ${nome} inválidos.`,
-    )
-  }
-
-  return lista
+  return new Intl.DateTimeFormat('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(data)
 }
 
-function normalizarObjeto(dados, nome) {
+function normalizarStatus(valor) {
+  return texto(valor)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[ -]+/g, '_')
+}
+
+function objeto(dados) {
   if (
     !dados ||
     typeof dados !== 'object' ||
     Array.isArray(dados)
   ) {
     throw new Error(
-      `O servidor retornou ${nome} inválido.`,
+      'O servidor retornou uma resposta inválida.',
     )
   }
 
   return dados
 }
 
-async function listarConjuntos({ signal } = {}) {
-  const dados = await consultar(
-    ROTAS.conjuntos,
-    signal,
-    'Não foi possível consultar os conjuntos.',
-  )
+export function normalizarTrajetoria(dados) {
+  objeto(dados)
 
-  return normalizarLista(dados, 'conjuntos')
-}
-
-async function listarArquivos(
-  conjuntoId,
-  { signal } = {},
-) {
-  const id = validarId(conjuntoId, 'o conjunto')
-
-  const dados = await consultar(
-    ROTAS.arquivos(id),
-    signal,
-    'Não foi possível consultar os arquivos do conjunto.',
-  )
-
-  return normalizarLista(dados, 'arquivos')
-}
-
-async function consultarTrajetoria(
-  arquivoId,
-  { signal } = {},
-) {
-  const id = validarId(arquivoId, 'o arquivo')
-
-  const dados = await consultar(
-    ROTAS.trajetoria(id),
-    signal,
-    'Não foi possível consultar a trajetória do arquivo.',
-  )
-
-  const trajetoria = normalizarObjeto(
-    dados,
-    'uma trajetória',
-  )
-
-  if (!Array.isArray(trajetoria.passagens)) {
+  if (!Array.isArray(dados.eventos)) {
     throw new Error(
-      'O servidor retornou uma trajetória sem uma lista válida de passagens.',
+      'A trajetória não possui uma lista válida de eventos.',
     )
   }
 
+  const eventos = dados.eventos.map((item, indice) => {
+    objeto(item)
+
+    const zona = texto(item.zona).toUpperCase()
+
+    if (!ZONAS.includes(zona)) {
+      throw new Error(
+        'A trajetória contém uma zona desconhecida.',
+      )
+    }
+
+    return {
+      ...item,
+      zona,
+      chave: String(indice),
+      titulo: `${zona} · ${texto(item.status) || 'Sem situação'}`,
+      dataFormatada: dataFormatada(item.dataHora),
+    }
+  })
+
+  const ultimas = new Map()
+
+  for (const evento of eventos) {
+    ultimas.set(evento.zona, evento)
+  }
+
+  const ultimo = eventos.at(-1)
+
+  const zonaAtual = eventos.length
+    ? texto(dados.zonaAtual || ultimo.zona).toUpperCase()
+    : null
+
+  if (zonaAtual && !ZONAS.includes(zonaAtual)) {
+    throw new Error(
+      'A zona atual informada é inválida.',
+    )
+  }
+
+  const passagens = [...ultimas.values()].map((evento) => {
+    const original = normalizarStatus(evento.status)
+
+    const status = CONCLUIDOS.has(original)
+      ? 'done'
+      : (
+          EM_ANDAMENTO.has(original) &&
+          evento.chave === ultimo.chave
+        )
+        ? 'atual'
+        : 'ressalva'
+
+    return {
+      zona: evento.zona,
+      status,
+      statusOriginal: texto(evento.status),
+      quando: evento.dataHora,
+      count: '',
+      obs: texto(evento.descricao),
+    }
+  })
+
   return {
-    ...trajetoria,
-    passagens: normalizarLista(
-      trajetoria.passagens,
-      'passagens',
-    ),
+    ...dados,
+    eventos,
+    passagens,
+    zonaAtual,
   }
 }
 
-async function consultarMovimentacao(
-  movimentacaoId,
-  { signal } = {},
-) {
-  const id = validarId(
-    movimentacaoId,
-    'a movimentação',
-  )
+export function prepararDetalheEvento(evento) {
+  return [
+    {
+      titulo: 'Zona',
+      valor: texto(evento.zona) || 'Não informada',
+    },
+    {
+      titulo: 'Tipo',
+      valor: texto(evento.tipo) || 'Não informado',
+    },
+    {
+      titulo: 'Data',
+      valor: dataFormatada(evento.dataHora),
+    },
+    {
+      titulo: 'Situação',
+      valor: texto(evento.status) || 'Não informada',
+    },
+    {
+      titulo: 'Descrição',
+      valor: texto(evento.descricao) || 'Sem descrição.',
+    },
+  ]
+}
 
-  const dados = await consultar(
-    ROTAS.movimentacao(id),
-    signal,
-    'Não foi possível consultar a movimentação.',
-  )
+async function consultar(caminho, signal) {
+  try {
+    const { data } = await api.get(caminho, {
+      signal,
+    })
 
-  return normalizarObjeto(
-    dados,
-    'um detalhamento de movimentação',
-  )
+    return data
+  } catch (erro) {
+    throw prepararErroConsulta(
+      erro,
+      'Não foi possível consultar o conjunto.',
+    )
+  }
 }
 
 export const rastreabilidadeService = {
-  listarConjuntos,
-  listarArquivos,
-  consultarTrajetoria,
-  consultarMovimentacao,
+  async consultarTrajetoria(
+    conjuntoId,
+    { signal } = {},
+  ) {
+    const id = validarId(conjuntoId)
+
+    const dados = await consultar(
+      `/api/conjuntos/${id}/trajetoria`,
+      signal,
+    )
+
+    return normalizarTrajetoria(dados)
+  },
+
+  async consultarStatusAtual(
+    conjuntoId,
+    { signal } = {},
+  ) {
+    const id = validarId(conjuntoId)
+
+    const dados = await consultar(
+      `/api/conjuntos/${id}/status-atual`,
+      signal,
+    )
+
+    return objeto(dados)
+  },
 }

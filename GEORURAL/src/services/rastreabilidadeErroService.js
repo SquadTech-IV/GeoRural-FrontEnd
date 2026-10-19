@@ -6,31 +6,22 @@ export function requisicaoCancelada(erro) {
   )
 }
 
-function texto(valor) {
-  return typeof valor === 'string'
-    ? valor.trim()
-    : ''
-}
-
-function mensagemBackend(dados) {
-  if (!dados || typeof dados !== 'object') {
-    return ''
-  }
-
-  return texto(dados.mensagem) || texto(dados.message)
-}
-
 export function obterMensagemErro(
   erro,
   mensagemPadrao = 'Não foi possível concluir a consulta.',
 ) {
   if (requisicaoCancelada(erro)) return ''
 
+  if (erro?.tratado && typeof erro.message === 'string') {
+    return erro.message
+  }
+
   const status = Number(
     erro?.response?.status ?? erro?.status,
   )
 
-  const mensagem = mensagemBackend(erro?.response?.data)
+  const dados = erro?.response?.data
+  const mensagem = dados?.mensagem ?? dados?.message
 
   if (
     erro?.code === 'ECONNABORTED' ||
@@ -47,27 +38,32 @@ export function obterMensagemErro(
     return 'Você não tem permissão para consultar esses dados.'
   }
 
-  if (status === 404) {
-    return mensagem || 'O recurso solicitado não foi encontrado.'
-  }
-
   if (status === 429) {
-    return 'Muitas consultas foram realizadas. Aguarde um momento e tente novamente.'
+    return 'Muitas consultas foram realizadas. Aguarde e tente novamente.'
   }
 
   if (status >= 500) {
     return 'O servidor não conseguiu concluir a consulta. Tente novamente.'
   }
 
-  if (mensagem) {
-    return mensagem
+  if (typeof mensagem === 'string' && mensagem.trim()) {
+    return mensagem.trim()
+  }
+
+  if (status === 404) {
+    return 'O recurso solicitado não foi encontrado.'
   }
 
   if (erro?.isAxiosError && !erro?.response) {
     return 'Não foi possível conectar ao servidor. Verifique sua conexão.'
   }
 
-  return texto(erro?.message) || mensagemPadrao
+  return (
+    typeof erro?.message === 'string' &&
+    erro.message.trim()
+  )
+    ? erro.message
+    : mensagemPadrao
 }
 
 export function prepararErroConsulta(erro, mensagemPadrao) {
@@ -80,6 +76,7 @@ export function prepararErroConsulta(erro, mensagemPadrao) {
     { cause: erro },
   )
 
+  falha.tratado = true
   falha.status =
     erro?.response?.status ?? erro?.status ?? null
 

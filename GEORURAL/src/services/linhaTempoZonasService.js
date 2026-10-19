@@ -49,6 +49,16 @@ function formatarQuando(valor) {
   }).format(data)
 }
 
+function resultadoInvalido(mensagem) {
+  return {
+    etapas: [],
+    zonaAtual: null,
+    emAndamento: false,
+    possuiMovimentacoes: false,
+    erro: mensagem,
+  }
+}
+
 export function prepararLinhaTempo(trajetoria) {
   if (trajetoria == null) {
     return {
@@ -61,29 +71,39 @@ export function prepararLinhaTempo(trajetoria) {
   }
 
   if (!Array.isArray(trajetoria.passagens)) {
-    return resultadoInvalido('A trajetória não possui uma lista válida de passagens.')
+    return resultadoInvalido(
+      'A trajetória não possui uma lista válida de passagens.',
+    )
   }
 
   const passagens = new Map()
 
   for (const passagem of trajetoria.passagens) {
     if (!passagem || typeof passagem !== 'object') {
-      return resultadoInvalido('A trajetória contém uma passagem inválida.')
+      return resultadoInvalido(
+        'A trajetória contém uma passagem inválida.',
+      )
     }
 
     const zona = texto(passagem.zona).toUpperCase()
     const status = texto(passagem.status).toLowerCase()
 
     if (!ZONAS.some((item) => item.codigo === zona)) {
-      return resultadoInvalido('A trajetória contém uma zona desconhecida.')
+      return resultadoInvalido(
+        'A trajetória contém uma zona desconhecida.',
+      )
     }
 
     if (!Object.hasOwn(SITUACOES, status)) {
-      return resultadoInvalido('A trajetória contém uma situação desconhecida.')
+      return resultadoInvalido(
+        'A trajetória contém uma situação desconhecida.',
+      )
     }
 
     if (passagens.has(zona)) {
-      return resultadoInvalido('A trajetória contém mais de um resumo para a mesma zona.')
+      return resultadoInvalido(
+        'A trajetória contém mais de um resumo para a mesma zona.',
+      )
     }
 
     passagens.set(zona, {
@@ -99,12 +119,16 @@ export function prepararLinhaTempo(trajetoria) {
     const situacao = SITUACOES[status]
 
     return {
-      movimentacaoId: passagem?.movimentacaoId ?? passagem?.id ?? null,
+      movimentacaoId:
+        passagem?.movimentacaoId ?? passagem?.id ?? null,
 
       zona: zona.codigo,
       nome: zona.nome,
       status,
-      situacao: situacao.nome,
+
+      situacao:
+        texto(passagem?.statusOriginal) || situacao.nome,
+
       icone: situacao.icone,
       quando: formatarQuando(passagem?.quando),
       contagem: texto(passagem?.count),
@@ -115,36 +139,47 @@ export function prepararLinhaTempo(trajetoria) {
     }
   })
 
-  const emAndamento = etapas.filter((etapa) => etapa.emAndamento)
+  const emAndamento = etapas.filter(
+    (etapa) => etapa.emAndamento,
+  )
 
   if (emAndamento.length > 1) {
-    return resultadoInvalido('A trajetória informa mais de uma zona em andamento.')
+    return resultadoInvalido(
+      'A trajetória informa mais de uma zona em andamento.',
+    )
   }
 
-  const concluidas = etapas.filter((etapa) => etapa.concluida)
+  const concluidas = etapas.filter(
+    (etapa) => etapa.concluida,
+  )
 
-  const atual = emAndamento[0] ?? concluidas[concluidas.length - 1] ?? null
+  const zonaInformada =
+    texto(trajetoria.zonaAtual).toUpperCase()
+
+  const atual =
+    etapas.find(
+      (etapa) => etapa.zona === zonaInformada,
+    ) ??
+    emAndamento[0] ??
+    concluidas[concluidas.length - 1] ??
+    null
 
   return {
     etapas,
+
     zonaAtual: atual
       ? {
           codigo: atual.zona,
           nome: atual.nome,
         }
       : null,
-    emAndamento: emAndamento.length === 1,
-    possuiMovimentacoes: etapas.some((etapa) => !etapa.pendente),
-    erro: '',
-  }
-}
 
-function resultadoInvalido(mensagem) {
-  return {
-    etapas: [],
-    zonaAtual: null,
-    emAndamento: false,
-    possuiMovimentacoes: false,
-    erro: mensagem,
+    emAndamento: emAndamento.length === 1,
+
+    possuiMovimentacoes: etapas.some(
+      (etapa) => !etapa.pendente,
+    ),
+
+    erro: '',
   }
 }

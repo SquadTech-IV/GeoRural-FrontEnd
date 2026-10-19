@@ -30,11 +30,6 @@ const itens = [
     icone: 'regras',
   },
   {
-    caminho: '/cadastros',
-    titulo: 'Fontes de dados',
-    icone: 'cadastros',
-  },
-  {
     caminho: '/rastreabilidade',
     titulo: 'Trajetória no datalake',
     icone: 'rastreabilidade',
