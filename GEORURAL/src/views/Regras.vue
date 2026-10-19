@@ -1,138 +1,244 @@
 <script setup>
-import { onMounted, ref, watch } from 'vue'
-import { RouterView, useRoute, useRouter } from 'vue-router'
-
+import { ref } from 'vue'
+import { RouterView, useRouter } from 'vue-router'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ListaIndicadores from '../components/ListaIndicadores.vue'
 import PainelDetalheIndicador from '../components/PainelDetalheIndicador.vue'
 import HistoricoVersoes from '../components/HistoricoVersoes.vue'
+import { regraService } from '../services/regraService'
+import { mensagemErroApi } from '../utils/mensagemErroApi'
 
-import {
-  regraService,
-  mensagemErro,
-} from '../services/regraService'
-
-defineOptions({
-  name: 'RegrasPagina',
-})
+defineOptions({ name: 'RegrasPagina' })
 
 const router = useRouter()
-const route = useRoute()
-
-const indicadores = ref([])
-const carregandoLista = ref(false)
-const erroLista = ref('')
 
 const salvandoVersao = ref(false)
 const erroSalvarVersao = ref('')
 const mensagemSucesso = ref('')
-
 const indicadorSelecionado = ref(null)
 const parametrosPendentes = ref(null)
 
 const carregandoIndicador = ref(false)
 const erroCarregarIndicador = ref('')
+const indicadorParaCarregar = ref(null)
 
-let consultaAtual = 0
+let ultimaConsulta = 0
 
-async function carregarLista() {
-  if (carregandoLista.value) return
-
-  carregandoLista.value = true
-  erroLista.value = ''
-
-  try {
-    indicadores.value =
-      await regraService.listarIndicadores()
-
-    await carregarDaRota()
-  } catch (erro) {
-    erroLista.value = mensagemErro(
-      erro,
-      'Não foi possível carregar os indicadores.',
-    )
-  } finally {
-    carregandoLista.value = false
-  }
+const configuracaoParametros = {
+  irl: [
+    {
+      id: 'minimo-mata-atlantica',
+      nome: 'Mínimo RL — Mata Atlântica',
+      descricao: 'Percentual mínimo utilizado na comparação.',
+      tipo: 'percentual',
+      unidade: '%',
+    },
+    {
+      id: 'minimo-amazonia',
+      nome: 'Mínimo RL — Amazônia Legal',
+      descricao: 'Percentual mínimo utilizado na comparação.',
+      tipo: 'percentual',
+      unidade: '%',
+    },
+  ],
+  idesmat: [
+    {
+      id: 'marco-1',
+      nome: 'Marco 1',
+      descricao: 'Primeira data de referência.',
+      tipo: 'data',
+    },
+    {
+      id: 'marco-2',
+      nome: 'Marco 2',
+      descricao: 'Segunda data de referência.',
+      tipo: 'data',
+    },
+    {
+      id: 'marco-3',
+      nome: 'Marco 3',
+      descricao: 'Terceira data de referência.',
+      tipo: 'data',
+    },
+  ],
+  ifc: [
+    {
+      id: 'fator-normalizacao',
+      nome: 'Fator de normalização',
+      descricao: 'Base de comparação por área.',
+      tipo: 'numero',
+      unidade: 'ha',
+      positivo: true,
+    },
+    {
+      id: 'periodo-apuracao',
+      nome: 'Período de apuração',
+      descricao: 'Janela de contagem dos focos.',
+      tipo: 'numero',
+      unidade: 'meses',
+      positivo: true,
+      inteiro: true,
+    },
+  ],
 }
 
-async function carregarDaRota() {
-  const sigla = Array.isArray(route.query.indicador)
-    ? route.query.indicador[0]
-    : route.query.indicador
-
-  if (
-    !sigla ||
-    String(indicadorSelecionado.value?.id) === String(sigla)
-  ) {
-    return
-  }
-
-  await carregarIndicador(sigla)
-}
+const indicadores = ref(
+  [
+    {
+      id: 'irl',
+      codigo: 'IRL',
+      nome: 'Reserva Legal',
+      possuiParametros: true,
+      formula:
+        'IRL (%) = área de Reserva Legal ÷ área do imóvel × 100. ' +
+        'O resultado é comparado ao percentual mínimo configurado ' +
+        'para o enquadramento do imóvel.',
+    },
+    {
+      id: 'idesmat',
+      codigo: 'IDesmat',
+      nome: 'Desmatamento',
+      possuiParametros: true,
+      formula:
+        'Para cada marco configurado, mede a supressão identificada ' +
+        'pelo PRODES posterior à data, dentro do imóvel, em hectares ' +
+        'e percentual da área total.',
+    },
+    {
+      id: 'ifc',
+      codigo: 'IFC',
+      nome: 'Focos de calor',
+      possuiParametros: true,
+      formula:
+        'IFC = quantidade de focos dentro do imóvel ÷ área do imóvel ' +
+        'em hectares × fator de normalização configurado. ' +
+        'A contagem considera o período de apuração configurado.',
+    },
+    {
+      id: 'iae',
+      codigo: 'IAE',
+      nome: 'Área embargada',
+      possuiParametros: false,
+      formula:
+        'IAE (%) = área do imóvel sobreposta a embargos ÷ área do ' +
+        'imóvel × 100. O resultado também é apresentado em hectares. ' +
+        'As sobreposições entre embargos são unificadas para evitar ' +
+        'contagem duplicada.',
+    },
+    {
+      id: 'icv',
+      codigo: 'ICV',
+      nome: 'Cobertura vegetal nativa',
+      possuiParametros: false,
+      formula:
+        'ICV (%) = área de vegetação nativa dentro do imóvel ÷ área ' +
+        'total do imóvel × 100. O resultado também é apresentado ' +
+        'em hectares.',
+    },
+    {
+      id: 'iapp',
+      codigo: 'IAPP',
+      nome: 'APP conservada',
+      possuiParametros: false,
+      formula:
+        'IAPP (%) = APP com vegetação nativa ÷ APP total × 100. ' +
+        'Área de APP sem vegetação nativa (ha) = APP total − APP ' +
+        'com vegetação. Quando não houver APP identificada, o ' +
+        'percentual é apresentado como não aplicável.',
+    },
+    {
+      id: 'isap',
+      codigo: 'ISAP',
+      nome: 'Áreas protegidas',
+      possuiParametros: false,
+      formula:
+        'Mede a área e o percentual do imóvel sobrepostos a cada ' +
+        'categoria protegida, como unidades de conservação, terras ' +
+        'indígenas, territórios quilombolas e florestas públicas. ' +
+        'O total utiliza a união das sobreposições para evitar ' +
+        'contagem duplicada.',
+    },
+  ].map((indicador) => ({
+    ...indicador,
+    parametros: configuracaoParametros[indicador.id] ?? [],
+    versoes: [],
+  })),
+)
 
 async function selecionarIndicador(indicador) {
   if (salvandoVersao.value) return
-
-  if (route.name !== 'Regras') {
-    await router.push({
-      name: 'Regras',
-    })
-  }
 
   parametrosPendentes.value = null
   erroSalvarVersao.value = ''
   mensagemSucesso.value = ''
 
+  indicadorParaCarregar.value = indicador.id
   indicadorSelecionado.value = indicador
 
   await carregarIndicador(indicador.id)
 }
 
 async function carregarIndicador(id) {
-  const consulta = ++consultaAtual
+  const consulta = ++ultimaConsulta
 
   carregandoIndicador.value = true
   erroCarregarIndicador.value = ''
 
   try {
-    const indicador =
-      await regraService.obterIndicador(id)
+    const resposta = await regraService.obterIndicador(id)
 
-    if (consulta !== consultaAtual) return
+    if (consulta !== ultimaConsulta) return
 
-    indicadorSelecionado.value = indicador
+    if (
+      !resposta ||
+      String(resposta.id) !== String(id) ||
+      !Array.isArray(resposta.parametros) ||
+      !Array.isArray(resposta.versoes)
+    ) {
+      erroCarregarIndicador.value =
+        'O servidor retornou dados incompletos do indicador.'
+      return
+    }
 
-    indicadores.value = indicadores.value.map(
-      (item) =>
-        item.id === indicador.id
-          ? indicador
-          : item,
+    const existente = indicadores.value.find(
+      (item) => String(item.id) === String(id),
     )
-  } catch (erro) {
-    if (consulta !== consultaAtual) return
 
-    erroCarregarIndicador.value = mensagemErro(
+    const atualizado = {
+      ...existente,
+      ...resposta,
+    }
+
+    indicadores.value = indicadores.value.map((item) =>
+      String(item.id) === String(id)
+        ? atualizado
+        : item,
+    )
+
+    indicadorSelecionado.value = atualizado
+  } catch (erro) {
+    if (consulta !== ultimaConsulta) return
+
+    erroCarregarIndicador.value = mensagemErroApi(
       erro,
-      'Não foi possível carregar o indicador.',
+      'Não foi possível carregar o indicador. Tente novamente.',
     )
   } finally {
-    if (consulta === consultaAtual) {
+    if (consulta === ultimaConsulta) {
       carregandoIndicador.value = false
     }
   }
 }
 
 function tentarNovamenteIndicador() {
-  if (carregandoIndicador.value) return
-
-  const id =
-    indicadorSelecionado.value?.id ||
-    route.query.indicador
-
-  if (id) {
-    carregarIndicador(id)
+  if (
+    indicadorParaCarregar.value == null ||
+    carregandoIndicador.value
+  ) {
+    return
   }
+
+  carregarIndicador(indicadorParaCarregar.value)
 }
 
 function abrirNovaVersao(dados) {
@@ -140,6 +246,13 @@ function abrirNovaVersao(dados) {
     salvandoVersao.value ||
     carregandoIndicador.value ||
     erroCarregarIndicador.value
+  ) {
+    return
+  }
+
+  if (
+    !indicadorSelecionado.value ||
+    dados.indicadorId !== indicadorSelecionado.value.id
   ) {
     return
   }
@@ -159,46 +272,75 @@ function abrirNovaVersao(dados) {
 async function confirmarNovaVersao(dados) {
   if (salvandoVersao.value) return
 
+  const indicador = indicadorSelecionado.value
+
+  if (
+    !indicador ||
+    dados.indicadorId !== indicador.id ||
+    parametrosPendentes.value?.indicadorId !== indicador.id
+  ) {
+    erroSalvarVersao.value =
+      'Selecione o indicador e revise os parâmetros novamente.'
+    return
+  }
+
   salvandoVersao.value = true
   erroSalvarVersao.value = ''
   mensagemSucesso.value = ''
 
   try {
-    const indicador =
-      await regraService.criarVersao(dados)
+    const resposta = await regraService.criarVersao(dados)
 
-    indicadores.value = indicadores.value.map(
-      (item) =>
-        item.id === indicador.id
-          ? indicador
-          : item,
+    if (
+      !resposta ||
+      String(resposta.id) !== String(indicador.id) ||
+      !Array.isArray(resposta.parametros) ||
+      resposta.versaoVigente == null ||
+      !Array.isArray(resposta.versoes)
+    ) {
+      erroSalvarVersao.value =
+        'Não foi possível confirmar os dados da nova versão. ' +
+        'O salvamento pode ter ocorrido. Consulte o histórico ' +
+        'antes de tentar novamente.'
+      return
+    }
+
+    const atualizado = {
+      ...indicador,
+      ...resposta,
+    }
+
+    indicadores.value = indicadores.value.map((item) =>
+      String(item.id) === String(atualizado.id)
+        ? atualizado
+        : item,
     )
 
-    indicadorSelecionado.value = indicador
+    indicadorSelecionado.value = atualizado
     parametrosPendentes.value = null
+    mensagemSucesso.value = 'Nova versão criada com sucesso.'
 
-    mensagemSucesso.value =
-      'Nova versão criada com sucesso.'
-
-    await router.push({
-      name: 'Regras',
-    })
+    await router.push({ name: 'Regras' })
   } catch (erro) {
-    erroSalvarVersao.value = mensagemErro(
-      erro,
-      'Não foi possível salvar a nova versão.',
-    )
+    if (
+      erro?.code === 'ECONNABORTED' ||
+      erro?.code === 'ETIMEDOUT' ||
+      erro?.code === 'ERR_NETWORK'
+    ) {
+      erroSalvarVersao.value =
+        'A conexão foi interrompida antes da confirmação. ' +
+        'O salvamento pode ter ocorrido. Consulte o histórico ' +
+        'antes de tentar novamente.'
+    } else {
+      erroSalvarVersao.value = mensagemErroApi(
+        erro,
+        'Não foi possível salvar a nova versão. Tente novamente.',
+      )
+    }
   } finally {
     salvandoVersao.value = false
   }
 }
-
-watch(
-  () => route.query.indicador,
-  carregarDaRota,
-)
-
-onMounted(carregarLista)
 </script>
 
 <template>
@@ -225,10 +367,7 @@ onMounted(carregarLista)
     <div class="regras-layout">
       <ListaIndicadores
         :indicadores="indicadores"
-        :carregando="carregandoLista"
-        :erro="erroLista"
         :selecionado-id="indicadorSelecionado?.id ?? null"
-        @tentar-novamente="carregarLista"
         @selecionar="selecionarIndicador"
       />
 
@@ -240,9 +379,7 @@ onMounted(carregarLista)
         @salvar-nova-versao="abrirNovaVersao"
       >
         <template #default="{ indicador }">
-          <HistoricoVersoes
-            :indicador="indicador"
-          />
+          <HistoricoVersoes :indicador="indicador" />
         </template>
       </PainelDetalheIndicador>
     </div>

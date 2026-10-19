@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import ListaImoveis from '../views/ListaImoveis.vue'
-import MapaIndicadores from '../views/MapaIndicadores.vue'
+import MapaResultado from '../views/MapaResultado.vue'
 import Regras from '../views/Regras.vue'
 import Cadastros from '../views/Cadastros.vue'
 import IngestaoFontes from '../views/IngestaoFontes.vue'
@@ -27,12 +27,8 @@ const router = createRouter({
     {
       path: '/resultado/:car',
       name: 'Resultado',
-      redirect: (to) => ({
-        name: 'MapaIndicadores',
-        params: {
-          car: to.params.car,
-        },
-      }),
+      component: MapaResultado,
+      props: true,
     },
     {
       path: '/imoveis',
@@ -42,8 +38,9 @@ const router = createRouter({
     {
       path: '/mapa-indicadores/:car?',
       name: 'MapaIndicadores',
-      component: MapaIndicadores,
-      props: true,
+      redirect: (to) => to.params.car
+        ? { name: 'Resultado', params: { car: to.params.car } }
+        : { name: 'Imoveis' },
     },
     {
       path: '/',
