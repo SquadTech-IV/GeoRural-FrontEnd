@@ -12,7 +12,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['erro'])
+const emit = defineEmits(['erro', 'detalhar'])
 
 const linhaTempo = computed(() =>
   prepararLinhaTempo(props.trajetoria),
@@ -129,6 +129,20 @@ watch(
             >
               Ainda não chegou nesta zona.
             </p>
+
+            <button
+              v-if="
+                etapa.movimentacaoId != null &&
+                !etapa.pendente
+              "
+              type="button"
+              class="linha-tempo-detalhar"
+              :aria-label="`Ver movimentação da zona ${etapa.nome}`"
+              @click="emit('detalhar', etapa.movimentacaoId)"
+            >
+              Ver movimentação
+              <span aria-hidden="true">→</span>
+            </button>
           </div>
         </li>
       </ol>

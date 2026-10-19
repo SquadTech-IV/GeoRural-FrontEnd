@@ -1,14 +1,23 @@
 <script setup>
-import { onBeforeUnmount, onMounted } from 'vue'
+import {
+  onBeforeUnmount,
+  onMounted,
+  watch,
+} from 'vue'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ListaArquivosConjunto from '../components/ListaArquivosConjunto.vue'
 import LinhaTempoZonas from '../components/LinhaTempoZonas.vue'
+import DetalheMovimentacao from '../components/DetalheMovimentacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
 
 import {
   criarConsultaRastreabilidade,
 } from '../services/rastreabilidadeConsultaService'
+
+import {
+  criarConsultaMovimentacao,
+} from '../services/movimentacaoConsultaService'
 
 const controle = criarConsultaRastreabilidade()
 
@@ -29,11 +38,31 @@ const {
   feedback,
 } = controle
 
+const movimentacao = criarConsultaMovimentacao(
+  controle.notificarErro,
+)
+
+const {
+  aberto: detalheAberto,
+  carregando: carregandoMovimentacao,
+  falhou: erroMovimentacao,
+  campos: camposMovimentacao,
+} = movimentacao
+
+watch(
+  [conjuntoId, arquivoId],
+  () => movimentacao.fechar(),
+  { flush: 'sync' },
+)
+
 onMounted(() => {
   controle.carregarConjuntos()
 })
 
-onBeforeUnmount(controle.destruir)
+onBeforeUnmount(() => {
+  controle.destruir()
+  movimentacao.destruir()
+})
 </script>
 
 <template>
@@ -163,10 +192,20 @@ onBeforeUnmount(controle.destruir)
           v-else-if="trajetoria"
           :trajetoria="trajetoria"
           @erro="controle.notificarErro"
+          @detalhar="movimentacao.consultar"
         />
       </section>
     </div>
   </main>
+
+  <DetalheMovimentacao
+    v-if="detalheAberto"
+    :carregando="carregandoMovimentacao"
+    :falhou="erroMovimentacao"
+    :campos="camposMovimentacao"
+    @fechar="movimentacao.fechar"
+    @tentar-novamente="movimentacao.tentarNovamente"
+  />
 
   <ToastMensagem
     v-if="feedback"
