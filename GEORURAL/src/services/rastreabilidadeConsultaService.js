@@ -39,12 +39,22 @@ export function criarConsultaRastreabilidade() {
     ) ?? null,
   )
 
-  function notificar(erro, mensagemPadrao) {
+  function notificarErro(mensagem) {
+    if (destruido || typeof mensagem !== 'string') return
+
+    const texto = mensagem.trim()
+
+    if (!texto) return
+
     feedback.value = {
       id: ++sequencia,
       tipo: 'erro',
-      mensagem: erro?.message || mensagemPadrao,
+      mensagem: texto,
     }
+  }
+
+  function notificar(erro, mensagemPadrao) {
+    notificarErro(erro?.message || mensagemPadrao)
   }
 
   function limparTrajetoria() {
@@ -224,6 +234,7 @@ export function criarConsultaRastreabilidade() {
     selecionarArquivo,
     tentarArquivosNovamente,
     tentarTrajetoriaNovamente,
+    notificarErro,
     fecharFeedback,
     destruir,
   }

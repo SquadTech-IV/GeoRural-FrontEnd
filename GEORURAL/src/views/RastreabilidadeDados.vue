@@ -3,6 +3,7 @@ import { onBeforeUnmount, onMounted } from 'vue'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ListaArquivosConjunto from '../components/ListaArquivosConjunto.vue'
+import LinhaTempoZonas from '../components/LinhaTempoZonas.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
 
 import {
@@ -158,29 +159,11 @@ onBeforeUnmount(controle.destruir)
           </button>
         </div>
 
-        <div
+        <LinhaTempoZonas
           v-else-if="trajetoria"
-          class="rastreabilidade-resumo"
-          role="status"
-        >
-          <span class="rastreabilidade-chip">
-            {{ conjuntoSelecionado?.nome }}
-          </span>
-
-          <p v-if="trajetoria.passagens.length">
-            Trajetória consultada.
-            {{ trajetoria.passagens.length }}
-            {{
-              trajetoria.passagens.length === 1
-                ? 'passagem registrada.'
-                : 'passagens registradas.'
-            }}
-          </p>
-
-          <p v-else>
-            Este arquivo ainda não possui movimentações registradas.
-          </p>
-        </div>
+          :trajetoria="trajetoria"
+          @erro="controle.notificarErro"
+        />
       </section>
     </div>
   </main>
