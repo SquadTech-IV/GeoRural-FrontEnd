@@ -1,5 +1,9 @@
 import api from './api'
 
+import {
+  prepararErroConsulta,
+} from './rastreabilidadeErroService'
+
 const ROTAS = {
   conjuntos: '/api/rastreabilidade/conjuntos',
 
@@ -25,69 +29,6 @@ function validarId(valor, nome) {
   return id
 }
 
-function requisicaoCancelada(erro) {
-  return (
-    erro?.code === 'ERR_CANCELED' ||
-    erro?.name === 'CanceledError' ||
-    erro?.name === 'AbortError'
-  )
-}
-
-function mensagemDaApi(dados) {
-  if (!dados || typeof dados !== 'object') {
-    return ''
-  }
-
-  const mensagem = dados.mensagem ?? dados.message
-
-  return typeof mensagem === 'string'
-    ? mensagem.trim()
-    : ''
-}
-
-function tratarErro(erro, mensagemPadrao) {
-  if (requisicaoCancelada(erro)) {
-    return erro
-  }
-
-  const status = erro?.response?.status
-  const mensagemBackend = mensagemDaApi(
-    erro?.response?.data,
-  )
-
-  let mensagem = mensagemPadrao
-
-  if (erro?.code === 'ECONNABORTED') {
-    mensagem =
-      'A consulta demorou mais que o esperado. Tente novamente.'
-  } else if (!erro?.response) {
-    mensagem =
-      'Não foi possível conectar ao servidor. Verifique sua conexão.'
-  } else if (status === 401) {
-    mensagem =
-      'Sua sessão expirou. Entre novamente para continuar.'
-  } else if (status === 403) {
-    mensagem =
-      'Você não tem permissão para consultar esses dados.'
-  } else if (status === 404) {
-    mensagem =
-      mensagemBackend || 'O recurso solicitado não foi encontrado.'
-  } else if (status >= 500) {
-    mensagem =
-      'O servidor não conseguiu concluir a consulta. Tente novamente.'
-  } else if (mensagemBackend) {
-    mensagem = mensagemBackend
-  }
-
-  const falha = new Error(mensagem, {
-    cause: erro,
-  })
-
-  falha.status = status ?? null
-
-  return falha
-}
-
 async function consultar(caminho, signal, mensagemErro) {
   try {
     const resposta = await api.get(caminho, {
@@ -96,7 +37,7 @@ async function consultar(caminho, signal, mensagemErro) {
 
     return resposta.data
   } catch (erro) {
-    throw tratarErro(erro, mensagemErro)
+    throw prepararErroConsulta(erro, mensagemErro)
   }
 }
 

@@ -1,5 +1,13 @@
 import { ref } from 'vue'
-import { rastreabilidadeService } from './rastreabilidadeService'
+
+import {
+  rastreabilidadeService,
+} from './rastreabilidadeService'
+
+import {
+  obterMensagemErro,
+  requisicaoCancelada,
+} from './rastreabilidadeErroService'
 
 function texto(valor) {
   return valor == null ? '' : String(valor).trim()
@@ -112,17 +120,32 @@ export function criarConsultaMovimentacao(notificarErro) {
           { signal: consulta.signal },
         )
 
-      if (destruido || consulta.signal.aborted) return
+      if (
+        destruido ||
+        consulta.signal.aborted ||
+        consultaAtual !== consulta
+      ) {
+        return
+      }
 
       campos.value = prepararDetalhe(resposta)
     } catch (erro) {
-      if (destruido || consulta.signal.aborted) return
+      if (
+        destruido ||
+        consulta.signal.aborted ||
+        consultaAtual !== consulta ||
+        requisicaoCancelada(erro)
+      ) {
+        return
+      }
 
       falhou.value = true
 
       notificarErro(
-        erro?.message ||
-        'Não foi possível consultar a movimentação.',
+        obterMensagemErro(
+          erro,
+          'Não foi possível consultar a movimentação.',
+        ),
       )
     } finally {
       if (!destruido && consultaAtual === consulta) {
@@ -143,7 +166,7 @@ export function criarConsultaMovimentacao(notificarErro) {
   }
 
   function tentarNovamente() {
-    if (movimentacaoId.value == null) return
+    if (destruido || movimentacaoId.value == null) return
 
     return consultar(movimentacaoId.value)
   }
@@ -151,6 +174,7 @@ export function criarConsultaMovimentacao(notificarErro) {
   function destruir() {
     destruido = true
     consultaAtual?.abort()
+    consultaAtual = null
   }
 
   return {

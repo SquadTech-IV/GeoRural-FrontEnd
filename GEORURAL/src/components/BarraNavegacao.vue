@@ -29,6 +29,16 @@ const itens = [
     titulo: 'Regras e Métodos',
     icone: 'regras',
   },
+  {
+    caminho: '/cadastros',
+    titulo: 'Fontes de dados',
+    icone: 'cadastros',
+  },
+  {
+    caminho: '/rastreabilidade',
+    titulo: 'Trajetória no datalake',
+    icone: 'rastreabilidade',
+  },
 ]
 
 function estaAtivo(caminho) {
@@ -39,7 +49,13 @@ function estaAtivo(caminho) {
     )
   }
 
-  return route.path === caminho
+  return (
+    route.path === caminho ||
+    (
+      caminho !== '/' &&
+      route.path.startsWith(`${caminho}/`)
+    )
+  )
 }
 
 function alternarTema() {
@@ -120,6 +136,26 @@ function alternarTema() {
               <circle cx="15" cy="17" r="3" />
             </template>
 
+            <template v-else-if="item.icone === 'cadastros'">
+              <ellipse cx="12" cy="5" rx="8" ry="3" />
+              <path
+                d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5"
+              />
+              <path
+                d="M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7"
+              />
+            </template>
+
+            <template
+              v-else-if="item.icone === 'rastreabilidade'"
+            >
+              <circle cx="5" cy="5" r="2" />
+              <circle cx="19" cy="19" r="2" />
+              <path
+                d="M7 5h8a4 4 0 0 1 0 8H9a4 4 0 0 0 0 8h8"
+              />
+            </template>
+
             <template v-else>
               <path
                 d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"
@@ -166,7 +202,6 @@ function alternarTema() {
 
             <template v-else>
               <circle cx="12" cy="12" r="4" />
-
               <path
                 d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"
               />

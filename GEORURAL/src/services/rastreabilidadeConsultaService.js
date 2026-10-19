@@ -1,6 +1,11 @@
 import { computed, ref } from 'vue'
 import { rastreabilidadeService } from './rastreabilidadeService'
 
+import {
+  obterMensagemErro,
+  requisicaoCancelada,
+} from './rastreabilidadeErroService'
+
 export function criarConsultaRastreabilidade() {
   const conjuntos = ref([])
   const arquivos = ref([])
@@ -46,6 +51,13 @@ export function criarConsultaRastreabilidade() {
 
     if (!texto) return
 
+    if (
+      feedback.value?.tipo === 'erro' &&
+      feedback.value.mensagem === texto
+    ) {
+      return
+    }
+
     feedback.value = {
       id: ++sequencia,
       tipo: 'erro',
@@ -53,8 +65,16 @@ export function criarConsultaRastreabilidade() {
     }
   }
 
-  function notificar(erro, mensagemPadrao) {
-    notificarErro(erro?.message || mensagemPadrao)
+  function notificarFalha(erro, mensagemPadrao) {
+    if (requisicaoCancelada(erro)) return
+
+    notificarErro(
+      obterMensagemErro(erro, mensagemPadrao),
+    )
+  }
+
+  function fecharFeedback() {
+    feedback.value = null
   }
 
   function limparTrajetoria() {
@@ -86,6 +106,8 @@ export function criarConsultaRastreabilidade() {
     const consulta = new AbortController()
     consultaConjuntos = consulta
 
+    fecharFeedback()
+
     carregandoConjuntos.value = true
     erroConjuntos.value = false
 
@@ -94,19 +116,33 @@ export function criarConsultaRastreabilidade() {
     limparArquivos()
 
     try {
-      const resposta = await rastreabilidadeService.listarConjuntos({
-        signal: consulta.signal,
-      })
+      const resposta =
+        await rastreabilidadeService.listarConjuntos({
+          signal: consulta.signal,
+        })
 
-      if (destruido || consulta.signal.aborted) return
+      if (
+        destruido ||
+        consulta.signal.aborted ||
+        consultaConjuntos !== consulta
+      ) {
+        return
+      }
 
       conjuntos.value = resposta
     } catch (erro) {
-      if (destruido || consulta.signal.aborted) return
+      if (
+        destruido ||
+        consulta.signal.aborted ||
+        consultaConjuntos !== consulta ||
+        requisicaoCancelada(erro)
+      ) {
+        return
+      }
 
       erroConjuntos.value = true
 
-      notificar(
+      notificarFalha(
         erro,
         'Não foi possível consultar os conjuntos.',
       )
@@ -120,6 +156,8 @@ export function criarConsultaRastreabilidade() {
   async function selecionarConjunto(id) {
     if (destruido) return
 
+    fecharFeedback()
+
     conjuntoId.value = String(id ?? '')
     limparArquivos()
 
@@ -131,20 +169,34 @@ export function criarConsultaRastreabilidade() {
     carregandoArquivos.value = true
 
     try {
-      const resposta = await rastreabilidadeService.listarArquivos(
-        conjuntoSelecionado.value.id,
-        { signal: consulta.signal },
-      )
+      const resposta =
+        await rastreabilidadeService.listarArquivos(
+          conjuntoSelecionado.value.id,
+          { signal: consulta.signal },
+        )
 
-      if (destruido || consulta.signal.aborted) return
+      if (
+        destruido ||
+        consulta.signal.aborted ||
+        consultaArquivos !== consulta
+      ) {
+        return
+      }
 
       arquivos.value = resposta
     } catch (erro) {
-      if (destruido || consulta.signal.aborted) return
+      if (
+        destruido ||
+        consulta.signal.aborted ||
+        consultaArquivos !== consulta ||
+        requisicaoCancelada(erro)
+      ) {
+        return
+      }
 
       erroArquivos.value = true
 
-      notificar(
+      notificarFalha(
         erro,
         'Não foi possível consultar os arquivos.',
       )
@@ -158,6 +210,7 @@ export function criarConsultaRastreabilidade() {
   async function selecionarArquivo(id) {
     if (destruido) return
 
+    fecharFeedback()
     limparTrajetoria()
 
     arquivoId.value = String(id ?? '')
@@ -170,20 +223,34 @@ export function criarConsultaRastreabilidade() {
     carregandoTrajetoria.value = true
 
     try {
-      const resposta = await rastreabilidadeService.consultarTrajetoria(
-        arquivoSelecionado.value.id,
-        { signal: consulta.signal },
-      )
+      const resposta =
+        await rastreabilidadeService.consultarTrajetoria(
+          arquivoSelecionado.value.id,
+          { signal: consulta.signal },
+        )
 
-      if (destruido || consulta.signal.aborted) return
+      if (
+        destruido ||
+        consulta.signal.aborted ||
+        consultaTrajetoria !== consulta
+      ) {
+        return
+      }
 
       trajetoria.value = resposta
     } catch (erro) {
-      if (destruido || consulta.signal.aborted) return
+      if (
+        destruido ||
+        consulta.signal.aborted ||
+        consultaTrajetoria !== consulta ||
+        requisicaoCancelada(erro)
+      ) {
+        return
+      }
 
       erroTrajetoria.value = true
 
-      notificar(
+      notificarFalha(
         erro,
         'Não foi possível consultar a trajetória.',
       )
@@ -200,10 +267,6 @@ export function criarConsultaRastreabilidade() {
 
   function tentarTrajetoriaNovamente() {
     return selecionarArquivo(arquivoId.value)
-  }
-
-  function fecharFeedback() {
-    feedback.value = null
   }
 
   function destruir() {
