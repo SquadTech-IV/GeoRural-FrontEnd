@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import ListaImoveis from '../views/ListaImoveis.vue'
 import MapaIndicadores from '../views/MapaIndicadores.vue'
 import Regras from '../views/Regras.vue'
+import IngestaoPagina from '../views/ingestao.vue'
 
 import ModalSalvarRegras from '../components/ModalSalvarRegras.vue'
 import ModalDetalheVersao from '../components/ModalDetalheVersao.vue'
@@ -12,6 +13,11 @@ const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
 
   routes: [
+    {
+      path: '/ingestao',
+      name: 'Ingestao',
+      component: IngestaoPagina,
+    },
     {
       path: '/imoveis',
       name: 'Imoveis',

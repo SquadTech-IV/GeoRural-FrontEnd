@@ -19,7 +19,11 @@ const itens = [
     titulo: 'Imóveis',
     icone: 'mapa',
   },
-
+  {
+    caminho: '/ingestao',
+    titulo: 'Ingestão de Fontes',
+    icone: 'upload',
+  },
 ]
 
 function estaAtivo(caminho) {
@@ -29,6 +33,13 @@ function estaAtivo(caminho) {
       route.path.startsWith('/resultado/') ||
       route.path === '/mapa-indicadores' ||
       route.path.startsWith('/mapa-indicadores/')
+    )
+  }
+
+  if (caminho === '/ingestao') {
+    return (
+      route.path === '/ingestao' ||
+      route.path.startsWith('/ingestao/')
     )
   }
 
