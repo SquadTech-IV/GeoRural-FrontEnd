@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import BarraNavegacao from '@/components/BarraNavegacao.vue'
+import BarraNavegacao from '../components/BarraNavegacao.vue'
 import FormularioEntradaDados from '../components/FormularioEntradaDados.vue'
 
 defineOptions({
@@ -81,9 +81,9 @@ function receberConfiguracao(dados) {
 
         <p>
           {{
-            configuracao.metodo === 'upload'
-              ? 'O arquivo foi selecionado. Nenhum dado foi enviado ao servidor.'
-              : 'A entrada por API foi selecionada. Nenhuma conexão foi executada.'
+            configuracao.metodo === 'api'
+              ? 'A entrada por API foi selecionada. Nenhuma conexão foi executada.'
+              : 'O arquivo foi selecionado. Nenhum dado foi enviado ao servidor.'
           }}
         </p>
 
@@ -93,14 +93,14 @@ function receberConfiguracao(dados) {
 
             <dd>
               {{
-                configuracao.metodo === 'upload'
-                  ? 'Upload'
-                  : 'API'
+                configuracao.metodo === 'api'
+                  ? 'API'
+                  : 'Upload'
               }}
             </dd>
           </div>
 
-          <template v-if="configuracao.metodo === 'upload'">
+          <template v-if="configuracao.metodo !== 'api'">
             <div>
               <dt>Arquivo</dt>
               <dd>{{ configuracao.arquivo?.name }}</dd>
@@ -122,7 +122,10 @@ function receberConfiguracao(dados) {
               <dt>Fonte</dt>
 
               <dd>
-                {{ fonteConfigurada?.nome ?? 'Fonte selecionada' }}
+                {{
+                  fonteConfigurada?.nome ??
+                  'Fonte selecionada'
+                }}
               </dd>
             </div>
 

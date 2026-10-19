@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import SeletorMetodoEntrada from './SeletorMetodoEntrada.vue'
+import ConsultaApiIngestao from './ConsultaApiIngestao.vue'
 
 const props = defineProps({
   fontes: {
@@ -21,7 +22,10 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['configurar'])
+const emit = defineEmits([
+  'configurar',
+  'api-consultada',
+])
 
 const metodo = ref('upload')
 const fonteId = ref('')
@@ -175,13 +179,13 @@ watch(metodo, () => {
 })
 
 function abrirSeletor() {
-  if (bloqueado.value) return
+  if (bloqueado.value || metodo.value !== 'upload') return
 
   inputArquivo.value?.click()
 }
 
 function selecionarArquivo(evento) {
-  if (bloqueado.value) return
+  if (bloqueado.value || metodo.value !== 'upload') return
 
   const selecionado = evento.target.files?.[0]
 
@@ -193,7 +197,7 @@ function selecionarArquivo(evento) {
 function receberArquivo(evento) {
   arrastando.value = false
 
-  if (bloqueado.value) return
+  if (bloqueado.value || metodo.value !== 'upload') return
 
   const selecionado = evento.dataTransfer?.files?.[0]
 
@@ -203,7 +207,7 @@ function receberArquivo(evento) {
 }
 
 function marcarArraste() {
-  if (bloqueado.value) return
+  if (bloqueado.value || metodo.value !== 'upload') return
 
   arrastando.value = true
 }
@@ -220,6 +224,10 @@ function removerArquivo() {
   if (bloqueado.value) return
 
   limparArquivo()
+}
+
+function receberConsultaApi(dados) {
+  emit('api-consultada', dados)
 }
 
 function configurar() {
@@ -357,10 +365,7 @@ function configurar() {
           </div>
         </div>
 
-        <div
-          v-show="metodo === 'upload'"
-          :inert="metodo !== 'upload'"
-        >
+        <div v-show="metodo === 'upload'">
           <div class="entrada-grade">
             <div class="entrada-campo">
               <label for="entrada-formato">
@@ -485,21 +490,12 @@ function configurar() {
           </div>
         </div>
 
-        <div
+        <ConsultaApiIngestao
           v-if="metodo === 'api'"
-          class="entrada-api"
-        >
-          <h3>Entrada por API</h3>
-
-          <p>
-            Selecione a fonte e o conjunto que deseja utilizar.
-            A conexão será verificada na próxima etapa.
-          </p>
-
-          <p class="entrada-ajuda">
-            Não é necessário selecionar um arquivo neste método.
-          </p>
-        </div>
+          :conjunto-id="conjuntoSelecionado?.id ?? null"
+          :desabilitado="bloqueado"
+          @consultado="receberConsultaApi"
+        />
 
         <footer class="entrada-rodape">
           <button
