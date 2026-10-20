@@ -1,8 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
 import ListaImoveis from '../views/ListaImoveis.vue'
-import MapaIndicadores from '../views/MapaIndicadores.vue'
 import Regras from '../views/Regras.vue'
+import Cadastros from '../views/Cadastros.vue'
 
 import ModalSalvarRegras from '../components/ModalSalvarRegras.vue'
 import ModalDetalheVersao from '../components/ModalDetalheVersao.vue'
@@ -13,6 +13,11 @@ const router = createRouter({
 
   routes: [
     {
+      path: '/cadastros',
+      name: 'Cadastros',
+      component: Cadastros,
+    },
+    {
       path: '/imoveis',
       name: 'Imoveis',
       component: ListaImoveis,
@@ -20,12 +25,14 @@ const router = createRouter({
     {
       path: '/mapa-indicadores/:car?',
       name: 'MapaIndicadores',
-      component: MapaIndicadores,
-      props: true,
+      redirect: (to) => to.params.car
+        ? { name: 'Resultado', params: { car: to.params.car } }
+        : { name: 'Imoveis' },
     },
     {
       path: '/',
       name: 'Regras',
+      alias: '/regras',
       component: Regras,
       children: [
         {

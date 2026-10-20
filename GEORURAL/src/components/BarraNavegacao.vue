@@ -15,14 +15,24 @@ const itens = [
     icone: 'regras',
   },
   {
+    caminho: '/cadastros',
+    titulo: 'Fontes e conjuntos',
+    icone: 'cadastros',
+  },
+  {
     caminho: '/imoveis',
     titulo: 'Imóveis',
     icone: 'mapa',
   },
-
 ]
 
 function estaAtivo(caminho) {
+  if (caminho === '/') {
+    return route.matched.some(
+      (registro) => registro.name === 'Regras',
+    )
+  }
+
   if (caminho === '/imoveis') {
     return (
       route.path === '/imoveis' ||
@@ -32,7 +42,10 @@ function estaAtivo(caminho) {
     )
   }
 
-  return route.path === caminho
+  return (
+    route.path === caminho ||
+    route.path.startsWith(`${caminho}/`)
+  )
 }
 
 function alternarTema() {
@@ -111,6 +124,16 @@ function alternarTema() {
               <path d="M4 7h2M12 7h8M4 17h8M18 17h2" />
               <circle cx="9" cy="7" r="3" />
               <circle cx="15" cy="17" r="3" />
+            </template>
+
+            <template v-else-if="item.icone === 'cadastros'">
+              <ellipse cx="12" cy="5" rx="8" ry="3" />
+              <path
+                d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5"
+              />
+              <path
+                d="M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7"
+              />
             </template>
 
             <template v-else>
