@@ -1,5 +1,13 @@
 import api from './api'
 
+import {
+  executarOperacaoArquivo,
+} from './arquivoRecebidoErroService'
+
+export {
+  consultaArquivoCancelada,
+} from './arquivoRecebidoErroService'
+
 function validarId(valor) {
   if (
     typeof valor === 'number' &&
@@ -67,14 +75,6 @@ function adaptarDetalhe(dado) {
   }
 }
 
-export function consultaArquivoCancelada(erro) {
-  return (
-    erro?.code === 'ERR_CANCELED' ||
-    erro?.name === 'CanceledError' ||
-    erro?.name === 'AbortError'
-  )
-}
-
 export function formatarDataRecebimento(valor) {
   if (!valor) return 'Não informado'
 
@@ -122,67 +122,80 @@ export function formatarTamanhoArquivo(valor) {
 }
 
 export const arquivosRecebidosService = {
-  async listar({
+  listar({
     nome = '',
     situacao = '',
     signal,
   } = {}) {
-    const params = {}
+    return executarOperacaoArquivo(async () => {
+      const params = {}
 
-    const filtroNome = String(nome ?? '').trim()
-    const filtroSituacao = String(situacao ?? '')
-      .trim()
-      .toUpperCase()
+      const filtroNome = String(nome ?? '').trim()
 
-    if (filtroNome) {
-      params.nome = filtroNome
-    }
+      const filtroSituacao = String(situacao ?? '')
+        .trim()
+        .toUpperCase()
 
-    if (filtroSituacao) {
-      params.situacao = filtroSituacao
-    }
+      if (filtroNome) {
+        params.nome = filtroNome
+      }
 
-    const { data } = await api.get('/api/arquivos', {
-      params,
-      signal,
-      timeout: 30000,
-    })
+      if (filtroSituacao) {
+        params.situacao = filtroSituacao
+      }
 
-    if (!Array.isArray(data)) {
-      throw new Error(
-        'O backend retornou uma lista de arquivos inválida.',
-      )
-    }
-
-    return data.map(adaptarResumo)
-  },
-
-  async consultarDetalhe(id, { signal } = {}) {
-    const arquivoId = validarId(id)
-
-    const { data } = await api.get(
-      `/api/arquivos/${arquivoId}`,
-      {
+      const { data } = await api.get('/api/arquivos', {
+        params,
         signal,
         timeout: 30000,
-      },
-    )
+      })
 
-    return adaptarDetalhe(data)
+      if (!Array.isArray(data)) {
+        throw new Error(
+          'O backend retornou uma lista de arquivos inválida.',
+        )
+      }
+
+      return data.map(adaptarResumo)
+    }, 'listar')
   },
 
-  async baixarOriginal(id, { signal } = {}) {
-    const arquivoId = validarId(id)
+  consultarDetalhe(id, { signal } = {}) {
+    return executarOperacaoArquivo(async () => {
+      const arquivoId = validarId(id)
 
-    const { data } = await api.get(
-      `/api/arquivos/${arquivoId}/download`,
-      {
-        signal,
-        responseType: 'blob',
-        timeout: 60000,
-      },
-    )
+      const { data } = await api.get(
+        `/api/arquivos/${arquivoId}`,
+        {
+          signal,
+          timeout: 30000,
+        },
+      )
 
-    return data
+      return adaptarDetalhe(data)
+    }, 'detalhe')
+  },
+
+  baixarOriginal(id, { signal } = {}) {
+    return executarOperacaoArquivo(async () => {
+      const arquivoId = validarId(id)
+
+      const { data } = await api.get(
+        `/api/arquivos/${arquivoId}/download`,
+        {
+          signal,
+          responseType: 'blob',
+          timeout: 60000,
+        },
+      )
+
+      if (!(data instanceof Blob)) {
+        throw new Error(
+          'O servidor retornou um conteúdo inválido para download.',
+        )
+      }
+
+      return data
+    }, 'download')
   },
 }

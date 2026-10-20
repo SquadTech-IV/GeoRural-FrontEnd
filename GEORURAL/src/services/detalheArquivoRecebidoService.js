@@ -65,9 +65,7 @@ export function criarDetalheArquivoRecebido() {
       }
 
       falhou.value = true
-
-      mensagem.value =
-        'Não foi possível consultar os detalhes do arquivo.'
+      mensagem.value = erro.message
     } finally {
       if (!destruido && consulta === atual) {
         carregando.value = false
@@ -137,8 +135,7 @@ export function criarDetalheArquivoRecebido() {
         return
       }
 
-      mensagem.value =
-        'Não foi possível baixar o arquivo original.'
+      mensagem.value = erro.message
     } finally {
       if (!destruido && download === atual) {
         baixando.value = false

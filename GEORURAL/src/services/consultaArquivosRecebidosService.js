@@ -62,9 +62,7 @@ export function criarConsultaArquivosRecebidos() {
 
       arquivos.value = []
       falhou.value = true
-
-      mensagem.value =
-        'Não foi possível consultar os arquivos recebidos. Tente novamente.'
+      mensagem.value = erro.message
     } finally {
       if (!destruido && consulta === atual) {
         carregando.value = false
