@@ -1,258 +1,337 @@
 import { computed, ref } from 'vue'
+import api from './api'
 
-const dadosExemplo = [
-  {
-    id: 'car-gua',
-    nome: 'CAR_Guarapuava_PR.zip',
-    origem: 'upload',
-    fonte: 'CAR',
-    competencia: '2026',
-    hash: 'a3f9…2b1d',
-    tamanho: '1,1 MB',
-    recebidoEm: '28/09/2026 09:40',
-    zona: 'Bruta',
-    camadas: [
-      {
-        id: 'imovel',
-        nome: 'Área do imóvel',
-        descricao: '1 imóvel · polígono',
-        status: 'processado',
-        processadoEm: '28/09/2026 09:43',
-        destino: 'Base do imóvel',
-        mapa: true,
-      },
-      {
-        id: 'rl',
-        nome: 'Reserva Legal',
-        descricao: 'Polígono',
-        status: 'pendente',
-        destino: 'IRL',
-        mapa: true,
-      },
-      {
-        id: 'app',
-        nome: 'APP',
-        descricao: 'Polígono',
-        status: 'pendente',
-        destino: 'Feição tratada',
-      },
-      {
-        id: 'vegetacao',
-        nome: 'Vegetação nativa',
-        descricao: 'Polígono',
-        status: 'pendente',
-        destino: 'Feição tratada',
-      },
-      {
-        id: 'uso',
-        nome: 'Uso do solo',
-        descricao: 'Polígono',
-        status: 'pendente',
-        destino: 'Feição tratada',
-      },
-    ],
-  },
-  {
-    id: 'car-pit',
-    nome: 'CAR_Pitanga_PR.zip',
-    origem: 'upload',
-    fonte: 'CAR',
-    competencia: '2026',
-    hash: 'b84d…0e77',
-    tamanho: '0,8 MB',
-    recebidoEm: '26/09/2026 11:03',
-    zona: 'Bruta',
-    camadas: [
-      {
-        id: 'imovel',
-        nome: 'Área do imóvel',
-        descricao: '1 imóvel · polígono',
-        status: 'pendente',
-        destino: 'Base do imóvel',
-        mapa: true,
-      },
-      {
-        id: 'rl',
-        nome: 'Reserva Legal',
-        descricao: 'Polígono',
-        status: 'pendente',
-        destino: 'IRL',
-        mapa: true,
-      },
-      {
-        id: 'app',
-        nome: 'APP',
-        descricao: 'Polígono',
-        status: 'pendente',
-        destino: 'Feição tratada',
-      },
-    ],
-  },
-  {
-    id: 'embargos',
-    nome: 'embargos_PR_2026-10-17.gml',
-    origem: 'api',
-    fonte: 'IBAMA',
-    competencia: '2026',
-    hash: '7c2e…91af',
-    tamanho: '4,2 MB',
-    recebidoEm: '17/10/2026 03:00',
-    zona: 'Bruta',
-    camadas: [
-      {
-        id: 'embargos',
-        nome: 'Embargos ambientais',
-        descricao: '842 feições',
-        status: 'pendente',
-        destino: 'IAE',
-        mapa: true,
-      },
-    ],
-  },
-  {
-    id: 'focos',
-    nome: 'focos_2026-10-16.geojson',
-    origem: 'api',
-    fonte: 'INPE',
-    competencia: '2026',
-    hash: 'd51b…77ac',
-    tamanho: '2,0 MB',
-    recebidoEm: '16/10/2026 03:00',
-    zona: 'Bruta',
-    camadas: [
-      {
-        id: 'focos',
-        nome: 'Focos de calor',
-        descricao: '1.197 feições',
-        status: 'processado',
-        processadoEm: '16/10/2026 03:04',
-        destino: 'Feição tratada',
-      },
-    ],
-  },
-  {
-    id: 'prodes',
-    nome: 'prodes_2025.geojson',
-    origem: 'api',
-    fonte: 'INPE',
-    competencia: '2025',
-    hash: 'e09c…1f30',
-    tamanho: '3,4 MB',
-    recebidoEm: '15/10/2026 03:00',
-    zona: 'Bruta',
-    camadas: [
-      {
-        id: 'desmatamento',
-        nome: 'Desmatamento (PRODES)',
-        descricao: '318 feições',
-        status: 'pendente',
-        destino: 'Feição tratada',
-      },
-    ],
-  },
-  {
-    id: 'municipios',
-    nome: 'malha_municipal_PR.geojson',
-    origem: 'api',
-    fonte: 'IBGE',
-    competencia: '2024',
-    hash: 'f10a…55cd',
-    tamanho: '6,1 MB',
-    recebidoEm: '27/09/2026 16:22',
-    zona: 'Bruta',
-    camadas: [
-      {
-        id: 'municipios',
-        nome: 'Municípios do Paraná',
-        descricao: '399 polígonos',
-        status: 'processado',
-        processadoEm: '27/09/2026 16:25',
-        destino: 'Referência cartográfica',
-      },
-    ],
-  },
-]
+function validarId(valor) {
+  const id = String(valor ?? '').trim()
 
-const apresentacoesStatus = {
-  pendente: {
-    texto: 'Não processado',
-    classe: 'neutro',
-  },
-  parcial: {
-    texto: 'Parcial',
-    classe: 'aviso',
-  },
-  processando: {
-    texto: 'Processando',
-    classe: 'andamento',
-  },
-  processado: {
-    texto: 'Processado',
-    classe: 'sucesso',
-  },
-}
-
-export function apresentarStatus(status) {
-  return apresentacoesStatus[status] ?? {
-    texto: 'Não informado',
-    classe: 'neutro',
+  if (!/^[1-9]\d*$/.test(id)) {
+    throw new Error('Selecione um arquivo válido.')
   }
+
+  return id
 }
 
-export function statusArquivo(arquivo) {
-  if (!arquivo?.camadas?.length) return 'pendente'
+function foiCancelado(erro) {
+  return (
+    erro?.code === 'ERR_CANCELED' ||
+    erro?.name === 'CanceledError' ||
+    erro?.name === 'AbortError'
+  )
+}
+
+function mensagemErro(erro, envio = false) {
+  const status = erro?.response?.status
+  const dados = erro?.response?.data
 
   if (
-    arquivo.camadas.some(
-      camada => camada.status === 'processando',
-    )
+    erro?.code === 'ECONNABORTED' ||
+    erro?.code === 'ETIMEDOUT'
   ) {
-    return 'processando'
+    return envio
+      ? 'O tempo de resposta terminou. O envio pode ter sido recebido pelo servidor; confirme antes de reenviar.'
+      : 'A consulta demorou mais que o permitido. Tente novamente.'
   }
 
-  const processadas = arquivo.camadas.filter(
-    camada => camada.status === 'processado',
-  ).length
+  if (erro?.isAxiosError && !erro.response) {
+    return envio
+      ? 'A conexão foi interrompida. Confirme no servidor se o envio foi recebido antes de tentar novamente.'
+      : 'Não foi possível acessar o backend. Verifique se ele está em execução.'
+  }
 
-  if (!processadas) return 'pendente'
+  if (status === 401 || status === 403) {
+    return 'Você não possui autorização para executar esta operação.'
+  }
 
-  return processadas === arquivo.camadas.length
-    ? 'processado'
-    : 'parcial'
+  const mensagem =
+    typeof dados?.mensagem === 'string'
+      ? dados.mensagem.trim()
+      : typeof dados?.message === 'string'
+        ? dados.message.trim()
+        : ''
+
+  if (
+    status >= 400 &&
+    status < 500 &&
+    mensagem
+  ) {
+    return mensagem
+  }
+
+  if (status === 404) {
+    return 'O arquivo solicitado não foi encontrado.'
+  }
+
+  if (status === 409) {
+    return 'O arquivo não está disponível para processamento.'
+  }
+
+  if (status >= 500) {
+    return 'O servidor não conseguiu concluir a operação.'
+  }
+
+  if (!erro?.isAxiosError && erro?.message) {
+    return erro.message
+  }
+
+  return 'Não foi possível concluir a operação.'
 }
 
-export function podeProcessarArquivo(arquivo) {
-  return Boolean(
-    arquivo?.camadas.some(
-      camada => camada.status === 'pendente',
-    ),
-  )
+async function requisitar(operacao, envio = false) {
+  try {
+    return await operacao()
+  } catch (erro) {
+    if (foiCancelado(erro)) {
+      throw erro
+    }
+
+    throw new Error(mensagemErro(erro, envio), {
+      cause: erro,
+    })
+  }
+}
+
+export function formatarData(valor) {
+  if (!valor) return 'Não informado'
+
+  const data = new Date(valor)
+
+  if (Number.isNaN(data.getTime())) {
+    return String(valor)
+  }
+
+  return data.toLocaleString('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  })
+}
+
+export function formatarTamanho(valor) {
+  if (valor == null || valor === '') {
+    return 'Não informado'
+  }
+
+  const bytes = Number(valor)
+
+  if (!Number.isFinite(bytes) || bytes < 0) {
+    return 'Não informado'
+  }
+
+  const unidades = ['B', 'KB', 'MB', 'GB', 'TB']
+
+  let tamanho = bytes
+  let indice = 0
+
+  while (tamanho >= 1024 && indice < unidades.length - 1) {
+    tamanho /= 1024
+    indice++
+  }
+
+  return `${tamanho.toLocaleString('pt-BR', {
+    maximumFractionDigits: indice === 0 ? 0 : 1,
+  })} ${unidades[indice]}`
+}
+
+export function apresentarStatus(valor) {
+  const original = String(valor ?? '').trim()
+  const codigo = original.toUpperCase()
+
+  const estados = {
+    AGUARDANDO: {
+      texto: 'Aguardando',
+      classe: 'aviso',
+    },
+    PENDENTE: {
+      texto: 'Pendente',
+      classe: 'aviso',
+    },
+    EM_PROCESSAMENTO: {
+      texto: 'Em processamento',
+      classe: 'andamento',
+    },
+    PROCESSANDO: {
+      texto: 'Processando',
+      classe: 'andamento',
+    },
+    PROCESSADO: {
+      texto: 'Processado',
+      classe: 'sucesso',
+    },
+    CONCLUIDO: {
+      texto: 'Concluído',
+      classe: 'sucesso',
+    },
+    SUCESSO: {
+      texto: 'Sucesso',
+      classe: 'sucesso',
+    },
+    ERRO: {
+      texto: 'Erro',
+      classe: 'erro',
+    },
+    FALHA: {
+      texto: 'Falha',
+      classe: 'erro',
+    },
+    FALHOU: {
+      texto: 'Falhou',
+      classe: 'erro',
+    },
+  }
+
+  return estados[codigo] ?? {
+    texto: original || 'Não informado',
+    classe: 'neutro',
+  }
+}
+
+function adaptarArquivo(dado) {
+  if (!dado || typeof dado !== 'object') {
+    throw new Error('O backend retornou um arquivo inválido.')
+  }
+
+  return {
+    id: validarId(dado.id),
+    nome: dado.nomeArquivo || dado.nome || 'Arquivo sem nome',
+    titulo: dado.nome || '',
+    fonte: dado.fonte || 'Não informada',
+    formato: dado.formato || 'Não informado',
+    quantidade: dado.qtdArquivos ?? null,
+    situacao: String(dado.situacao ?? ''),
+    recebidoEm: formatarData(dado.recebidoEm),
+  }
+}
+
+function adaptarDetalhe(dado) {
+  const resumo = adaptarArquivo(dado)
+
+  if (
+    dado.arquivos != null &&
+    !Array.isArray(dado.arquivos)
+  ) {
+    throw new Error(
+      'O backend retornou uma lista de conteúdos inválida.',
+    )
+  }
+
+  return {
+    ...resumo,
+    srid: dado.srid,
+    tamanho: formatarTamanho(dado.tamanhoBytes),
+    caminho: dado.caminho || '',
+    descricao: dado.descricao || '',
+    itens: (dado.arquivos ?? []).map(item => ({
+      id: validarId(item.id),
+      nome: item.nome || 'Item sem nome',
+      formato: item.formato || 'Não informado',
+      tamanho: formatarTamanho(item.tamanhoBytes),
+      descricao: item.descricao || '',
+    })),
+  }
+}
+
+export const processamentoService = {
+  listar({ signal } = {}) {
+    return requisitar(async () => {
+      const { data } = await api.get('/api/arquivos', {
+        signal,
+        timeout: 30000,
+      })
+
+      if (!Array.isArray(data)) {
+        throw new Error(
+          'O backend retornou uma lista de arquivos inválida.',
+        )
+      }
+
+      return data.map(adaptarArquivo)
+    })
+  },
+
+  detalhe(id, { signal } = {}) {
+    return requisitar(async () => {
+      const arquivoId = validarId(id)
+
+      const { data } = await api.get(
+        `/api/arquivos/${arquivoId}`,
+        {
+          signal,
+          timeout: 30000,
+        },
+      )
+
+      return adaptarDetalhe(data)
+    })
+  },
+
+  encaminhar(id) {
+    return requisitar(async () => {
+      const arquivoId = validarId(id)
+
+      const { data } = await api.post(
+        `/api/arquivos/${arquivoId}/processar`,
+        null,
+        {
+          timeout: 60000,
+        },
+      )
+
+      if (
+        !data ||
+        String(data.id) !== arquivoId
+      ) {
+        throw new Error(
+          'O servidor respondeu ao envio, mas a confirmação recebida é inválida. Confirme o recebimento antes de reenviar.',
+        )
+      }
+
+      return data
+    }, true)
+  },
+
+  baixar(id) {
+    return requisitar(async () => {
+      const arquivoId = validarId(id)
+
+      const { data } = await api.get(
+        `/api/arquivos/${arquivoId}/download`,
+        {
+          responseType: 'blob',
+          timeout: 60000,
+        },
+      )
+
+      return data
+    })
+  },
 }
 
 export function criarConsultaProcessamento() {
-  const arquivos = ref(
-    dadosExemplo.map(arquivo => ({
-      ...arquivo,
-      camadas: arquivo.camadas.map(camada => ({
-        ...camada,
-      })),
-    })),
-  )
-
+  const arquivos = ref([])
   const busca = ref('')
-  const origem = ref('')
   const fonte = ref('')
   const status = ref('')
 
-  const arquivoAtivoId = ref(arquivos.value[0]?.id ?? '')
+  const arquivoAtivoId = ref('')
+  const arquivoAtivo = ref(null)
   const arquivosSelecionados = ref(new Set())
-  const camadasSelecionadas = ref(new Set())
+
+  const carregando = ref(false)
+  const carregandoDetalhe = ref(false)
+
+  const falhouLista = ref(false)
+  const falhouDetalhe = ref(false)
+
+  const enviando = ref(false)
+  const baixando = ref(false)
+
+  const ultimaEntrega = ref(null)
   const notificacao = ref(null)
 
-  const temporizadores = new Set()
-
+  let consultaLista = null
+  let consultaDetalhe = null
   let temporizadorNotificacao = null
-  let sequenciaNotificacao = 0
+
+  let sequencia = 0
   let destruido = false
 
   const fontes = computed(() =>
@@ -261,63 +340,53 @@ export function criarConsultaProcessamento() {
     )].sort(),
   )
 
+  const situacoes = computed(() =>
+    [...new Set(
+      arquivos.value
+        .map(arquivo => arquivo.situacao)
+        .filter(Boolean),
+    )].sort(),
+  )
+
   const arquivosFiltrados = computed(() => {
-    const texto = busca.value.trim().toLocaleLowerCase('pt-BR')
+    const texto = busca.value
+      .trim()
+      .toLocaleLowerCase('pt-BR')
 
     return arquivos.value.filter(arquivo => {
-      const correspondeBusca =
+      const correspondeNome =
         !texto ||
-        arquivo.nome.toLocaleLowerCase('pt-BR').includes(texto)
+        arquivo.nome
+          .toLocaleLowerCase('pt-BR')
+          .includes(texto) ||
+        arquivo.titulo
+          .toLocaleLowerCase('pt-BR')
+          .includes(texto)
 
       return (
-        correspondeBusca &&
-        (!origem.value || arquivo.origem === origem.value) &&
+        correspondeNome &&
         (!fonte.value || arquivo.fonte === fonte.value) &&
-        (!status.value || statusArquivo(arquivo) === status.value)
+        (!status.value || arquivo.situacao === status.value)
       )
     })
   })
 
-  const arquivoAtivo = computed(() =>
-    arquivos.value.find(
-      arquivo => arquivo.id === arquivoAtivoId.value,
-    ) ?? null,
-  )
-
-  const visiveisSelecionaveis = computed(() =>
-    arquivosFiltrados.value.filter(podeProcessarArquivo),
-  )
-
   const todosVisiveisSelecionados = computed(() =>
-    visiveisSelecionaveis.value.length > 0 &&
-    visiveisSelecionaveis.value.every(
+    arquivosFiltrados.value.length > 0 &&
+    arquivosFiltrados.value.every(
       arquivo => arquivosSelecionados.value.has(arquivo.id),
     ),
   )
 
   const algunsVisiveisSelecionados = computed(() =>
     !todosVisiveisSelecionados.value &&
-    visiveisSelecionaveis.value.some(
+    arquivosFiltrados.value.some(
       arquivo => arquivosSelecionados.value.has(arquivo.id),
     ),
   )
 
   const quantidadeArquivosSelecionados = computed(
     () => arquivosSelecionados.value.size,
-  )
-
-  const camadasMarcadas = computed(() =>
-    arquivoAtivo.value?.camadas.filter(
-      camada =>
-        camada.status === 'pendente' &&
-        camadasSelecionadas.value.has(camada.id),
-    ) ?? [],
-  )
-
-  const quantidadeProcessadas = computed(() =>
-    arquivoAtivo.value?.camadas.filter(
-      camada => camada.status === 'processado',
-    ).length ?? 0,
   )
 
   function fecharNotificacao() {
@@ -331,7 +400,7 @@ export function criarConsultaProcessamento() {
     clearTimeout(temporizadorNotificacao)
 
     notificacao.value = {
-      id: ++sequenciaNotificacao,
+      id: ++sequencia,
       tipo,
       mensagem,
     }
@@ -339,36 +408,162 @@ export function criarConsultaProcessamento() {
     if (tipo !== 'erro') {
       temporizadorNotificacao = setTimeout(
         fecharNotificacao,
-        6000,
+        7000,
       )
     }
   }
 
-  function abrirArquivo(id) {
-    arquivoAtivoId.value = id
-    camadasSelecionadas.value = new Set()
+  async function abrirArquivo(id) {
+    if (destruido) return
+
+    consultaDetalhe?.abort()
+
+    const atual = new AbortController()
+    consultaDetalhe = atual
+
+    arquivoAtivoId.value = String(id)
+    arquivoAtivo.value = null
+
+    carregandoDetalhe.value = true
+    falhouDetalhe.value = false
+
+    try {
+      const detalhe = await processamentoService.detalhe(
+        id,
+        {
+          signal: atual.signal,
+        },
+      )
+
+      if (
+        destruido ||
+        atual.signal.aborted ||
+        consultaDetalhe !== atual
+      ) {
+        return
+      }
+
+      arquivoAtivo.value = detalhe
+    } catch (erro) {
+      if (
+        destruido ||
+        atual.signal.aborted ||
+        consultaDetalhe !== atual ||
+        foiCancelado(erro)
+      ) {
+        return
+      }
+
+      falhouDetalhe.value = true
+      notificar('erro', erro.message)
+    } finally {
+      if (!destruido && consultaDetalhe === atual) {
+        carregandoDetalhe.value = false
+        consultaDetalhe = null
+      }
+    }
+  }
+
+  async function carregarArquivos() {
+    if (destruido || enviando.value) return
+
+    consultaLista?.abort()
+
+    const atual = new AbortController()
+    consultaLista = atual
+
+    carregando.value = true
+    falhouLista.value = false
+
+    try {
+      const resposta = await processamentoService.listar({
+        signal: atual.signal,
+      })
+
+      if (
+        destruido ||
+        atual.signal.aborted ||
+        consultaLista !== atual
+      ) {
+        return
+      }
+
+      arquivos.value = resposta
+
+      const ids = new Set(
+        resposta.map(arquivo => arquivo.id),
+      )
+
+      arquivosSelecionados.value = new Set(
+        [...arquivosSelecionados.value].filter(
+          id => ids.has(id),
+        ),
+      )
+
+      if (!fontes.value.includes(fonte.value)) {
+        fonte.value = ''
+      }
+
+      if (!situacoes.value.includes(status.value)) {
+        status.value = ''
+      }
+
+      const proximoId = ids.has(arquivoAtivoId.value)
+        ? arquivoAtivoId.value
+        : resposta[0]?.id
+
+      if (proximoId) {
+        await abrirArquivo(proximoId)
+      } else {
+        consultaDetalhe?.abort()
+        consultaDetalhe = null
+
+        arquivoAtivoId.value = ''
+        arquivoAtivo.value = null
+
+        carregandoDetalhe.value = false
+        falhouDetalhe.value = false
+      }
+    } catch (erro) {
+      if (
+        destruido ||
+        atual.signal.aborted ||
+        consultaLista !== atual ||
+        foiCancelado(erro)
+      ) {
+        return
+      }
+
+      falhouLista.value = true
+      notificar('erro', erro.message)
+    } finally {
+      if (!destruido && consultaLista === atual) {
+        carregando.value = false
+        consultaLista = null
+      }
+    }
   }
 
   function selecionarArquivo(id, selecionado) {
-    const arquivo = arquivos.value.find(item => item.id === id)
-
-    if (!podeProcessarArquivo(arquivo)) return
+    if (enviando.value || carregando.value) return
 
     const selecao = new Set(arquivosSelecionados.value)
 
     if (selecionado) {
-      selecao.add(id)
+      selecao.add(String(id))
     } else {
-      selecao.delete(id)
+      selecao.delete(String(id))
     }
 
     arquivosSelecionados.value = selecao
   }
 
   function selecionarVisiveis(selecionado) {
+    if (enviando.value || carregando.value) return
+
     const selecao = new Set(arquivosSelecionados.value)
 
-    for (const arquivo of visiveisSelecionaveis.value) {
+    for (const arquivo of arquivosFiltrados.value) {
       if (selecionado) {
         selecao.add(arquivo.id)
       } else {
@@ -379,186 +574,164 @@ export function criarConsultaProcessamento() {
     arquivosSelecionados.value = selecao
   }
 
-  function selecionarCamada(id, selecionada) {
-    const camada = arquivoAtivo.value?.camadas.find(
-      item => item.id === id,
-    )
+  async function enviarArquivos(ids) {
+    if (destruido || enviando.value) return
 
-    if (camada?.status !== 'pendente') return
+    const selecionados = [...new Set(ids.map(String))]
 
-    const selecao = new Set(camadasSelecionadas.value)
-
-    if (selecionada) {
-      selecao.add(id)
-    } else {
-      selecao.delete(id)
-    }
-
-    camadasSelecionadas.value = selecao
-  }
-
-  function limparSelecoesIndisponiveis() {
-    arquivosSelecionados.value = new Set(
-      [...arquivosSelecionados.value].filter(id =>
-        podeProcessarArquivo(
-          arquivos.value.find(arquivo => arquivo.id === id),
-        ),
-      ),
-    )
-
-    camadasSelecionadas.value = new Set(
-      [...camadasSelecionadas.value].filter(id =>
-        arquivoAtivo.value?.camadas.some(
-          camada =>
-            camada.id === id &&
-            camada.status === 'pendente',
-        ),
-      ),
-    )
-  }
-
-  function iniciarSimulacao(trabalhos) {
-    const pendentes = trabalhos.filter(
-      trabalho => trabalho.camada.status === 'pendente',
-    )
-
-    if (!pendentes.length) {
-      notificar(
-        'aviso',
-        'Selecione pelo menos uma camada não processada.',
-      )
-
+    if (!selecionados.length) {
+      notificar('aviso', 'Selecione pelo menos um arquivo.')
       return
     }
 
-    for (const trabalho of pendentes) {
-      trabalho.camada.status = 'processando'
-    }
+    enviando.value = true
 
-    limparSelecoesIndisponiveis()
+    const sucessos = []
+    const falhas = []
 
-    notificar(
-      'informacao',
-      `Simulação iniciada para ${pendentes.length} camada(s).`,
-    )
+    try {
+      for (const id of selecionados) {
+        if (destruido) break
 
-    let concluidas = 0
+        try {
+          const entrega =
+            await processamentoService.encaminhar(id)
 
-    pendentes.forEach((trabalho, indice) => {
-      const temporizador = setTimeout(() => {
-        temporizadores.delete(temporizador)
+          if (destruido) return
 
-        if (destruido) return
+          ultimaEntrega.value = entrega
+          sucessos.push(id)
+        } catch (erro) {
+          if (destruido) return
 
-        trabalho.camada.status = 'processado'
-        trabalho.camada.processadoEm =
-          new Date().toLocaleString('pt-BR')
+          const arquivo = arquivos.value.find(
+            item => item.id === id,
+          )
 
-        concluidas++
-
-        if (concluidas === pendentes.length) {
-          notificar(
-            'sucesso',
-            `Simulação concluída para ${pendentes.length} camada(s). Nenhum pipeline real foi executado.`,
+          falhas.push(
+            `${arquivo?.nome ?? id}: ${erro.message}`,
           )
         }
-      }, 1200 + indice * 450)
+      }
 
-      temporizadores.add(temporizador)
-    })
-  }
+      if (destruido) return
 
-  function processarCamada(arquivoId, camadaId) {
-    const arquivo = arquivos.value.find(
-      item => item.id === arquivoId,
-    )
+      arquivosSelecionados.value = new Set(
+        [...arquivosSelecionados.value].filter(
+          id => !sucessos.includes(id),
+        ),
+      )
 
-    const camada = arquivo?.camadas.find(
-      item => item.id === camadaId,
-    )
-
-    if (!camada) {
-      notificar('erro', 'A camada selecionada não foi encontrada.')
-      return
+      if (falhas.length) {
+        notificar(
+          'erro',
+          `${sucessos.length} envio(s) confirmado(s) e ` +
+          `${falhas.length} sem confirmação. ` +
+          falhas.join(' '),
+        )
+      } else {
+        notificar(
+          'sucesso',
+          `${sucessos.length} arquivo(s) encaminhado(s). ` +
+          'A confirmação não indica conclusão do processamento.',
+        )
+      }
+    } finally {
+      if (!destruido) {
+        enviando.value = false
+      }
     }
-
-    iniciarSimulacao([{ arquivo, camada }])
-  }
-
-  function processarCamadasMarcadas() {
-    const arquivo = arquivoAtivo.value
-
-    if (!arquivo) return
-
-    iniciarSimulacao(
-      camadasMarcadas.value.map(camada => ({
-        arquivo,
-        camada,
-      })),
-    )
   }
 
   function processarArquivosSelecionados() {
-    const trabalhos = []
-
-    for (const arquivo of arquivos.value) {
-      if (!arquivosSelecionados.value.has(arquivo.id)) continue
-
-      for (const camada of arquivo.camadas) {
-        if (camada.status === 'pendente') {
-          trabalhos.push({ arquivo, camada })
-        }
-      }
-    }
-
-    iniciarSimulacao(trabalhos)
+    return enviarArquivos(
+      [...arquivosSelecionados.value],
+    )
   }
 
-  function solicitarMapa() {
-    notificar(
-      'informacao',
-      'A abertura desta camada no mapa depende da integração com os resultados do backend.',
-    )
+  function processarArquivoAtivo() {
+    if (!arquivoAtivo.value) return
+
+    return enviarArquivos([arquivoAtivo.value.id])
+  }
+
+  async function baixarOriginal() {
+    const arquivo = arquivoAtivo.value
+
+    if (!arquivo || baixando.value || destruido) return
+
+    baixando.value = true
+
+    try {
+      const conteudo = await processamentoService.baixar(
+        arquivo.id,
+      )
+
+      if (destruido) return
+
+      const url = URL.createObjectURL(conteudo)
+      const link = document.createElement('a')
+
+      try {
+        link.href = url
+        link.download = arquivo.nome
+        document.body.appendChild(link)
+        link.click()
+      } finally {
+        link.remove()
+
+        setTimeout(() => {
+          URL.revokeObjectURL(url)
+        }, 1000)
+      }
+    } catch (erro) {
+      if (!destruido) {
+        notificar('erro', erro.message)
+      }
+    } finally {
+      if (!destruido) {
+        baixando.value = false
+      }
+    }
   }
 
   function destruir() {
     destruido = true
 
+    consultaLista?.abort()
+    consultaDetalhe?.abort()
+
     clearTimeout(temporizadorNotificacao)
-
-    for (const temporizador of temporizadores) {
-      clearTimeout(temporizador)
-    }
-
-    temporizadores.clear()
   }
 
   return {
     busca,
-    origem,
     fonte,
     status,
     fontes,
+    situacoes,
     arquivosFiltrados,
     arquivoAtivo,
     arquivoAtivoId,
     arquivosSelecionados,
-    camadasSelecionadas,
     todosVisiveisSelecionados,
     algunsVisiveisSelecionados,
-    visiveisSelecionaveis,
     quantidadeArquivosSelecionados,
-    quantidadeProcessadas,
-    camadasMarcadas,
+    carregando,
+    carregandoDetalhe,
+    falhouLista,
+    falhouDetalhe,
+    enviando,
+    baixando,
+    ultimaEntrega,
     notificacao,
+    carregarArquivos,
     abrirArquivo,
     selecionarArquivo,
     selecionarVisiveis,
-    selecionarCamada,
-    processarCamada,
-    processarCamadasMarcadas,
     processarArquivosSelecionados,
-    solicitarMapa,
+    processarArquivoAtivo,
+    baixarOriginal,
     fecharNotificacao,
     destruir,
   }

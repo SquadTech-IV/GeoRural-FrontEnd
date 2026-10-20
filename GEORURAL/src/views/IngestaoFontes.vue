@@ -5,7 +5,7 @@ import IconDocumentation from '../components/icons/IconDocumentation.vue'
 import IconUpload from '../components/icons/IconUpload.vue'
 
 
-const mostrarModal = ref(false)
+
 const mostrarArquivos = ref(false)
 const arquivos = ref([])
 const mensagemErro = ref('')
@@ -18,7 +18,15 @@ function obterExtensao(nomeArquivo) {
 }
 
 function handleArquivoSelecionado(event) {
-  const arquivosDoInput = event.target.files
+  registrarArquivos(event.target.files)
+  event.target.value = ''
+}
+
+function handleArquivoSolto(event) {
+  registrarArquivos(event.dataTransfer?.files ?? [])
+}
+
+function registrarArquivos(arquivosDoInput) {
   if (!arquivosDoInput.length) return
 
   mensagemErro.value = ''
@@ -42,11 +50,12 @@ function handleArquivoSelecionado(event) {
   }
 
   if (!arquivosValidos.length) {
-    event.target.value = ''
     return
   }
 
   const arquivosSelecionados = arquivosValidos.map((arquivo) => ({
+    id: crypto.randomUUID(),
+    arquivo,
     nome: arquivo.name,
     fonte: 'Upload manual',
     recebido: new Date().toLocaleString('pt-BR', {
@@ -59,8 +68,7 @@ function handleArquivoSelecionado(event) {
   }))
 
   arquivos.value = [...arquivosSelecionados, ...arquivos.value].slice(0, 8)
-  mostrarModal.value = true
-  event.target.value = ''
+  mostrarArquivos.value = true
 }
 
 function formatarTamanho(bytes) {
@@ -86,7 +94,7 @@ function formatarTamanho(bytes) {
       <h2>Upload de Arquivos</h2>
     </div>
 
-    <label class="Card-Enviar-Arquivos">
+    <label class="Card-Enviar-Arquivos" @dragover.prevent @drop.prevent="handleArquivoSolto">
       <p class="Card-Enviar-Arquivos-Titulo">
         <IconUpload class="Card-Enviar-Arquivos-Icone" />
         Arraste o arquivo do imóvel aqui ou clique para selecionar
@@ -94,17 +102,19 @@ function formatarTamanho(bytes) {
       <p class="Card-Enviar-Arquivos-Subtitulo">
         Formatos aceitos: Shapefile (.zip), GeoPackage (.gpkg) ou GeoJSON
       </p>
-      <input type="file" accept=".zip,.gpkg,.geojson" hidden multiple @change="handleArquivoSelecionado" />
+      <input type="file" accept=".zip,.gpkg,.geojson" class="entrada-arquivo" multiple @change="handleArquivoSelecionado" />
     </label>
-    <p v-if="mensagemErro" class="mensagem-erro">{{ mensagemErro }}</p>
+    <p v-if="mensagemErro" class="mensagem-erro" role="alert">{{ mensagemErro }}</p>
+
+    <p role="status">Os arquivos selecionados ficam apenas nesta p?gina. O envio ao servidor ainda n?o est? dispon?vel.</p>
 
     <hr/>
 
-    <div class="recent-files" @click="mostrarArquivos = !mostrarArquivos">
+    <button type="button" class="recent-files" :aria-expanded="mostrarArquivos" @click="mostrarArquivos = !mostrarArquivos">
       <span class="icon"></span>
       <span>Arquivos recentes</span>
       <span class="arrow" :class="{ 'arrow--open': mostrarArquivos }">›</span>
-    </div>
+    </button>
 
     <table v-if="mostrarArquivos" class="tabela-arquivos">
       <thead>
@@ -116,7 +126,7 @@ function formatarTamanho(bytes) {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="arquivo in arquivos" :key="arquivo.nome">
+        <tr v-for="arquivo in arquivos" :key="arquivo.id">
           <td class="mono">{{ arquivo.nome }}</td>
           <td class="mono">{{ arquivo.recebido }}</td>
           <td class="mono">{{ arquivo.tamanho }}</td>
@@ -133,17 +143,14 @@ function formatarTamanho(bytes) {
 
 </template>
 
+
 <style scoped>
+
 * {
   box-sizing: border-box;
 }
 
-:global(body) {
-  background: #000000;
-  align-items: center;
-  justify-content: center;
-  margin: 0;
-}
+
 
 
 .Conteudo {
@@ -153,26 +160,26 @@ function formatarTamanho(bytes) {
 
 .Conteudo h3 {
   font-size: 28px;
-  color: #fff;
+  color: var(--cor-texto);
   margin: 0 0 12px;
   font-family: 'Chakra Petch', sans-serif;
 }
 
 .Conteudo p {
-  color: #9ca3af;
+  color: var(--cor-texto-secundario);
   font-size: 14px;
   line-height: 1.5;
   margin: 0 auto;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   font-family: 'Chakra Petch', sans-serif;
 }
 
 .Card-Upload-Arquivos {
-  background: #0a0a0f;
-  border: 1px solid #b829f7;
+  background: var(--cor-painel);
+  border: 1px solid var(--cor-roxo);
   border-radius: 16px;
   padding: 24px;
-  color: #fff;
+  color: var(--cor-texto);
   font-family: sans-serif;
   max-width: 900px;
   margin: 16px auto;
@@ -193,7 +200,7 @@ function formatarTamanho(bytes) {
 }
 
 .Card-Enviar-Arquivos {
-  border: 2px dashed #b829f7;
+  border: 2px dashed var(--cor-roxo);
   border-radius: 12px;
   padding: 56px 24px;
   text-align: center;
@@ -205,11 +212,11 @@ function formatarTamanho(bytes) {
   font-weight: bold;
   font-size: 16px;
   margin: 8px 0 4px;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .Card-Enviar-Arquivos-Subtitulo {
-  color: #9ca3af;
+  color: var(--cor-texto-secundario);
   font-size: 13px;
   margin-top: 4px;
 }
@@ -220,7 +227,7 @@ function formatarTamanho(bytes) {
 }
 
 .mensagem-erro {
-  color: #f87171;
+  color: var(--cor-erro);
   background: rgba(248, 113, 113, 0.1);
   border: 1px solid rgba(248, 113, 113, 0.4);
   border-radius: 8px;
@@ -231,7 +238,7 @@ function formatarTamanho(bytes) {
 
 hr {
   border: none;
-  border-top: 1px solid #2a2a35;
+  border-top: 1px solid var(--cor-borda);
   margin: 20px 0;
 }
 
@@ -245,12 +252,12 @@ hr {
 
 .recent-files .arrow {
   margin-left: auto;
-  color: #b829f7;
+  color: var(--cor-roxo);
 }
 
 .arrow {
   margin-left: auto;
-  color: #b829f7;
+  color: var(--cor-roxo);
   transition: transform 0.2s;
 }
 
@@ -267,16 +274,16 @@ hr {
 
 .tabela-arquivos thead th {
   text-align: left;
-  color: #9ca3af;
+  color: var(--cor-texto-secundario);
   font-weight: 500;
   padding: 8px 12px;
-  border-bottom: 1px solid #2a2a35;
+  border-bottom: 1px solid var(--cor-borda);
 }
 
 .tabela-arquivos tbody td {
   padding: 12px;
-  border-bottom: 1px solid #1a1a22;
-  color: #fff;
+  border-bottom: 1px solid var(--cor-borda-suave);
+  color: var(--cor-texto);
 }
 
 .mono {
@@ -299,13 +306,13 @@ hr {
 }
 
 .badge--rejeitado {
-  color: #f87171;
+  color: var(--cor-erro);
   background: rgba(248, 113, 113, 0.1);
   border: 1px solid rgba(248, 113, 113, 0.4);
 }
 
 .badge--pendente {
-  color: #facc15;
+  color: var(--cor-aviso);
   background: rgba(250, 204, 21, 0.1);
   border: 1px solid rgba(250, 204, 21, 0.4);
 }
@@ -319,4 +326,14 @@ hr {
   justify-content: center;
   z-index: 999;
 }
+
+.Conteudo, .Card-Upload-Arquivos { width: calc(100% - 32px); margin: 16px auto; }
+.Card-Enviar-Arquivos { position: relative; }
+.entrada-arquivo { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.Card-Enviar-Arquivos:focus-within, .recent-files:focus-visible { outline: 2px solid var(--cor-roxo); outline-offset: 4px; }
+.recent-files { width: 100%; border: 0; padding: 8px 0; background: transparent; color: inherit; text-align: left; }
+.tabela-arquivos { table-layout: fixed; }
+.tabela-arquivos td, .tabela-arquivos th { overflow-wrap: anywhere; }
+@media (max-width: 640px) { .Card-Upload-Arquivos { padding: 12px; } .Card-Enviar-Arquivos { padding: 24px 12px; } .tabela-arquivos tbody td, .tabela-arquivos thead th { padding: 8px 4px; } }
+
 </style>
