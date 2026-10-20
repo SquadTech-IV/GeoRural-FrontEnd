@@ -1,13 +1,10 @@
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import ModalProcessamento from '../components/ModalProcessamento.vue'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import IconDocumentation from '../components/icons/IconDocumentation.vue'
 import IconUpload from '../components/icons/IconUpload.vue'
 
 
-const router = useRouter()
 const mostrarModal = ref(false)
 const mostrarArquivos = ref(false)
 const arquivos = ref([])
@@ -72,10 +69,7 @@ function formatarTamanho(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-function handleProcessamentoFinalizado() {
-  mostrarModal.value = false
-  router.push({ name: 'mapa-resultados' })
-}
+
 </script>
 
 <template>
@@ -136,9 +130,7 @@ function handleProcessamentoFinalizado() {
     </table>
   </div>
 
-  <div v-if="mostrarModal" class="overlay">
-    <ModalProcessamento @finalizado="handleProcessamentoFinalizado" />
-  </div>
+
 </template>
 
 <style scoped>

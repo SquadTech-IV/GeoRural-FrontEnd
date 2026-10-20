@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import IngestaoFontes from '../views/IngestaoFontes.vue'
-import VerificarDadosExistentes from '../views/VerificarDadosExistentes.vue'
-import ModalVisualizacaoCSV from '@/components/ModalVisualizacaoCSV.vue'
+
+import ProcessarDados from '../views/ProcessarDados.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -12,15 +12,10 @@ const router = createRouter({
       component: IngestaoFontes,
     },
     {
-      path: '/verificar-dados-existentes',
-      name: 'VerificarDadosExistentes',
-      component: VerificarDadosExistentes,
+      path: '/processar',
+      name: 'ProcessarDados',
+      component: ProcessarDados,
     },
-  {
-    path:'/sla',
-    name: 'modal',
-    component: ModalVisualizacaoCSV
-  }
   ],
 })
 
