@@ -9,6 +9,8 @@ import { regraService, mensagemErro } from '../services/regraService'
 
 defineOptions({ name: 'RegrasIndicadores' })
 
+defineOptions({ name: 'RegrasPagina' })
+
 const router = useRouter()
 const route = useRoute()
 const indicadores = ref([])
