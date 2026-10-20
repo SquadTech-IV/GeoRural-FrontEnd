@@ -4,6 +4,8 @@ import {
   onMounted,
 } from 'vue'
 
+import { RouterLink } from 'vue-router'
+
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 
 import {
@@ -101,7 +103,11 @@ onBeforeUnmount(destruir)
               class="recebidos-botao recebidos-botao--principal"
               :disabled="carregando"
             >
-              {{ carregando ? 'Consultando...' : 'Consultar' }}
+              {{
+                carregando
+                  ? 'Consultando...'
+                  : 'Consultar'
+              }}
             </button>
           </div>
         </form>
@@ -117,9 +123,15 @@ onBeforeUnmount(destruir)
             Resultado da consulta
           </h2>
 
-          <span v-if="!carregando && !falhou && consultado">
+          <span
+            v-if="!carregando && !falhou && consultado"
+          >
             {{ arquivos.length }}
-            {{ arquivos.length === 1 ? 'arquivo' : 'arquivos' }}
+            {{
+              arquivos.length === 1
+                ? 'arquivo'
+                : 'arquivos'
+            }}
           </span>
         </header>
 
@@ -186,13 +198,21 @@ onBeforeUnmount(destruir)
                 :key="arquivo.id"
               >
                 <th scope="row">
-                  <span class="recebidos-nome">
+                  <RouterLink
+                    :to="{
+                      name: 'DetalheArquivoRecebido',
+                      params: {
+                        id: arquivo.id,
+                      },
+                    }"
+                    class="recebidos-nome recebidos-link"
+                  >
                     {{
                       arquivo.nomeArquivo ||
                       arquivo.nome ||
                       'Não informado'
                     }}
-                  </span>
+                  </RouterLink>
 
                   <small
                     v-if="
@@ -213,12 +233,18 @@ onBeforeUnmount(destruir)
                 </td>
 
                 <td>
-                  {{ arquivo.qtdArquivos ?? 'Não informado' }}
+                  {{
+                    arquivo.qtdArquivos ??
+                    'Não informado'
+                  }}
                 </td>
 
                 <td>
                   <span class="recebidos-situacao">
-                    {{ arquivo.situacao || 'Não informada' }}
+                    {{
+                      arquivo.situacao ||
+                      'Não informada'
+                    }}
                   </span>
                 </td>
 

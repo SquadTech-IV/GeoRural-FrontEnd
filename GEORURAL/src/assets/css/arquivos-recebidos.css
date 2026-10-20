@@ -350,3 +350,18 @@
     bottom: 16px;
   }
 }
+
+.recebidos-link {
+  color: var(--cor-roxo, #8520bd);
+  text-decoration: none;
+}
+
+.recebidos-link:hover {
+  text-decoration: underline;
+}
+
+.recebidos-link:focus-visible {
+  outline: 2px solid var(--cor-roxo, #8520bd);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
