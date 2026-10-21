@@ -6,6 +6,7 @@ import {
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
+import HistoricoTransformacoes from '../components/HistoricoTransformacoes.vue'
 
 import {
   criarConsultaZonaTratada,
@@ -32,6 +33,10 @@ const {
   destruir,
 } = criarConsultaZonaTratada()
 
+function exibirErro(erro) {
+  mensagem.value = erro
+}
+
 onMounted(consultar)
 onBeforeUnmount(destruir)
 </script>
@@ -45,8 +50,8 @@ onBeforeUnmount(destruir)
         <h1>Zona tratada</h1>
 
         <p>
-          Consulte os conjuntos tratados e selecione
-          um registro para conferir suas informações.
+          Consulte os conjuntos tratados e acompanhe
+          o histórico das transformações da execução.
         </p>
       </header>
 
@@ -249,6 +254,12 @@ onBeforeUnmount(destruir)
             <dd>{{ selecionado.situacao }}</dd>
           </div>
         </dl>
+
+        <HistoricoTransformacoes
+          :key="selecionado.chave"
+          :execucao-id="selecionado.execucaoId"
+          @erro="exibirErro"
+        />
       </section>
     </main>
 
