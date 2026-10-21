@@ -19,6 +19,12 @@ const {
   execucoes,
   execucaoId,
   registros,
+  busca,
+  tipoSelecionado,
+  ordenacao,
+  tiposDisponiveis,
+  filtrosAtivos,
+  registrosFiltrados,
   carregandoExecucoes,
   carregandoRegistros,
   falhouExecucoes,
@@ -29,6 +35,7 @@ const {
   carregarExecucoes,
   selecionarExecucao,
   tentarRegistrosNovamente,
+  limparFiltros,
   fecharMensagem,
   destruir,
 } = criarConsultaQuarentena()
@@ -46,8 +53,8 @@ onBeforeUnmount(destruir)
         <h1>Registros em quarentena</h1>
 
         <p>
-          Consulte os registros rejeitados na validação
-          e os motivos informados para cada inconsistência.
+          Consulte os registros rejeitados e filtre
+          as inconsistências encontradas na validação.
         </p>
       </header>
 
@@ -142,8 +149,11 @@ onBeforeUnmount(destruir)
           <span
             v-if="consultado"
             class="quarentena-contagem"
+            role="status"
           >
-            {{ registros.length }} registro(s) carregado(s)
+            {{ registrosFiltrados.length }}
+            de {{ registros.length }}
+            registro(s) carregado(s)
           </span>
         </header>
 
@@ -181,8 +191,9 @@ onBeforeUnmount(destruir)
             v-if="listaParcial"
             class="quarentena-ajuda"
           >
-            A API retornou apenas uma página dos
-            registros desta execução.
+            A API retornou uma página dos registros.
+            Os filtros consideram somente os registros
+            carregados.
           </p>
 
           <p
@@ -193,52 +204,133 @@ onBeforeUnmount(destruir)
             para esta execução.
           </p>
 
-          <div
-            v-else
-            class="quarentena-tabela-container"
-            role="region"
-            aria-label="Registros rejeitados na validação"
-            tabindex="0"
-          >
-            <table class="quarentena-tabela">
-              <thead>
-                <tr>
-                  <th scope="col">Linha</th>
-                  <th scope="col">Registro</th>
-                  <th scope="col">Tipo</th>
-                  <th scope="col">Campo</th>
-                  <th scope="col">Motivo</th>
-                  <th scope="col">Situação</th>
-                </tr>
-              </thead>
+          <template v-else>
+            <div class="quarentena-filtros">
+              <div class="quarentena-filtro-campo">
+                <label for="quarentena-busca">
+                  Buscar registro
+                </label>
 
-              <tbody>
-                <tr
-                  v-for="registro in registros"
-                  :key="registro.chave"
+                <input
+                  id="quarentena-busca"
+                  v-model="busca"
+                  type="search"
+                  placeholder="Registro, campo ou motivo"
+                />
+              </div>
+
+              <div class="quarentena-filtro-campo">
+                <label for="quarentena-tipo">
+                  Tipo de inconsistência
+                </label>
+
+                <select
+                  id="quarentena-tipo"
+                  v-model="tipoSelecionado"
                 >
-                  <td>{{ registro.linha }}</td>
+                  <option value="">
+                    Todos os tipos
+                  </option>
 
-                  <th scope="row">
-                    {{ registro.identificador }}
-                  </th>
+                  <option
+                    v-for="tipo in tiposDisponiveis"
+                    :key="tipo.valor"
+                    :value="tipo.valor"
+                  >
+                    {{ tipo.nome }}
+                    ({{ tipo.quantidade }})
+                  </option>
+                </select>
+              </div>
 
-                  <td>{{ registro.tipo }}</td>
-                  <td>{{ registro.campo }}</td>
+              <div class="quarentena-filtro-campo">
+                <label for="quarentena-ordenacao">
+                  Ordenar por
+                </label>
 
-                  <td class="quarentena-motivo">
-                    {{ registro.motivo }}
-                  </td>
+                <select
+                  id="quarentena-ordenacao"
+                  v-model="ordenacao"
+                >
+                  <option value="linha">
+                    Linha crescente
+                  </option>
 
-                  <td>
-                    <span class="quarentena-situacao">
-                      {{ registro.situacao }}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+                  <option value="linha_desc">
+                    Linha decrescente
+                  </option>
+
+                  <option value="motivo">
+                    Motivo
+                  </option>
+                </select>
+              </div>
+
+              <button
+                type="button"
+                class="quarentena-botao"
+                :disabled="!filtrosAtivos"
+                @click="limparFiltros"
+              >
+                Limpar filtros
+              </button>
+            </div>
+
+            <p
+              v-if="!registrosFiltrados.length"
+              class="quarentena-estado"
+            >
+              Nenhum registro encontrado com os
+              filtros selecionados.
+            </p>
+
+            <div
+              v-else
+              class="quarentena-tabela-container"
+              role="region"
+              aria-label="Registros rejeitados na validação"
+              tabindex="0"
+            >
+              <table class="quarentena-tabela">
+                <thead>
+                  <tr>
+                    <th scope="col">Linha</th>
+                    <th scope="col">Registro</th>
+                    <th scope="col">Tipo</th>
+                    <th scope="col">Campo</th>
+                    <th scope="col">Motivo</th>
+                    <th scope="col">Situação</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  <tr
+                    v-for="registro in registrosFiltrados"
+                    :key="registro.chave"
+                  >
+                    <td>{{ registro.linha }}</td>
+
+                    <th scope="row">
+                      {{ registro.identificador }}
+                    </th>
+
+                    <td>{{ registro.tipo }}</td>
+                    <td>{{ registro.campo }}</td>
+
+                    <td class="quarentena-motivo">
+                      {{ registro.motivo }}
+                    </td>
+
+                    <td>
+                      <span class="quarentena-situacao">
+                        {{ registro.situacao }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </template>
         </template>
       </section>
     </main>
