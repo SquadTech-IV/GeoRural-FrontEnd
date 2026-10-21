@@ -8,6 +8,7 @@ import {
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
 import DetalheRegistroQuarentena from '../components/DetalheRegistroQuarentena.vue'
+import ExportarQuarentena from '../components/ExportarQuarentena.vue'
 
 import {
   criarConsultaQuarentena,
@@ -61,7 +62,7 @@ function fecharDetalhe() {
   registroDetalhadoId.value = null
 }
 
-function exibirErroDetalhe(erro) {
+function exibirErro(erro) {
   mensagem.value = erro
 }
 
@@ -92,8 +93,8 @@ onBeforeUnmount(destruir)
 
         <p>
           Consulte os registros rejeitados, filtre as
-          inconsistências e confira os detalhes da
-          validação.
+          inconsistências, confira os detalhes e exporte
+          os registros filtrados.
         </p>
       </header>
 
@@ -224,13 +225,21 @@ onBeforeUnmount(destruir)
         </div>
 
         <template v-else-if="consultado">
+          <ExportarQuarentena
+            :registros="registrosFiltrados"
+            :execucao-id="execucaoId"
+            :desabilitado="carregandoRegistros"
+            :lista-parcial="listaParcial"
+            @erro="exibirErro"
+          />
+
           <p
             v-if="listaParcial"
             class="quarentena-ajuda"
           >
             A API retornou uma página dos registros.
-            Os filtros consideram somente os registros
-            carregados.
+            Os filtros e a exportação consideram
+            somente os registros carregados.
           </p>
 
           <p
@@ -392,7 +401,7 @@ onBeforeUnmount(destruir)
       :key="registroDetalhadoId"
       :registro-id="registroDetalhadoId"
       @fechar="fecharDetalhe"
-      @erro="exibirErroDetalhe"
+      @erro="exibirErro"
     />
 
     <ToastMensagem
