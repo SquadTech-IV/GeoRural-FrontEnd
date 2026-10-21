@@ -7,6 +7,7 @@ import {
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
 import HistoricoTransformacoes from '../components/HistoricoTransformacoes.vue'
+import InformacoesProcessamento from '../components/InformacoesProcessamento.vue'
 
 import {
   criarConsultaZonaTratada,
@@ -50,8 +51,9 @@ onBeforeUnmount(destruir)
         <h1>Zona tratada</h1>
 
         <p>
-          Consulte os conjuntos tratados e acompanhe
-          o histórico das transformações da execução.
+          Consulte os conjuntos tratados, o histórico
+          das transformações e as informações do
+          processamento.
         </p>
       </header>
 
@@ -256,7 +258,13 @@ onBeforeUnmount(destruir)
         </dl>
 
         <HistoricoTransformacoes
-          :key="selecionado.chave"
+          :key="`historico-${selecionado.chave}`"
+          :execucao-id="selecionado.execucaoId"
+          @erro="exibirErro"
+        />
+
+        <InformacoesProcessamento
+          :key="`processamento-${selecionado.chave}`"
           :execucao-id="selecionado.execucaoId"
           @erro="exibirErro"
         />
