@@ -6,6 +6,7 @@ import {
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
+import ArquivosOrigemAuditoria from '../components/ArquivosOrigemAuditoria.vue'
 
 import {
   criarConsultaAuditoria,
@@ -32,6 +33,10 @@ const {
   destruir,
 } = criarConsultaAuditoria()
 
+function exibirErroOrigem(erro) {
+  mensagem.value = erro
+}
+
 onMounted(consultar)
 onBeforeUnmount(destruir)
 </script>
@@ -45,8 +50,8 @@ onBeforeUnmount(destruir)
         <h1>Linhagem e auditoria</h1>
 
         <p>
-          Consulte os resultados e selecione um registro
-          para identificar o imóvel e o indicador.
+          Consulte os resultados e os arquivos utilizados
+          na origem de cada registro.
         </p>
       </header>
 
@@ -141,8 +146,8 @@ onBeforeUnmount(destruir)
             class="auditoria-ajuda"
           >
             A API retornou uma página dos resultados.
-            Os filtros abaixo consideram apenas os
-            registros carregados.
+            Os filtros consideram apenas os registros
+            carregados.
           </p>
 
           <p
@@ -191,9 +196,17 @@ onBeforeUnmount(destruir)
                     {{ item.imovel }}
                   </th>
 
-                  <td>{{ item.car || 'Não informado' }}</td>
-                  <td>{{ item.indicador }}</td>
-                  <td>{{ item.valor ?? 'Não informado' }}</td>
+                  <td>
+                    {{ item.car || 'Não informado' }}
+                  </td>
+
+                  <td>
+                    {{ item.indicador }}
+                  </td>
+
+                  <td>
+                    {{ item.valor ?? 'Não informado' }}
+                  </td>
 
                   <td>
                     <button
@@ -226,11 +239,15 @@ onBeforeUnmount(destruir)
         <dl class="auditoria-resumo">
           <div>
             <dt>Imóvel</dt>
-            <dd>{{ selecionado.imovel }}</dd>
+
+            <dd>
+              {{ selecionado.imovel }}
+            </dd>
           </div>
 
           <div>
             <dt>CAR</dt>
+
             <dd>
               {{ selecionado.car || 'Não informado' }}
             </dd>
@@ -238,16 +255,26 @@ onBeforeUnmount(destruir)
 
           <div>
             <dt>Indicador</dt>
-            <dd>{{ selecionado.indicador }}</dd>
+
+            <dd>
+              {{ selecionado.indicador }}
+            </dd>
           </div>
 
           <div>
             <dt>Valor</dt>
+
             <dd>
               {{ selecionado.valor ?? 'Não informado' }}
             </dd>
           </div>
         </dl>
+
+        <ArquivosOrigemAuditoria
+          :key="selecionado.chave"
+          :resultado-id="selecionado.id"
+          @erro="exibirErroOrigem"
+        />
       </section>
     </main>
 
