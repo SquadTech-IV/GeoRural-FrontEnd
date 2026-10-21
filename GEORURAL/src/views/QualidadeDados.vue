@@ -1,13 +1,18 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import FluxoPublicacaoVersao from '../components/FluxoPublicacaoVersao.vue'
 import ListaVersoesPublicadas from '../components/ListaVersoesPublicadas.vue'
+import ToastMensagem from '../components/ToastMensagem.vue'
 
 import {
   prepararConferenciaResultados,
 } from '../services/conferenciaResultadosService'
+
+import {
+  criarFeedbackPublicacao,
+} from '../services/publicacaoErroService'
 
 const props = defineProps({
   resultado: {
@@ -34,15 +39,73 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  erroConferencia: {
+    type: [Object, String],
+    default: null,
+  },
+  erroPublicacao: {
+    type: [Object, String],
+    default: null,
+  },
+  erroVersoes: {
+    type: [Object, String],
+    default: null,
+  },
 })
 
-const emit = defineEmits(['publicar'])
+const emit = defineEmits([
+  'publicar',
+  'tentar-conferencia',
+  'tentar-versoes',
+])
+
+const {
+  notificacoes,
+  registrarErro,
+  fechar,
+} = criarFeedbackPublicacao()
 
 const conferencia = computed(() =>
   prepararConferenciaResultados(props.resultado),
 )
 
+const notificacaoAtual = computed(() =>
+  notificacoes.value[0] ?? null,
+)
+
+watch(
+  () => props.erroConferencia,
+  erro => registrarErro('conferencia', erro),
+  { immediate: true },
+)
+
+watch(
+  () => props.erroPublicacao,
+  erro => registrarErro('publicacao', erro),
+  { immediate: true },
+)
+
+watch(
+  () => props.erroVersoes,
+  erro => registrarErro('versoes', erro),
+  { immediate: true },
+)
+
+function fecharNotificacao() {
+  if (notificacaoAtual.value) {
+    fechar(notificacaoAtual.value.id)
+  }
+}
+
 function solicitarPublicacao(dados) {
+  if (
+    props.carregando ||
+    props.publicando ||
+    props.erroConferencia
+  ) {
+    return
+  }
+
   emit('publicar', dados)
 }
 </script>
@@ -69,6 +132,21 @@ function solicitarPublicacao(dados) {
         <p role="status">
           Carregando resultados da validação...
         </p>
+      </section>
+
+      <section
+        v-else-if="erroConferencia"
+        class="qualidade-card qualidade-estado"
+      >
+        <h2>Conferência dos resultados</h2>
+
+        <button
+          type="button"
+          class="qualidade-tentar"
+          @click="emit('tentar-conferencia')"
+        >
+          Tentar consultar resultados novamente
+        </button>
       </section>
 
       <section
@@ -265,11 +343,38 @@ function solicitarPublicacao(dados) {
         </p>
       </template>
 
+      <section
+        v-if="erroVersoes && !carregandoVersoes"
+        class="qualidade-card qualidade-estado"
+      >
+        <h2>Versões publicadas</h2>
+
+        <button
+          type="button"
+          class="qualidade-tentar"
+          @click="emit('tentar-versoes')"
+        >
+          Tentar consultar versões novamente
+        </button>
+      </section>
+
       <ListaVersoesPublicadas
+        v-else
         :versoes="versoesPublicadas"
         :carregando="carregandoVersoes"
       />
     </main>
+
+    <ToastMensagem
+      v-if="notificacaoAtual"
+      :key="notificacaoAtual.id"
+      :identificador="notificacaoAtual.id"
+      :titulo="notificacaoAtual.titulo"
+      :mensagem="notificacaoAtual.mensagem"
+      tipo="erro"
+      :duracao="0"
+      @fechar="fecharNotificacao"
+    />
   </div>
 </template>
 
