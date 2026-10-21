@@ -9,6 +9,7 @@ import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
 import ArquivosOrigemAuditoria from '../components/ArquivosOrigemAuditoria.vue'
 import LinhaTempoExecucao from '../components/LinhaTempoExecucao.vue'
+import DetalheExecucaoAuditoria from '../components/DetalheExecucaoAuditoria.vue'
 
 import {
   criarConsultaAuditoria,
@@ -66,8 +67,8 @@ onBeforeUnmount(destruir)
         <h1>Linhagem e auditoria</h1>
 
         <p>
-          Consulte os resultados, os arquivos de origem
-          e a linha do tempo da execução.
+          Consulte os resultados, os arquivos de origem,
+          a linha do tempo e os detalhes da execução.
         </p>
       </header>
 
@@ -294,6 +295,12 @@ onBeforeUnmount(destruir)
 
         <LinhaTempoExecucao
           :key="`execucao-${selecionado.chave}`"
+          :execucao-id="execucaoSelecionada"
+          @erro="exibirErro"
+        />
+
+        <DetalheExecucaoAuditoria
+          :key="`detalhe-${selecionado.chave}`"
           :execucao-id="execucaoSelecionada"
           @erro="exibirErro"
         />
