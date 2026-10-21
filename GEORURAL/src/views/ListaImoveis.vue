@@ -111,7 +111,7 @@ onMounted(carregar)
               <RouterLink
                 v-if="imovel.codigoCar"
                 :to="{
-                  name: 'Resultado',
+                  name: 'MapaIndicadores',
                   params: { car: imovel.codigoCar },
                 }"
               >
