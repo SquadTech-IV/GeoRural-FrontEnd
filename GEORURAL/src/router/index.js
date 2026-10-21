@@ -4,6 +4,7 @@ import ListaImoveis from '../views/ListaImoveis.vue'
 import MapaIndicadores from '../views/MapaIndicadores.vue'
 import Regras from '../views/Regras.vue'
 import IngestaoPagina from '../views/Ingestao.vue'
+import AuditoriaDados from '../views/AuditoriaDados.vue'
 
 import ModalSalvarRegras from '../components/ModalSalvarRegras.vue'
 import ModalDetalheVersao from '../components/ModalDetalheVersao.vue'
@@ -28,6 +29,11 @@ const router = createRouter({
       name: 'MapaIndicadores',
       component: MapaIndicadores,
       props: true,
+    },
+    {
+      path: '/auditoria',
+      name: 'AuditoriaDados',
+      component: AuditoriaDados,
     },
     {
       path: '/',
