@@ -6,6 +6,19 @@ import {
 } from '../services/versoesPublicadasService'
 
 const props = defineProps({
+  titulo: {
+    type: String,
+    default: 'Versões publicadas',
+  },
+  descricao: {
+    type: String,
+    default:
+      'Consulte as versões publicadas.',
+  },
+  mensagemVazia: {
+    type: String,
+    default: 'Nenhuma versão disponível.',
+  },
   versoes: {
     type: Array,
     default: () => [],
@@ -30,13 +43,10 @@ const versoesExibidas = computed(() =>
     <header class="versoes-cabecalho">
       <div>
         <h2 id="versoes-publicadas-titulo">
-          Versões publicadas
+          {{ titulo }}
         </h2>
 
-        <p>
-          Consulte as versões publicadas e identifique
-          a versão vigente.
-        </p>
+        <p>{{ descricao }}</p>
       </div>
 
       <span
@@ -77,25 +87,20 @@ const versoesExibidas = computed(() =>
         <path d="M3 7V4h7l2 3" />
       </svg>
 
-      <strong>Nenhuma versão disponível</strong>
-
-      <p>
-        As versões publicadas fornecidas à página
-        serão exibidas aqui.
-      </p>
+      <strong>{{ mensagemVazia }}</strong>
+      <p>{{ descricao }}</p>
     </div>
 
     <div
       v-else
       class="versoes-tabela-container"
       role="region"
-      aria-label="Histórico de versões publicadas"
+      :aria-label="titulo"
       tabindex="0"
     >
       <table class="versoes-tabela">
         <caption class="versoes-somente-leitor">
-          Versões publicadas, competências e datas
-          de publicação
+          Versões, competências e datas de publicação
         </caption>
 
         <thead>
@@ -103,7 +108,7 @@ const versoesExibidas = computed(() =>
             <th scope="col">Versão</th>
             <th scope="col">Competência</th>
             <th scope="col">Publicada em</th>
-            <th scope="col">Situação</th>
+            <th scope="col">Situação no retorno</th>
           </tr>
         </thead>
 
@@ -125,7 +130,9 @@ const versoesExibidas = computed(() =>
             <td>
               <span
                 class="versoes-situacao"
-                :class="`versoes-situacao--${versao.situacao.classe}`"
+                :class="
+                  `versoes-situacao--${versao.situacao.classe}`
+                "
               >
                 {{ versao.situacao.texto }}
               </span>

@@ -1,4 +1,4 @@
- <script setup>
+<script setup>
 import {
   computed,
   onBeforeUnmount,
@@ -81,11 +81,7 @@ onBeforeUnmount(fecharConfirmacao)
 </script>
 
 <template>
-  <section
-    class="publicacao-card"
-    aria-labelledby="publicacao-titulo"
-    :aria-busy="publicando"
-  >
+  <section class="publicacao-card" aria-labelledby="publicacao-titulo" :aria-busy="publicando">
     <header class="publicacao-cabecalho">
       <div>
         <h2 id="publicacao-titulo">
@@ -116,13 +112,8 @@ onBeforeUnmount(fecharConfirmacao)
         {{ avaliacao.motivo }}
       </p>
 
-      <button
-        type="button"
-        class="publicacao-botao publicacao-botao--principal"
-        :disabled="!avaliacao.permitido"
-        aria-describedby="publicacao-ajuda"
-        @click="abrirConfirmacao"
-      >
+      <button type="button" class="publicacao-botao publicacao-botao--principal" :disabled="!avaliacao.permitido"
+        aria-describedby="publicacao-ajuda" @click="abrirConfirmacao">
         {{
           publicando
             ? 'Publicando...'
@@ -131,23 +122,14 @@ onBeforeUnmount(fecharConfirmacao)
       </button>
     </div>
 
-    <p
-      v-if="publicando"
-      class="publicacao-andamento"
-      role="status"
-    >
+    <p v-if="publicando" class="publicacao-andamento" role="status">
       Aguarde a confirmação do servidor.
     </p>
   </section>
 
   <Teleport to="body">
-    <dialog
-      ref="dialogo"
-      class="publicacao-dialogo"
-      aria-labelledby="publicacao-confirmacao-titulo"
-      aria-describedby="publicacao-confirmacao-descricao"
-      @cancel="cancelar"
-    >
+    <dialog ref="dialogo" class="publicacao-dialogo" aria-labelledby="publicacao-confirmacao-titulo"
+      aria-describedby="publicacao-confirmacao-descricao" @cancel="cancelar">
       <form @submit.prevent="confirmar">
         <header class="publicacao-dialogo-cabecalho">
           <h2 id="publicacao-confirmacao-titulo">
@@ -159,30 +141,22 @@ onBeforeUnmount(fecharConfirmacao)
           <p id="publicacao-confirmacao-descricao">
             Deseja solicitar a publicação da versão
             <strong>{{ versao?.numero ?? versao?.id }}</strong>,
-            vinculada à execução
+            após a conferência da execução
             <strong>{{ resultado?.execucaoId }}</strong>?
           </p>
 
           <p class="publicacao-dialogo-ajuda">
-            A solicitação precisa ser confirmada pelo servidor.
+            O servidor verifica a qualidade da execução
+            efetivamente vinculada à versão antes de publicar.
           </p>
         </div>
 
         <footer class="publicacao-dialogo-rodape">
-          <button
-            type="button"
-            class="publicacao-botao"
-            autofocus
-            @click="fecharConfirmacao"
-          >
+          <button type="button" class="publicacao-botao" autofocus @click="fecharConfirmacao">
             Cancelar
           </button>
 
-          <button
-            type="submit"
-            class="publicacao-botao publicacao-botao--principal"
-            :disabled="!avaliacao.permitido"
-          >
+          <button type="submit" class="publicacao-botao publicacao-botao--principal" :disabled="!avaliacao.permitido">
             Confirmar solicitação
           </button>
         </footer>

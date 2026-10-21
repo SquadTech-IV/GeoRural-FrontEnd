@@ -381,3 +381,73 @@
   outline: 2px solid var(--cor-roxo, #8520bd);
   outline-offset: 3px;
 }
+
+.qualidade-consulta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.qualidade-campo label,
+.qualidade-reprovacao label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.qualidade-campo input,
+.qualidade-reprovacao textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 8px;
+  background: var(--cor-painel, #fff);
+  color: var(--cor-texto, #24202d);
+  font: inherit;
+  font-size: 13px;
+}
+
+.qualidade-reprovacao {
+  margin-top: 18px;
+}
+
+.qualidade-reprovacao textarea {
+  resize: vertical;
+}
+
+.qualidade-reprovacao button {
+  margin-top: 14px;
+}
+
+.qualidade-campo input:focus-visible,
+.qualidade-reprovacao textarea:focus-visible,
+.qualidade-card summary:focus-visible {
+  outline: 2px solid var(--cor-roxo, #8520bd);
+  outline-offset: 3px;
+}
+
+.qualidade-card summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.qualidade-tentar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.qualidade-observacao {
+  margin-bottom: 20px;
+}
+
+@media (max-width: 700px) {
+  .qualidade-consulta {
+    grid-template-columns: 1fr;
+  }
+}

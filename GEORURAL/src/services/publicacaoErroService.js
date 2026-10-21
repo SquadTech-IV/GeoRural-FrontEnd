@@ -3,15 +3,18 @@ import { readonly, ref } from 'vue'
 const contextos = {
   conferencia: {
     titulo: 'Conferência dos resultados',
-    mensagem: 'Não foi possível consultar os resultados da validação.',
+    mensagem:
+      'Não foi possível consultar os resultados da validação.',
   },
   publicacao: {
     titulo: 'Publicação da versão',
-    mensagem: 'Não foi possível concluir a solicitação de publicação.',
+    mensagem:
+      'Não foi possível concluir a solicitação de publicação.',
   },
   versoes: {
     titulo: 'Versões publicadas',
-    mensagem: 'Não foi possível consultar as versões publicadas.',
+    mensagem:
+      'Não foi possível consultar as versões publicadas.',
   },
 }
 
@@ -44,13 +47,13 @@ export function mensagemErroPublicacao(
 
   if (tempoEsgotado) {
     return contexto === 'publicacao'
-      ? 'O tempo de resposta terminou. Consulte a situação da versão antes de solicitar a publicação novamente.'
+      ? 'O tempo de resposta terminou. Consulte a situação da versão antes de solicitar a operação novamente.'
       : 'O servidor demorou para responder. Tente novamente.'
   }
 
   if (erro?.isAxiosError && !erro.response) {
     return contexto === 'publicacao'
-      ? 'A conexão foi interrompida. A publicação pode ter sido recebida pelo servidor. Consulte a situação da versão antes de reenviar.'
+      ? 'A conexão foi interrompida. A operação pode ter sido recebida pelo servidor. Consulte a situação da versão antes de reenviar.'
       : 'Não foi possível acessar o servidor. Verifique a conexão e tente novamente.'
   }
 
@@ -72,7 +75,7 @@ export function mensagemErroPublicacao(
 
   if (status >= 500) {
     return contexto === 'publicacao'
-      ? 'O servidor não confirmou a publicação. Consulte a situação da versão antes de tentar novamente.'
+      ? 'O servidor não confirmou a operação. Consulte a situação da versão antes de tentar novamente.'
       : 'O servidor não conseguiu concluir a consulta. Tente novamente mais tarde.'
   }
 
@@ -119,6 +122,18 @@ export function criarFeedbackPublicacao() {
     )
   }
 
+  function notificar(tipo, titulo, mensagem) {
+    notificacoes.value = [
+      ...notificacoes.value,
+      {
+        id: ++sequencia,
+        tipo,
+        titulo,
+        mensagem,
+      },
+    ]
+  }
+
   function registrarErro(contexto, erro) {
     removerContexto(contexto)
 
@@ -134,8 +149,12 @@ export function criarFeedbackPublicacao() {
       {
         id: ++sequencia,
         contexto,
+        tipo: 'erro',
         titulo: configuracao.titulo,
-        mensagem: mensagemErroPublicacao(erro, contexto),
+        mensagem: mensagemErroPublicacao(
+          erro,
+          contexto,
+        ),
       },
     ]
   }
@@ -149,6 +168,7 @@ export function criarFeedbackPublicacao() {
   return {
     notificacoes: readonly(notificacoes),
     registrarErro,
+    notificar,
     fechar,
   }
 }

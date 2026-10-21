@@ -1,5 +1,11 @@
 <script setup>
-import { computed, watch } from 'vue'
+import {
+  computed,
+  onBeforeUnmount,
+  watch,
+} from 'vue'
+
+import { useRoute } from 'vue-router'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import FluxoPublicacaoVersao from '../components/FluxoPublicacaoVersao.vue'
@@ -11,84 +17,40 @@ import {
 } from '../services/conferenciaResultadosService'
 
 import {
-  criarFeedbackPublicacao,
-} from '../services/publicacaoErroService'
+  criarControleQualidade,
+} from '../services/qualidadeControleService'
 
-const props = defineProps({
-  resultado: {
-    type: Object,
-    default: null,
-  },
-  versao: {
-    type: Object,
-    default: null,
-  },
-  carregando: {
-    type: Boolean,
-    default: false,
-  },
-  publicando: {
-    type: Boolean,
-    default: false,
-  },
-  versoesPublicadas: {
-    type: Array,
-    default: () => [],
-  },
-  carregandoVersoes: {
-    type: Boolean,
-    default: false,
-  },
-  erroConferencia: {
-    type: [Object, String],
-    default: null,
-  },
-  erroPublicacao: {
-    type: [Object, String],
-    default: null,
-  },
-  erroVersoes: {
-    type: [Object, String],
-    default: null,
-  },
-})
-
-const emit = defineEmits([
-  'publicar',
-  'tentar-conferencia',
-  'tentar-versoes',
-])
+const route = useRoute()
 
 const {
+  execucaoId,
+  versaoId,
+  motivoReprovacao,
+  resultado,
+  versaoSelecionada,
+  versaoConfirmada,
+  carregando,
+  publicando,
+  reprovando,
+  ocupado,
+  falhouConferencia,
+  versoesPublicadas,
   notificacoes,
-  registrarErro,
   fechar,
-} = criarFeedbackPublicacao()
+  selecionarExecucao,
+  selecionarVersao,
+  consultar,
+  publicar,
+  registrarReprovacao,
+  destruir,
+} = criarControleQualidade()
 
 const conferencia = computed(() =>
-  prepararConferenciaResultados(props.resultado),
+  prepararConferenciaResultados(resultado.value),
 )
 
 const notificacaoAtual = computed(() =>
   notificacoes.value[0] ?? null,
-)
-
-watch(
-  () => props.erroConferencia,
-  erro => registrarErro('conferencia', erro),
-  { immediate: true },
-)
-
-watch(
-  () => props.erroPublicacao,
-  erro => registrarErro('publicacao', erro),
-  { immediate: true },
-)
-
-watch(
-  () => props.erroVersoes,
-  erro => registrarErro('versoes', erro),
-  { immediate: true },
 )
 
 function fecharNotificacao() {
@@ -97,17 +59,30 @@ function fecharNotificacao() {
   }
 }
 
-function solicitarPublicacao(dados) {
-  if (
-    props.carregando ||
-    props.publicando ||
-    props.erroConferencia
-  ) {
-    return
-  }
+watch(
+  [
+    () => route.query.execucaoId,
+    () => route.query.versaoId,
+  ],
+  ([execucao, versao]) => {
+    if (ocupado.value) return
 
-  emit('publicar', dados)
-}
+    selecionarExecucao(
+      typeof execucao === 'string' ? execucao : '',
+    )
+
+    selecionarVersao(
+      typeof versao === 'string' ? versao : '',
+    )
+
+    if (execucaoId.value) {
+      consultar()
+    }
+  },
+  { immediate: true },
+)
+
+onBeforeUnmount(destruir)
 </script>
 
 <template>
@@ -119,10 +94,79 @@ function solicitarPublicacao(dados) {
         <h1>Conferência dos resultados</h1>
 
         <p>
-          Confira os resultados da validação e consulte
-          o histórico de versões publicadas.
+          Consulte os resultados da validação e solicite
+          a publicação da versão.
         </p>
       </header>
+
+      <section
+        class="qualidade-card"
+        aria-labelledby="qualidade-consulta-titulo"
+      >
+        <h2 id="qualidade-consulta-titulo">
+          Selecionar execução e versão
+        </h2>
+
+        <form
+          class="qualidade-consulta"
+          @submit.prevent="consultar"
+        >
+          <div class="qualidade-campo">
+            <label for="qualidade-execucao">
+              Identificador da execução
+            </label>
+
+            <input
+              id="qualidade-execucao"
+              :value="execucaoId"
+              type="text"
+              inputmode="numeric"
+              required
+              :disabled="publicando || reprovando"
+              placeholder="Código da execução"
+              @input="
+                selecionarExecucao($event.target.value)
+              "
+            />
+          </div>
+
+          <div class="qualidade-campo">
+            <label for="qualidade-versao">
+              Identificador da versão
+            </label>
+
+            <input
+              id="qualidade-versao"
+              :value="versaoId"
+              type="text"
+              inputmode="numeric"
+              :disabled="publicando || reprovando"
+              placeholder="Código da versão"
+              @input="
+                selecionarVersao($event.target.value)
+              "
+            />
+          </div>
+
+          <button
+            class="qualidade-tentar"
+            type="submit"
+            :disabled="ocupado"
+          >
+            {{
+              carregando
+                ? 'Consultando...'
+                : 'Consultar qualidade'
+            }}
+          </button>
+        </form>
+
+        <p class="qualidade-ajuda">
+          Informe os identificadores da execução e da
+          versão que deseja conferir. O servidor valida
+          a execução vinculada à versão ao publicar.
+        </p>
+      </section>
 
       <section
         v-if="carregando"
@@ -135,7 +179,7 @@ function solicitarPublicacao(dados) {
       </section>
 
       <section
-        v-else-if="erroConferencia"
+        v-else-if="falhouConferencia"
         class="qualidade-card qualidade-estado"
       >
         <h2>Conferência dos resultados</h2>
@@ -143,7 +187,7 @@ function solicitarPublicacao(dados) {
         <button
           type="button"
           class="qualidade-tentar"
-          @click="emit('tentar-conferencia')"
+          @click="consultar"
         >
           Tentar consultar resultados novamente
         </button>
@@ -171,8 +215,8 @@ function solicitarPublicacao(dados) {
         <h2>Nenhum resultado disponível</h2>
 
         <p>
-          Os resultados serão exibidos quando os dados
-          da validação forem fornecidos à página.
+          Informe a execução acima e clique em
+          Consultar qualidade.
         </p>
       </section>
 
@@ -194,7 +238,9 @@ function solicitarPublicacao(dados) {
 
             <span
               class="qualidade-selo"
-              :class="`qualidade-selo--${conferencia.classeConclusao}`"
+              :class="
+                `qualidade-selo--${conferencia.classeConclusao}`
+              "
             >
               {{ conferencia.conclusao }}
             </span>
@@ -205,7 +251,9 @@ function solicitarPublicacao(dados) {
               v-for="indicador in conferencia.indicadores"
               :key="indicador.chave"
               class="qualidade-indicador"
-              :class="`qualidade-indicador--${indicador.classe}`"
+              :class="
+                `qualidade-indicador--${indicador.classe}`
+              "
             >
               <dt>{{ indicador.titulo }}</dt>
               <dd>{{ indicador.valor }}</dd>
@@ -213,7 +261,9 @@ function solicitarPublicacao(dados) {
           </dl>
 
           <div class="qualidade-aprovacao">
-            <div class="qualidade-aprovacao-cabecalho">
+            <div
+              class="qualidade-aprovacao-cabecalho"
+            >
               <h3>Percentual de aprovação</h3>
 
               <strong>
@@ -256,7 +306,8 @@ function solicitarPublicacao(dados) {
             v-if="!conferencia.regras.length"
             class="qualidade-lista-vazia"
           >
-            Nenhuma regra violada informada nesta validação.
+            Nenhuma regra violada informada nesta
+            validação.
           </p>
 
           <div
@@ -268,7 +319,8 @@ function solicitarPublicacao(dados) {
           >
             <table class="qualidade-tabela">
               <caption class="qualidade-somente-leitor">
-                Regras violadas e quantidade de ocorrências
+                Regras violadas e quantidade de
+                ocorrências
               </caption>
 
               <thead>
@@ -331,48 +383,96 @@ function solicitarPublicacao(dados) {
 
         <FluxoPublicacaoVersao
           :resultado="resultado"
-          :versao="versao"
-          :publicando="publicando"
-          @confirmar="solicitarPublicacao"
+          :versao="versaoSelecionada"
+          :publicando="publicando || reprovando"
+          @confirmar="publicar"
         />
 
         <p class="qualidade-observacao">
-          A aprovação da validação permite solicitar a
-          publicação. A versão somente deve ser apresentada
-          como publicada após a confirmação do servidor.
+          A versão será apresentada como publicada
+          somente após a confirmação do servidor.
         </p>
       </template>
 
       <section
-        v-if="erroVersoes && !carregandoVersoes"
-        class="qualidade-card qualidade-estado"
+        v-if="versaoConfirmada"
+        class="qualidade-card"
+        aria-labelledby="qualidade-confirmacao-titulo"
       >
-        <h2>Versões publicadas</h2>
+        <h2 id="qualidade-confirmacao-titulo">
+          Resposta confirmada pelo servidor
+        </h2>
 
-        <button
-          type="button"
-          class="qualidade-tentar"
-          @click="emit('tentar-versoes')"
-        >
-          Tentar consultar versões novamente
-        </button>
+        <p class="qualidade-ajuda">
+          Versão {{ versaoConfirmada.numero }}
+          · Situação {{ versaoConfirmada.situacao }}
+          · Execução
+          {{ versaoConfirmada.execucaoId ?? 'Não informada' }}
+        </p>
+      </section>
+
+      <section
+        class="qualidade-card"
+        aria-labelledby="qualidade-reprovacao-titulo"
+      >
+        <details>
+          <summary id="qualidade-reprovacao-titulo">
+            Registrar justificativa de reprovação
+          </summary>
+
+          <form
+            class="qualidade-reprovacao"
+            @submit.prevent="registrarReprovacao"
+          >
+            <label for="qualidade-motivo">
+              Motivo
+            </label>
+
+            <textarea
+              id="qualidade-motivo"
+              v-model="motivoReprovacao"
+              required
+              :disabled="ocupado"
+              rows="3"
+            />
+
+            <p class="qualidade-ajuda">
+              A operação registra a justificativa na
+              auditoria. A situação da versão permanece
+              conforme a resposta do servidor.
+            </p>
+
+            <button
+              class="qualidade-tentar"
+              type="submit"
+              :disabled="ocupado || !versaoId.trim()"
+            >
+              {{
+                reprovando
+                  ? 'Registrando...'
+                  : 'Registrar justificativa'
+              }}
+            </button>
+          </form>
+        </details>
       </section>
 
       <ListaVersoesPublicadas
-        v-else
         :versoes="versoesPublicadas"
-        :carregando="carregandoVersoes"
+        titulo="Publicações confirmadas nesta sessão"
+        descricao="Exibe somente as respostas de publicação recebidas enquanto esta página permanece aberta. O histórico completo ainda não está disponível."
+        mensagem-vazia="Nenhuma publicação confirmada nesta sessão."
       />
     </main>
 
     <ToastMensagem
       v-if="notificacaoAtual"
       :key="notificacaoAtual.id"
-      :identificador="notificacaoAtual.id"
-      :titulo="notificacaoAtual.titulo"
       :mensagem="notificacaoAtual.mensagem"
-      tipo="erro"
-      :duracao="0"
+      :tipo="notificacaoAtual.tipo"
+      :duracao="
+        notificacaoAtual.tipo === 'erro' ? 0 : 6000
+      "
       @fechar="fecharNotificacao"
     />
   </div>
