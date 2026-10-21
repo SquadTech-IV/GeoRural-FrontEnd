@@ -3,6 +3,7 @@ import { computed } from 'vue'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import FluxoPublicacaoVersao from '../components/FluxoPublicacaoVersao.vue'
+import ListaVersoesPublicadas from '../components/ListaVersoesPublicadas.vue'
 
 import {
   prepararConferenciaResultados,
@@ -22,6 +23,14 @@ const props = defineProps({
     default: false,
   },
   publicando: {
+    type: Boolean,
+    default: false,
+  },
+  versoesPublicadas: {
+    type: Array,
+    default: () => [],
+  },
+  carregandoVersoes: {
     type: Boolean,
     default: false,
   },
@@ -47,8 +56,8 @@ function solicitarPublicacao(dados) {
         <h1>Conferência dos resultados</h1>
 
         <p>
-          Confira os resultados da validação antes de
-          prosseguir com a publicação da versão.
+          Confira os resultados da validação e consulte
+          o histórico de versões publicadas.
         </p>
       </header>
 
@@ -255,6 +264,11 @@ function solicitarPublicacao(dados) {
           como publicada após a confirmação do servidor.
         </p>
       </template>
+
+      <ListaVersoesPublicadas
+        :versoes="versoesPublicadas"
+        :carregando="carregandoVersoes"
+      />
     </main>
   </div>
 </template>
