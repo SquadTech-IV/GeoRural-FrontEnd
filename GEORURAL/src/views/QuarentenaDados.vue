@@ -2,14 +2,20 @@
 import {
   onBeforeUnmount,
   onMounted,
+  ref,
 } from 'vue'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
+import DetalheRegistroQuarentena from '../components/DetalheRegistroQuarentena.vue'
 
 import {
   criarConsultaQuarentena,
 } from '../services/quarentenaConsultaService'
+
+import {
+  validarIdQuarentena,
+} from '../services/quarentenaService'
 
 defineOptions({
   name: 'QuarentenaDadosPagina',
@@ -40,6 +46,38 @@ const {
   destruir,
 } = criarConsultaQuarentena()
 
+const registroDetalhadoId = ref(null)
+
+function abrirDetalhe(registro) {
+  try {
+    registroDetalhadoId.value =
+      validarIdQuarentena(registro.id)
+  } catch (erro) {
+    mensagem.value = erro.message
+  }
+}
+
+function fecharDetalhe() {
+  registroDetalhadoId.value = null
+}
+
+function exibirErroDetalhe(erro) {
+  mensagem.value = erro
+}
+
+function alterarExecucao(evento) {
+  fecharDetalhe()
+
+  selecionarExecucao(
+    evento.target.value,
+  )
+}
+
+function atualizarExecucoes() {
+  fecharDetalhe()
+  carregarExecucoes()
+}
+
 onMounted(carregarExecucoes)
 onBeforeUnmount(destruir)
 </script>
@@ -53,8 +91,9 @@ onBeforeUnmount(destruir)
         <h1>Registros em quarentena</h1>
 
         <p>
-          Consulte os registros rejeitados e filtre
-          as inconsistências encontradas na validação.
+          Consulte os registros rejeitados, filtre as
+          inconsistências e confira os detalhes da
+          validação.
         </p>
       </header>
 
@@ -72,7 +111,7 @@ onBeforeUnmount(destruir)
             type="button"
             class="quarentena-botao"
             :disabled="carregandoExecucoes"
-            @click="carregarExecucoes"
+            @click="atualizarExecucoes"
           >
             Atualizar execuções
           </button>
@@ -93,7 +132,7 @@ onBeforeUnmount(destruir)
           <button
             type="button"
             class="quarentena-botao"
-            @click="carregarExecucoes"
+            @click="atualizarExecucoes"
           >
             Tentar novamente
           </button>
@@ -117,9 +156,7 @@ onBeforeUnmount(destruir)
           <select
             id="quarentena-execucao"
             :value="execucaoId"
-            @change="
-              selecionarExecucao($event.target.value)
-            "
+            @change="alterarExecucao"
           >
             <option value="">
               Selecione
@@ -300,6 +337,7 @@ onBeforeUnmount(destruir)
                     <th scope="col">Campo</th>
                     <th scope="col">Motivo</th>
                     <th scope="col">Situação</th>
+                    <th scope="col">Detalhes</th>
                   </tr>
                 </thead>
 
@@ -326,6 +364,20 @@ onBeforeUnmount(destruir)
                         {{ registro.situacao }}
                       </span>
                     </td>
+
+                    <td>
+                      <button
+                        type="button"
+                        class="quarentena-botao"
+                        :disabled="registro.id == null"
+                        :aria-label="
+                          `Consultar inconsistência da linha ${registro.linha}`
+                        "
+                        @click="abrirDetalhe(registro)"
+                      >
+                        Ver detalhes
+                      </button>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -334,6 +386,14 @@ onBeforeUnmount(destruir)
         </template>
       </section>
     </main>
+
+    <DetalheRegistroQuarentena
+      v-if="registroDetalhadoId !== null"
+      :key="registroDetalhadoId"
+      :registro-id="registroDetalhadoId"
+      @fechar="fecharDetalhe"
+      @erro="exibirErroDetalhe"
+    />
 
     <ToastMensagem
       v-if="mensagem"

@@ -1,0 +1,155 @@
+.quarentena-detalhe-dialogo {
+  box-sizing: border-box;
+  width: min(620px, calc(100vw - 32px));
+  max-height: calc(100dvh - 40px);
+  margin: auto;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 14px;
+  background: var(--cor-painel, #fff);
+  color: var(--cor-texto, #24202d);
+  font-family: inherit;
+  box-shadow: 0 20px 60px rgb(30 20 48 / 20%);
+}
+
+.quarentena-detalhe-dialogo::backdrop {
+  background: rgb(20 14 30 / 45%);
+}
+
+.quarentena-detalhe-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px;
+  border-bottom: 1px solid var(--cor-borda, #ded8e7);
+}
+
+.quarentena-detalhe-cabecalho h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.quarentena-detalhe-cabecalho p {
+  margin: 7px 0 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 12px;
+}
+
+.quarentena-detalhe-fechar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cor-texto-secundario, #686273);
+  cursor: pointer;
+}
+
+.quarentena-detalhe-fechar svg {
+  width: 20px;
+  height: 20px;
+}
+
+.quarentena-detalhe-fechar:hover {
+  background: var(--cor-menu-hover, #f6f0fb);
+  color: var(--cor-roxo, #8520bd);
+}
+
+.quarentena-detalhe-conteudo {
+  padding: 20px;
+}
+
+.quarentena-detalhe-campos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0;
+}
+
+.quarentena-detalhe-campos dt {
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 11px;
+}
+
+.quarentena-detalhe-campos dd {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.quarentena-detalhe-motivo {
+  margin-top: 24px;
+  padding: 14px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 10px;
+  background: var(--cor-painel-secundario, #f0edf5);
+}
+
+.quarentena-detalhe-motivo h3 {
+  margin: 0;
+  font-size: 13px;
+}
+
+.quarentena-detalhe-motivo p {
+  margin: 8px 0 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.quarentena-detalhe-estado {
+  margin: 0;
+  padding: 24px 0;
+  color: var(--cor-texto-secundario, #686273);
+  text-align: center;
+  font-size: 12px;
+}
+
+.quarentena-detalhe-rodape {
+  display: flex;
+  justify-content: flex-end;
+  padding: 16px 20px;
+  border-top: 1px solid var(--cor-borda, #ded8e7);
+}
+
+.quarentena-detalhe-botao {
+  min-height: 36px;
+  padding: 8px 14px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 8px;
+  background: var(--cor-painel, #fff);
+  color: var(--cor-roxo, #8520bd);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.quarentena-detalhe-botao:hover {
+  border-color: var(--cor-roxo, #8520bd);
+  background: var(--cor-menu-hover, #f6f0fb);
+}
+
+.quarentena-detalhe-botao:focus-visible,
+.quarentena-detalhe-fechar:focus-visible {
+  outline: 2px solid var(--cor-roxo, #8520bd);
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .quarentena-detalhe-campos {
+    grid-template-columns: 1fr;
+  }
+}
