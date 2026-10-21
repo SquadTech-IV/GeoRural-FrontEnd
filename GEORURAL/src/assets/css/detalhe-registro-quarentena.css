@@ -153,3 +153,32 @@
     grid-template-columns: 1fr;
   }
 }
+
+.quarentena-detalhe-legenda {
+  margin: 0 0 18px;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.quarentena-detalhe-campo--invalido {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--cor-erro, #b42335);
+  border-left-width: 3px;
+  border-radius: 8px;
+  background: var(--cor-erro-fundo, #fff0f1);
+}
+
+.quarentena-detalhe-campo--invalido dt {
+  color: var(--cor-erro, #b42335);
+  font-weight: 700;
+}
+
+.quarentena-detalhe-campos
+  .quarentena-detalhe-identificacao {
+  margin-top: 10px;
+  color: var(--cor-erro, #b42335);
+  font-size: 11px;
+  font-weight: 600;
+}

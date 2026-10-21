@@ -1,5 +1,6 @@
 <script setup>
 import {
+  computed,
   nextTick,
   onBeforeUnmount,
   onMounted,
@@ -9,6 +10,10 @@ import {
 import {
   criarConsultaDetalheQuarentena,
 } from '../services/quarentenaDetalheService'
+
+import {
+  prepararCamposInvalidos,
+} from '../services/quarentenaCamposInvalidosService'
 
 const props = defineProps({
   registroId: {
@@ -32,13 +37,26 @@ const {
   destruir,
 } = criarConsultaDetalheQuarentena()
 
+const camposExibidos = computed(() =>
+  prepararCamposInvalidos(detalhe.value),
+)
+
+const possuiDestaques = computed(() =>
+  camposExibidos.value.some(
+    campo => campo.destaque,
+  ),
+)
+
 let elementoAnterior = null
 let overflowAnterior = ''
+let desmontado = false
 
 async function carregar() {
   try {
     await consultar(props.registroId)
   } catch (erro) {
+    if (desmontado) return
+
     emit(
       'erro',
       erro.message ||
@@ -79,11 +97,15 @@ onMounted(async () => {
 
   await nextTick()
 
+  if (desmontado) return
+
   dialogo.value?.showModal()
   carregar()
 })
 
 onBeforeUnmount(() => {
+  desmontado = true
+
   destruir()
 
   dialogo.value?.close()
@@ -159,13 +181,33 @@ onBeforeUnmount(() => {
         </div>
 
         <template v-else-if="detalhe">
+          <p
+            v-if="possuiDestaques"
+            class="quarentena-detalhe-legenda"
+          >
+            Os destaques identificam o campo apontado
+            pela validação e o valor recebido.
+          </p>
+
           <dl class="quarentena-detalhe-campos">
             <div
-              v-for="campo in detalhe.campos"
+              v-for="campo in camposExibidos"
               :key="campo.chave"
+              :class="{
+                'quarentena-detalhe-campo--invalido':
+                  campo.destaque,
+              }"
             >
               <dt>{{ campo.titulo }}</dt>
+
               <dd>{{ campo.valor }}</dd>
+
+              <dd
+                v-if="campo.identificacao"
+                class="quarentena-detalhe-identificacao"
+              >
+                {{ campo.identificacao }}
+              </dd>
             </div>
           </dl>
 
