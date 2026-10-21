@@ -1,0 +1,240 @@
+<script setup>
+import { computed } from 'vue'
+
+import BarraNavegacao from '../components/BarraNavegacao.vue'
+
+import {
+  prepararConferenciaResultados,
+} from '../services/conferenciaResultadosService'
+
+const props = defineProps({
+  resultado: {
+    type: Object,
+    default: null,
+  },
+  carregando: {
+    type: Boolean,
+    default: false,
+  },
+})
+
+const conferencia = computed(() =>
+  prepararConferenciaResultados(props.resultado),
+)
+</script>
+
+<template>
+  <div class="qualidade-layout">
+    <BarraNavegacao />
+
+    <main class="qualidade-pagina">
+      <header class="qualidade-cabecalho">
+        <h1>Conferência dos resultados</h1>
+
+        <p>
+          Confira os resultados da validação antes de
+          prosseguir com a publicação da versão.
+        </p>
+      </header>
+
+      <section
+        v-if="carregando"
+        class="qualidade-card qualidade-estado"
+        aria-busy="true"
+      >
+        <p role="status">
+          Carregando resultados da validação...
+        </p>
+      </section>
+
+      <section
+        v-else-if="!conferencia"
+        class="qualidade-card qualidade-estado"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path
+            d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+          />
+          <path d="M14 3v6h6M8 13h8M8 17h5" />
+        </svg>
+
+        <h2>Nenhum resultado disponível</h2>
+
+        <p>
+          Os resultados serão exibidos quando os dados
+          da validação forem fornecidos à página.
+        </p>
+      </section>
+
+      <template v-else>
+        <section
+          class="qualidade-card"
+          aria-labelledby="qualidade-resumo-titulo"
+        >
+          <header class="qualidade-resumo-cabecalho">
+            <div>
+              <h2 id="qualidade-resumo-titulo">
+                Resumo da validação
+              </h2>
+
+              <p>
+                Execução {{ conferencia.execucaoId }}
+              </p>
+            </div>
+
+            <span
+              class="qualidade-selo"
+              :class="`qualidade-selo--${conferencia.classeConclusao}`"
+            >
+              {{ conferencia.conclusao }}
+            </span>
+          </header>
+
+          <dl class="qualidade-indicadores">
+            <div
+              v-for="indicador in conferencia.indicadores"
+              :key="indicador.chave"
+              class="qualidade-indicador"
+              :class="`qualidade-indicador--${indicador.classe}`"
+            >
+              <dt>{{ indicador.titulo }}</dt>
+              <dd>{{ indicador.valor }}</dd>
+            </div>
+          </dl>
+
+          <div class="qualidade-aprovacao">
+            <div class="qualidade-aprovacao-cabecalho">
+              <h3>Percentual de aprovação</h3>
+
+              <strong>
+                {{ conferencia.percentualFormatado }}
+              </strong>
+            </div>
+
+            <progress
+              v-if="conferencia.percentual !== null"
+              class="qualidade-progresso"
+              :value="conferencia.percentual"
+              max="100"
+              aria-label="Percentual de aprovação dos registros"
+            >
+              {{ conferencia.percentualFormatado }}
+            </progress>
+
+            <p class="qualidade-ajuda">
+              Situação informada:
+              {{ conferencia.statusValidacao }}
+            </p>
+          </div>
+        </section>
+
+        <section
+          class="qualidade-card"
+          aria-labelledby="qualidade-regras-titulo"
+        >
+          <header class="qualidade-secao-cabecalho">
+            <h2 id="qualidade-regras-titulo">
+              Regras violadas
+            </h2>
+
+            <span>
+              {{ conferencia.regras.length }} regra(s)
+            </span>
+          </header>
+
+          <p
+            v-if="!conferencia.regras.length"
+            class="qualidade-lista-vazia"
+          >
+            Nenhuma regra violada informada nesta validação.
+          </p>
+
+          <div
+            v-else
+            class="qualidade-tabela-container"
+            role="region"
+            aria-label="Regras violadas na validação"
+            tabindex="0"
+          >
+            <table class="qualidade-tabela">
+              <caption class="qualidade-somente-leitor">
+                Regras violadas e quantidade de ocorrências
+              </caption>
+
+              <thead>
+                <tr>
+                  <th scope="col">Regra</th>
+                  <th scope="col">Tipo</th>
+                  <th scope="col">Severidade</th>
+                  <th scope="col">Ocorrências</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr
+                  v-for="(regra, indice) in conferencia.regras"
+                  :key="indice"
+                >
+                  <th scope="row">
+                    {{ regra.nome }}
+                  </th>
+
+                  <td>{{ regra.tipo }}</td>
+
+                  <td>
+                    <span class="qualidade-severidade">
+                      {{ regra.severidade }}
+                    </span>
+                  </td>
+
+                  <td>{{ regra.quantidade }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section
+          class="qualidade-card"
+          aria-labelledby="qualidade-motivos-titulo"
+        >
+          <h2 id="qualidade-motivos-titulo">
+            Motivos de reprovação
+          </h2>
+
+          <ul
+            v-if="conferencia.motivos.length"
+            class="qualidade-motivos"
+          >
+            <li
+              v-for="(motivo, indice) in conferencia.motivos"
+              :key="indice"
+            >
+              {{ motivo }}
+            </li>
+          </ul>
+
+          <p v-else class="qualidade-lista-vazia">
+            Nenhum motivo de reprovação informado.
+          </p>
+        </section>
+
+        <p class="qualidade-observacao">
+          A conclusão apresentada corresponde à validação
+          informada pelo backend. A conferência não publica
+          a versão nem altera os resultados.
+        </p>
+      </template>
+    </main>
+  </div>
+</template>
+
+<style scoped src="../assets/css/qualidade-dados.css"></style>
