@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
+import FluxoPublicacaoVersao from '../components/FluxoPublicacaoVersao.vue'
 
 import {
   prepararConferenciaResultados,
@@ -12,15 +13,29 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  versao: {
+    type: Object,
+    default: null,
+  },
   carregando: {
+    type: Boolean,
+    default: false,
+  },
+  publicando: {
     type: Boolean,
     default: false,
   },
 })
 
+const emit = defineEmits(['publicar'])
+
 const conferencia = computed(() =>
   prepararConferenciaResultados(props.resultado),
 )
+
+function solicitarPublicacao(dados) {
+  emit('publicar', dados)
+}
 </script>
 
 <template>
@@ -227,10 +242,17 @@ const conferencia = computed(() =>
           </p>
         </section>
 
+        <FluxoPublicacaoVersao
+          :resultado="resultado"
+          :versao="versao"
+          :publicando="publicando"
+          @confirmar="solicitarPublicacao"
+        />
+
         <p class="qualidade-observacao">
-          A conclusão apresentada corresponde à validação
-          informada pelo backend. A conferência não publica
-          a versão nem altera os resultados.
+          A aprovação da validação permite solicitar a
+          publicação. A versão somente deve ser apresentada
+          como publicada após a confirmação do servidor.
         </p>
       </template>
     </main>
