@@ -1,5 +1,6 @@
 <script setup>
 import {
+  computed,
   onBeforeUnmount,
   onMounted,
 } from 'vue'
@@ -7,10 +8,15 @@ import {
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
 import ArquivosOrigemAuditoria from '../components/ArquivosOrigemAuditoria.vue'
+import LinhaTempoExecucao from '../components/LinhaTempoExecucao.vue'
 
 import {
   criarConsultaAuditoria,
 } from '../services/auditoriaConsultaService'
+
+import {
+  obterExecucaoResultado,
+} from '../services/auditoriaLinhaTempoService'
 
 defineOptions({
   name: 'AuditoriaDadosPagina',
@@ -33,7 +39,17 @@ const {
   destruir,
 } = criarConsultaAuditoria()
 
-function exibirErroOrigem(erro) {
+const execucaoSelecionada = computed(() => {
+  try {
+    return obterExecucaoResultado(
+      selecionado.value,
+    )
+  } catch {
+    return null
+  }
+})
+
+function exibirErro(erro) {
   mensagem.value = erro
 }
 
@@ -50,8 +66,8 @@ onBeforeUnmount(destruir)
         <h1>Linhagem e auditoria</h1>
 
         <p>
-          Consulte os resultados e os arquivos utilizados
-          na origem de cada registro.
+          Consulte os resultados, os arquivos de origem
+          e a linha do tempo da execução.
         </p>
       </header>
 
@@ -271,9 +287,15 @@ onBeforeUnmount(destruir)
         </dl>
 
         <ArquivosOrigemAuditoria
-          :key="selecionado.chave"
+          :key="`origens-${selecionado.chave}`"
           :resultado-id="selecionado.id"
-          @erro="exibirErroOrigem"
+          @erro="exibirErro"
+        />
+
+        <LinhaTempoExecucao
+          :key="`execucao-${selecionado.chave}`"
+          :execucao-id="execucaoSelecionada"
+          @erro="exibirErro"
         />
       </section>
     </main>
