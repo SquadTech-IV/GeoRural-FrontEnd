@@ -11,7 +11,7 @@ const tema = ref(
 const itens = [
   {
     caminho: '/',
-    titulo: 'Regras',
+    titulo: 'Regras e Métodos',
     icone: 'regras',
   },
   {
@@ -21,7 +21,7 @@ const itens = [
   },
   {
     caminho: '/ingestao',
-    titulo: 'Ingestão de fontes',
+    titulo: 'Ingestão de Fontes',
     icone: 'upload',
   },
   {
