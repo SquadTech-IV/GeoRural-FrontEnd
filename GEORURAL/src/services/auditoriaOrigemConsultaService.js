@@ -27,7 +27,7 @@ export function criarConsultaOrigensAuditoria() {
     consultado.value = false
   }
 
-  async function consultar(resultadoId) {
+  async function consultar(resultadoId, dadosFornecidos = null) {
     if (destruido) return
 
     limpar()
@@ -39,7 +39,7 @@ export function criarConsultaOrigensAuditoria() {
     try {
       const id = validarIdAuditoria(resultadoId)
 
-      const linhagem =
+      const linhagem = dadosFornecidos ??
         await auditoriaService.consultarLinhagem(
           id,
           { signal: atual.signal },

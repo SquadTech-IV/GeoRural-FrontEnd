@@ -3,6 +3,8 @@ import {
   computed,
   onBeforeUnmount,
   onMounted,
+  ref,
+  watch,
 } from 'vue'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
@@ -15,9 +17,7 @@ import {
   criarConsultaAuditoria,
 } from '../services/auditoriaConsultaService'
 
-import {
-  obterExecucaoResultado,
-} from '../services/auditoriaLinhaTempoService'
+import { auditoriaService, requisicaoAuditoriaCancelada } from '../services/auditoriaService'
 
 defineOptions({
   name: 'AuditoriaDadosPagina',
@@ -40,22 +40,60 @@ const {
   destruir,
 } = criarConsultaAuditoria()
 
-const execucaoSelecionada = computed(() => {
-  try {
-    return obterExecucaoResultado(
-      selecionado.value,
-    )
-  } catch {
-    return null
+const trilha = ref(null)
+const carregandoTrilha = ref(false)
+const falhouTrilha = ref(false)
+let consultaTrilha = null
+
+const dadosExecucao = computed(() => {
+  if (!trilha.value) return null
+  const execucao = trilha.value.execucao ?? trilha.value
+  return {
+    ...execucao,
+    eventos: trilha.value.eventos ?? trilha.value.etapas ?? execucao.eventos ?? execucao.etapas,
   }
 })
+const execucaoSelecionada = computed(() =>
+  trilha.value?.execucao?.id ?? trilha.value?.execucaoId ??
+  selecionado.value?.original?.execucaoId ?? selecionado.value?.original?.execucao?.id ?? null,
+)
+
+async function carregarTrilha() {
+  consultaTrilha?.abort()
+  trilha.value = null
+  falhouTrilha.value = false
+  carregandoTrilha.value = false
+  if (!selecionado.value) return
+  const atual = new AbortController()
+  consultaTrilha = atual
+  carregandoTrilha.value = true
+  try {
+    const dados = await auditoriaService.consultarLinhagem(
+      selecionado.value.id,
+      { signal: atual.signal },
+    )
+    if (!atual.signal.aborted && consultaTrilha === atual) trilha.value = dados
+  } catch (erro) {
+    if (!atual.signal.aborted && consultaTrilha === atual && !requisicaoAuditoriaCancelada(erro)) {
+      falhouTrilha.value = true
+      exibirErro(erro.message)
+    }
+  } finally {
+    if (consultaTrilha === atual) carregandoTrilha.value = false
+  }
+}
+
+watch(selecionado, carregarTrilha)
 
 function exibirErro(erro) {
   mensagem.value = erro
 }
 
 onMounted(consultar)
-onBeforeUnmount(destruir)
+onBeforeUnmount(() => {
+  destruir()
+  consultaTrilha?.abort()
+})
 </script>
 
 <template>
@@ -106,8 +144,7 @@ onBeforeUnmount(destruir)
               id="auditoria-busca"
               v-model="busca"
               type="search"
-              placeholder="Imóvel, CAR ou indicador"
-              :disabled="carregando"
+              placeholder="Digite um trecho do CAR"
             />
           </div>
 
@@ -163,8 +200,7 @@ onBeforeUnmount(destruir)
             class="auditoria-ajuda"
           >
             A API retornou uma página dos resultados.
-            Os filtros consideram apenas os registros
-            carregados.
+            Os filtros são aplicados pelo servidor.
           </p>
 
           <p
@@ -287,23 +323,33 @@ onBeforeUnmount(destruir)
           </div>
         </dl>
 
-        <ArquivosOrigemAuditoria
-          :key="`origens-${selecionado.chave}`"
-          :resultado-id="selecionado.id"
-          @erro="exibirErro"
-        />
+        <p v-if="carregandoTrilha" role="status">Consultando a trilha completa...</p>
+        <button v-else-if="falhouTrilha" type="button" class="auditoria-botao" @click="carregarTrilha">
+          Tentar consultar a trilha novamente
+        </button>
 
-        <LinhaTempoExecucao
-          :key="`execucao-${selecionado.chave}`"
-          :execucao-id="execucaoSelecionada"
-          @erro="exibirErro"
-        />
+        <template v-if="trilha">
+          <ArquivosOrigemAuditoria
+            :dados="trilha"
+            :key="`origens-${selecionado.chave}`"
+            :resultado-id="selecionado.id"
+            @erro="exibirErro"
+          />
 
-        <DetalheExecucaoAuditoria
-          :key="`detalhe-${selecionado.chave}`"
-          :execucao-id="execucaoSelecionada"
-          @erro="exibirErro"
-        />
+          <LinhaTempoExecucao
+            :dados="dadosExecucao"
+            :key="`execucao-${selecionado.chave}`"
+            :execucao-id="execucaoSelecionada"
+            @erro="exibirErro"
+          />
+
+          <DetalheExecucaoAuditoria
+            :dados="dadosExecucao"
+            :key="`detalhe-${selecionado.chave}`"
+            :execucao-id="execucaoSelecionada"
+            @erro="exibirErro"
+          />
+        </template>
       </section>
     </main>
 

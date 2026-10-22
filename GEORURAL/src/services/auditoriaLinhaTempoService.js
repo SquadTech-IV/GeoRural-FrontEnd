@@ -175,7 +175,7 @@ export function criarConsultaLinhaTempo() {
     falhou.value = false
   }
 
-  async function consultar(execucaoId) {
+  async function consultar(execucaoId, dadosFornecidos = null) {
     if (destruido) return
 
     limpar()
@@ -185,7 +185,7 @@ export function criarConsultaLinhaTempo() {
     carregando.value = true
 
     try {
-      const dados =
+      const dados = dadosFornecidos ??
         await auditoriaService.consultarExecucao(
           execucaoId,
           { signal: atual.signal },

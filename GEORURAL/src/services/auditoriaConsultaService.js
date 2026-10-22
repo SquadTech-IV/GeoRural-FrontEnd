@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import {
   auditoriaService,
@@ -69,33 +69,15 @@ export function criarConsultaAuditoria() {
   let consulta = null
   let destruido = false
 
-  const indicadores = computed(() =>
-    [...new Set(
-      resultados.value.map(item => item.indicador),
-    )].sort(),
-  )
+  const siglas = ref([])
+  const indicadores = computed(() => siglas.value)
+  const resultadosFiltrados = computed(() => resultados.value)
+  let agendamento = null
 
-  const resultadosFiltrados = computed(() => {
-    const termo = busca.value
-      .trim()
-      .toLocaleLowerCase('pt-BR')
-
-    return resultados.value.filter(item => {
-      const correspondeIndicador =
-        !indicador.value ||
-        item.indicador === indicador.value
-
-      const conteudo = [
-        item.imovel,
-        item.car,
-        item.indicador,
-      ].join(' ').toLocaleLowerCase('pt-BR')
-
-      return (
-        correspondeIndicador &&
-        (!termo || conteudo.includes(termo))
-      )
-    })
+  const pararFiltros = watch([busca, indicador], () => {
+    clearTimeout(agendamento)
+    consulta?.abort()
+    agendamento = setTimeout(consultar, 300)
   })
 
   const listaParcial = computed(() =>
@@ -106,6 +88,7 @@ export function criarConsultaAuditoria() {
   async function consultar() {
     if (destruido) return
 
+    clearTimeout(agendamento)
     consulta?.abort()
 
     const atual = new AbortController()
@@ -118,12 +101,14 @@ export function criarConsultaAuditoria() {
     resultados.value = []
     selecionado.value = null
     totalServidor.value = null
-    indicador.value = ''
 
     try {
       const resposta =
         await auditoriaService.listarResultados(
-          {},
+          {
+            indicador: indicador.value || 'TODOS',
+            busca: busca.value.trim() || undefined,
+          },
           { signal: atual.signal },
         )
 
@@ -142,6 +127,11 @@ export function criarConsultaAuditoria() {
       resultados.value = lista.map(
         prepararResultado,
       )
+
+      siglas.value = [...new Set([
+        ...siglas.value,
+        ...resultados.value.map(item => item.indicador),
+      ])].sort()
 
       if (
         !Array.isArray(resposta) &&
@@ -181,6 +171,8 @@ export function criarConsultaAuditoria() {
 
   function destruir() {
     destruido = true
+    pararFiltros()
+    clearTimeout(agendamento)
     consulta?.abort()
   }
 

@@ -10,6 +10,10 @@ import {
 } from '../services/auditoriaDetalheExecucaoService'
 
 const props = defineProps({
+  dados: {
+    type: Object,
+    default: null,
+  },
   execucaoId: {
     type: [String, Number],
     default: null,
@@ -33,7 +37,7 @@ async function carregar() {
   if (props.execucaoId == null) return
 
   try {
-    await consultar(props.execucaoId)
+    await consultar(props.execucaoId, props.dados)
   } catch (erro) {
     emit(
       'erro',
@@ -57,7 +61,7 @@ function tratarAbertura(evento) {
 }
 
 watch(
-  () => props.execucaoId,
+  () => [props.execucaoId, props.dados],
   () => {
     limpar()
 

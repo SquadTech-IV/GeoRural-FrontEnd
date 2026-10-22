@@ -9,6 +9,10 @@ import {
 } from '../services/auditoriaLinhaTempoService'
 
 const props = defineProps({
+  dados: {
+    type: Object,
+    default: null,
+  },
   execucaoId: {
     type: [String, Number],
     default: null,
@@ -34,7 +38,7 @@ async function carregar() {
   }
 
   try {
-    await consultar(props.execucaoId)
+    await consultar(props.execucaoId, props.dados)
   } catch (erro) {
     emit(
       'erro',
@@ -45,7 +49,7 @@ async function carregar() {
 }
 
 watch(
-  () => props.execucaoId,
+  () => [props.execucaoId, props.dados],
   carregar,
   { immediate: true },
 )

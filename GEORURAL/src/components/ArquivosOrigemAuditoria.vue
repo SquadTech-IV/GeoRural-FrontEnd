@@ -11,6 +11,10 @@ import {
 } from '../services/auditoriaOrigemConsultaService'
 
 const props = defineProps({
+  dados: {
+    type: Object,
+    default: null,
+  },
   resultadoId: {
     type: [String, Number],
     default: null,
@@ -35,7 +39,7 @@ async function carregar() {
   }
 
   try {
-    await consultar(props.resultadoId)
+    await consultar(props.resultadoId, props.dados)
   } catch (erro) {
     emit(
       'erro',
@@ -46,7 +50,7 @@ async function carregar() {
 }
 
 watch(
-  () => props.resultadoId,
+  () => [props.resultadoId, props.dados],
   carregar,
   { immediate: true },
 )

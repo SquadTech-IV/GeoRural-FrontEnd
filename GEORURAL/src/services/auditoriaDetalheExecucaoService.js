@@ -193,7 +193,7 @@ export function criarConsultaDetalheExecucao() {
     falhou.value = false
   }
 
-  async function consultar(execucaoId) {
+  async function consultar(execucaoId, dadosFornecidos = null) {
     if (destruido) return
 
     limpar()
@@ -205,7 +205,7 @@ export function criarConsultaDetalheExecucao() {
     try {
       const id = validarIdAuditoria(execucaoId)
 
-      const dados =
+      const dados = dadosFornecidos ??
         await auditoriaService.consultarExecucao(
           id,
           { signal: atual.signal },

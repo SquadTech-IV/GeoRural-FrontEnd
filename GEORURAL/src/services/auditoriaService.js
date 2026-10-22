@@ -1,6 +1,9 @@
 import api from './api'
 
-let rotasConfiguradas = null
+let rotasConfiguradas = {
+  resultados: '/api/linhagem/resultados',
+  linhagem: id => `/api/linhagem/resultados/${encodeURIComponent(id)}`,
+}
 
 export function requisicaoAuditoriaCancelada(erro) {
   return (
