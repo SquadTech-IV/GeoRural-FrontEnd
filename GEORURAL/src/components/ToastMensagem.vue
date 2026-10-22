@@ -1,9 +1,5 @@
 <script setup>
-import {
-  computed,
-  onBeforeUnmount,
-  watch,
-} from 'vue'
+import { computed, onBeforeUnmount, watch } from 'vue'
 
 const props = defineProps({
   mensagem: {

@@ -1,0 +1,243 @@
+.linha-tempo {
+  padding-top: 20px;
+  color: var(--cor-texto);
+}
+
+.linha-tempo-atual {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 24px;
+  color: var(--cor-texto-secundario);
+  font-size: 12px;
+}
+
+.linha-tempo-zona {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.linha-tempo-zona--BRUTA {
+  background: var(--cor-painel-secundario);
+  color: var(--cor-texto);
+}
+
+.linha-tempo-zona--QUARENTENA {
+  background: var(--cor-aviso-fundo);
+  color: var(--cor-aviso);
+}
+
+.linha-tempo-zona--TRATADA {
+  background: var(--cor-menu-fundo);
+  color: var(--cor-roxo);
+}
+
+.linha-tempo-zona--PUBLICADA {
+  background: var(--cor-sucesso-fundo);
+  color: var(--cor-sucesso);
+}
+
+.linha-tempo-vazia {
+  margin: 0 0 24px;
+  color: var(--cor-texto-secundario);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.linha-tempo-etapas {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.linha-tempo-etapa {
+  --etapa-cor: var(--cor-texto-secundario);
+  --etapa-fundo: var(--cor-painel-secundario);
+  --etapa-borda: var(--cor-borda);
+
+  display: flex;
+  gap: 15px;
+}
+
+.linha-tempo-etapa--done {
+  --etapa-cor: var(--cor-sucesso);
+  --etapa-fundo: var(--cor-sucesso-fundo);
+  --etapa-borda: var(--cor-sucesso-borda);
+}
+
+.linha-tempo-etapa--ressalva {
+  --etapa-cor: var(--cor-aviso);
+  --etapa-fundo: var(--cor-aviso-fundo);
+  --etapa-borda: var(--cor-aviso-borda);
+}
+
+.linha-tempo-etapa--atual {
+  --etapa-cor: var(--cor-roxo);
+  --etapa-fundo: var(--cor-menu-fundo);
+  --etapa-borda: var(--cor-menu-borda);
+}
+
+.linha-tempo-trilho {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: center;
+  width: 34px;
+}
+
+.linha-tempo-no {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--etapa-borda);
+  border-radius: 50%;
+  background: var(--etapa-fundo);
+  color: var(--etapa-cor);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.linha-tempo-pulso {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: linha-tempo-pulsar 1.5s infinite;
+}
+
+.linha-tempo-conexao {
+  flex: 1;
+  width: 2px;
+  min-height: 28px;
+  margin: 5px 0;
+  background: var(--cor-borda);
+}
+
+.linha-tempo-conexao--concluida {
+  background: var(--cor-sucesso-borda);
+}
+
+.linha-tempo-etapa:last-child .linha-tempo-conexao {
+  display: none;
+}
+
+.linha-tempo-conteudo {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 0 28px;
+}
+
+.linha-tempo-etapa:last-child .linha-tempo-conteudo {
+  padding-bottom: 0;
+}
+
+.linha-tempo-titulo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.linha-tempo-titulo h3 {
+  margin: 0;
+  color: var(--cor-texto);
+  font-family: var(--fonte-titulo);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.linha-tempo-situacao {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--etapa-fundo);
+  color: var(--etapa-cor);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.linha-tempo-data {
+  margin: 7px 0 0;
+  color: var(--cor-texto-secundario);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.linha-tempo-contagem {
+  margin: 8px 0 0;
+  color: var(--cor-texto);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.linha-tempo-observacao {
+  margin: 5px 0 0;
+  color: var(--cor-texto-secundario);
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.linha-tempo-observacao--pendente {
+  font-style: italic;
+}
+
+.linha-tempo-detalhar {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  margin-top: 12px;
+  padding: 6px 10px;
+
+  border: 1px solid var(--cor-menu-borda);
+  border-radius: 8px;
+
+  background: var(--cor-menu-fundo);
+  color: var(--cor-roxo);
+
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.linha-tempo-detalhar:hover {
+  background: var(--cor-menu-ativo-hover);
+}
+
+.linha-tempo-detalhar:focus-visible {
+  outline: 2px solid var(--cor-roxo);
+  outline-offset: 3px;
+}
+
+@keyframes linha-tempo-pulsar {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (max-width: 600px) {
+  .linha-tempo-etapa {
+    gap: 12px;
+  }
+
+  .linha-tempo-titulo {
+    gap: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .linha-tempo-pulso {
+    animation: none;
+  }
+}
