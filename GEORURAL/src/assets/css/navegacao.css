@@ -8,7 +8,6 @@
 
   width: var(--sidebar-largura);
   height: 100vh;
-  height: 100dvh;
 
   border-right: 1px solid var(--cor-borda);
   background: var(--cor-fundo);
@@ -20,14 +19,13 @@
 .sidebar-cabecalho {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
 
   min-height: 92px;
   padding: 24px 20px;
 }
 
 .sidebar-marca {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 12px;
 
@@ -36,8 +34,6 @@
 }
 
 .sidebar-logo {
-  display: block;
-  flex-shrink: 0;
   width: 50px;
   height: 42px;
   object-fit: contain;
@@ -54,9 +50,15 @@
   min-height: 0;
   padding: 28px 14px;
   overflow-y: auto;
+}
 
-  scrollbar-width: thin;
-  scrollbar-color: var(--cor-borda) transparent;
+.sidebar-secao {
+  margin: 0 12px 16px;
+
+  color: var(--cor-texto-secundario);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
 }
 
 .sidebar-links {
@@ -83,40 +85,38 @@
   font-weight: 500;
   line-height: 1.4;
   text-decoration: none;
+
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    color 0.2s;
 }
 
 .sidebar-link:hover {
-  background: var(--cor-menu-hover);
+  background: rgba(184, 41, 247, 0.08);
   color: var(--cor-texto);
 }
 
 .sidebar-link--ativo {
-  border-color: var(--cor-menu-borda);
-  background: var(--cor-menu-fundo);
+  border-color: rgba(184, 41, 247, 0.45);
+  background: rgba(184, 41, 247, 0.14);
   color: var(--cor-roxo);
 }
 
 .sidebar-link--ativo:hover {
-  background: var(--cor-menu-ativo-hover);
+  background: rgba(184, 41, 247, 0.2);
   color: var(--cor-roxo);
 }
 
 .sidebar-icone {
-  display: block;
   flex-shrink: 0;
   width: 22px;
   height: 22px;
 }
 
-.sidebar-link span {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
 .sidebar-rodape {
   display: flex;
   justify-content: center;
-  flex-shrink: 0;
   padding: 20px 16px;
 }
 
@@ -126,7 +126,6 @@
   gap: 10px;
 
   width: 100%;
-  min-height: 50px;
   padding: 8px 12px;
 
   border: 1px solid var(--cor-borda);
@@ -135,16 +134,20 @@
   background: var(--cor-painel-secundario);
   color: var(--cor-texto);
 
-  font: inherit;
-  text-align: left;
+  font-family: var(--fonte-titulo);
   cursor: pointer;
+
+  transition:
+    background-color 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .sidebar-tema-icone {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
 
   width: 34px;
   height: 34px;
@@ -168,88 +171,21 @@
 .sidebar-tema:hover {
   border-color: var(--cor-roxo);
   background: var(--cor-menu-hover);
+  box-shadow: 0 3px 12px rgba(133, 32, 189, 0.12);
+}
+
+.sidebar-tema:active {
+  box-shadow: none;
+}
+
+.sidebar-tema:focus-visible {
+  outline: 2px solid var(--cor-roxo);
+  outline-offset: 4px;
 }
 
 .sidebar-link:focus-visible,
-.sidebar-marca:focus-visible,
-.sidebar-tema:focus-visible {
+.sidebar-marca:focus-visible {
   outline: 2px solid var(--cor-roxo);
-  outline-offset: 3px;
+  outline-offset: 4px;
 }
 
-@media (max-width: 760px) {
-  .sidebar {
-    position: relative;
-    inset: auto;
-
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-
-    width: 100%;
-    height: auto;
-
-    border-right: 0;
-    border-bottom: 1px solid var(--cor-borda);
-  }
-
-  .sidebar-cabecalho {
-    min-height: 72px;
-    padding: 14px 16px;
-  }
-
-  .sidebar-logo {
-    width: 38px;
-    height: 34px;
-  }
-
-  .sidebar-nome {
-    font-size: 18px;
-  }
-
-  .sidebar-rodape {
-    grid-column: 2;
-    grid-row: 1;
-    align-items: center;
-    padding: 12px 16px 12px 0;
-  }
-
-  .sidebar-tema {
-    width: auto;
-    min-height: 42px;
-    padding: 4px;
-    border-radius: 10px;
-  }
-
-  .sidebar-tema-texto {
-    display: none;
-  }
-
-  .sidebar-conteudo {
-    grid-column: 1 / -1;
-    padding: 0 12px 12px;
-    overflow-x: auto;
-  }
-
-  .sidebar-links {
-    flex-direction: row;
-    gap: 8px;
-  }
-
-  .sidebar-link {
-    justify-content: center;
-    flex: 1;
-    min-height: 42px;
-    padding: 9px 12px;
-    font-size: 12px;
-    white-space: nowrap;
-  }
-
-  .sidebar-link span {
-    overflow-wrap: normal;
-  }
-
-  .sidebar-icone {
-    width: 18px;
-    height: 18px;
-  }
-}
