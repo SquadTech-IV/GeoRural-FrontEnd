@@ -11,7 +11,17 @@ const tema = ref(
 const itens = [
   {
     caminho: '/',
-    titulo: 'Ingestão de Fontes',
+    titulo: 'Regras',
+    icone: 'regras',
+  },
+  {
+    caminho: '/imoveis',
+    titulo: 'Imóveis',
+    icone: 'mapa',
+  },
+  {
+    caminho: '/ingestao',
+    titulo: 'Ingestão de fontes',
     icone: 'upload',
   },
   {
@@ -19,13 +29,31 @@ const itens = [
     titulo: 'Processar dados',
     icone: 'processar',
   },
+  {
+    caminho: '/rastreabilidade',
+    titulo: 'Trajetória no datalake',
+    icone: 'rastreabilidade',
+  },
 ]
 
 function estaAtivo(caminho) {
   if (caminho === '/') {
     return (
       route.path === '/' ||
-      route.path === '/ingestao'
+      [
+        'RegraNovaVersao',
+        'RegraDetalheVersao',
+        'RegraCompararVersoes',
+      ].includes(route.name)
+    )
+  }
+
+  if (caminho === '/imoveis') {
+    return (
+      route.path === '/imoveis' ||
+      route.path.startsWith('/resultado/') ||
+      route.path === '/mapa-indicadores' ||
+      route.path.startsWith('/mapa-indicadores/')
     )
   }
 
@@ -36,14 +64,16 @@ function estaAtivo(caminho) {
 }
 
 function alternarTema() {
-  tema.value = tema.value === 'light'
-    ? 'dark'
-    : 'light'
+  tema.value =
+    tema.value === 'light' ? 'dark' : 'light'
 
   document.documentElement.dataset.tema = tema.value
 
   try {
-    localStorage.setItem('georural-tema', tema.value)
+    localStorage.setItem(
+      'georural-tema',
+      tema.value,
+    )
   } catch {
     // Mantém a troca de tema mesmo sem acesso ao armazenamento.
   }
@@ -51,7 +81,10 @@ function alternarTema() {
 </script>
 
 <template>
-  <aside class="sidebar" aria-label="Menu principal">
+  <aside
+    class="sidebar"
+    aria-label="Menu principal"
+  >
     <div class="sidebar-cabecalho">
       <RouterLink
         to="/"
@@ -64,7 +97,9 @@ function alternarTema() {
           class="sidebar-logo"
         />
 
-        <span class="sidebar-nome">GEORURAL</span>
+        <span class="sidebar-nome">
+          GEORURAL
+        </span>
       </RouterLink>
     </div>
 
@@ -79,10 +114,13 @@ function alternarTema() {
           :to="item.caminho"
           class="sidebar-link"
           :class="{
-            'sidebar-link--ativo': estaAtivo(item.caminho),
+            'sidebar-link--ativo':
+              estaAtivo(item.caminho),
           }"
           :aria-current="
-            estaAtivo(item.caminho) ? 'page' : undefined
+            estaAtivo(item.caminho)
+              ? 'page'
+              : undefined
           "
         >
           <svg
@@ -101,9 +139,38 @@ function alternarTema() {
               <path d="M4 16v4h16v-4" />
             </template>
 
-            <template v-else-if="item.icone === 'processar'">
+            <template
+              v-else-if="item.icone === 'regras'"
+            >
+              <path
+                d="M4 7h2M12 7h8M4 17h8M18 17h2"
+              />
+              <circle cx="9" cy="7" r="3" />
+              <circle cx="15" cy="17" r="3" />
+            </template>
+
+            <template
+              v-else-if="item.icone === 'processar'"
+            >
               <path d="m9 5 11 7-11 7z" />
               <path d="M4 5v14" />
+            </template>
+
+            <template
+              v-else-if="item.icone === 'rastreabilidade'"
+            >
+              <circle cx="5" cy="5" r="2" />
+              <circle cx="19" cy="19" r="2" />
+              <path
+                d="M7 5h8a4 4 0 0 1 0 8H9a4 4 0 0 0 0 8h8"
+              />
+            </template>
+
+            <template v-else>
+              <path
+                d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"
+              />
+              <path d="M9 3v15M15 6v15" />
             </template>
           </svg>
 
@@ -144,7 +211,11 @@ function alternarTema() {
             />
 
             <template v-else>
-              <circle cx="12" cy="12" r="4" />
+              <circle
+                cx="12"
+                cy="12"
+                r="4"
+              />
 
               <path
                 d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"
@@ -154,7 +225,11 @@ function alternarTema() {
         </span>
 
         <span class="sidebar-tema-texto">
-          {{ tema === 'light' ? 'Modo escuro' : 'Modo claro' }}
+          {{
+            tema === 'light'
+              ? 'Modo escuro'
+              : 'Modo claro'
+          }}
         </span>
       </button>
     </footer>

@@ -1,4 +1,6 @@
 @import './base.css';
+@import './css/tabela.css';
+@import './css/tema.css';
 
 #app {
   width: 100%;

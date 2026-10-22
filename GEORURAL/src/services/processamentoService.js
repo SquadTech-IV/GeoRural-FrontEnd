@@ -736,3 +736,7 @@ export function criarConsultaProcessamento() {
     destruir,
   }
 }
+
+export function processarArquivo(arquivoId) {
+  return processamentoService.encaminhar(arquivoId)
+}
