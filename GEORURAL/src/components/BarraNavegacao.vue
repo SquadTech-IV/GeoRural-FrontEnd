@@ -11,10 +11,23 @@ const tema = ref(
 const itens = [
   {
     caminho: '/',
-    titulo: 'Regras e Métodos',
-    icone: 'regras',
+    titulo: 'Ingestão de Fontes',
+    icone: 'upload',
   },
   {
+    caminho: '/arquivos-recebidos',
+    titulo: 'Arquivos recebidos',
+    icone: 'arquivos',
+  },
+  {
+    caminho: '/processar',
+    titulo: 'Processar dados',
+    icone: 'processar',
+  },
+  {
+    caminho: '/qualidade',
+    titulo: 'Qualidade dos dados',
+    icone: 'qualidade',
     caminho: '/imoveis',
     titulo: 'Imóveis',
     icone: 'mapa',
@@ -40,20 +53,7 @@ function estaAtivo(caminho) {
   if (caminho === '/') {
     return (
       route.path === '/' ||
-      [
-        'RegraNovaVersao',
-        'RegraDetalheVersao',
-        'RegraCompararVersoes',
-      ].includes(route.name)
-    )
-  }
-
-  if (caminho === '/imoveis') {
-    return (
-      route.path === '/imoveis' ||
-      route.path.startsWith('/resultado/') ||
-      route.path === '/mapa-indicadores' ||
-      route.path.startsWith('/mapa-indicadores/')
+      route.path === '/ingestao'
     )
   }
 
@@ -64,8 +64,9 @@ function estaAtivo(caminho) {
 }
 
 function alternarTema() {
-  tema.value =
-    tema.value === 'light' ? 'dark' : 'light'
+  tema.value = tema.value === 'light'
+    ? 'dark'
+    : 'light'
 
   document.documentElement.dataset.tema = tema.value
 
@@ -145,6 +146,13 @@ function alternarTema() {
               <path
                 d="M4 7h2M12 7h8M4 17h8M18 17h2"
               />
+              <path d="M14 3v6h6" />
+              <path d="M8 13h8M8 17h5" />
+            </template>
+
+            <template v-else-if="item.icone === 'processar'">
+              <path d="m9 5 11 7-11 7z" />
+              <path d="M4 5v14" />
               <circle cx="9" cy="7" r="3" />
               <circle cx="15" cy="17" r="3" />
             </template>
@@ -166,11 +174,10 @@ function alternarTema() {
               />
             </template>
 
-            <template v-else>
-              <path
-                d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"
-              />
-              <path d="M9 3v15M15 6v15" />
+            <template v-else-if="item.icone === 'qualidade'">
+              <path d="M9 3H5v18h14V3h-4" />
+              <path d="M9 2h6v4H9z" />
+              <path d="m8 14 3 3 5-6" />
             </template>
           </svg>
 

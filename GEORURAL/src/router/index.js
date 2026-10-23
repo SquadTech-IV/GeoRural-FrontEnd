@@ -3,11 +3,12 @@ import {
   createWebHistory,
 } from 'vue-router'
 
+import ProcessarDados from '../views/ProcessarDados.vue'
+import QualidadeDados from '../views/QualidadeDados.vue'
 import ListaImoveis from '../views/ListaImoveis.vue'
 import MapaIndicadores from '../views/MapaIndicadores.vue'
 import Regras from '../views/Regras.vue'
 import IngestaoPagina from '../views/Ingestao.vue'
-import ProcessarDados from '../views/ProcessarDados.vue'
 import RastreabilidadeDados from '../views/RastreabilidadeDados.vue'
 
 import ModalSalvarRegras from '../components/ModalSalvarRegras.vue'
@@ -31,15 +32,20 @@ const router = createRouter({
       component: ProcessarDados,
     },
     {
-      path: '/imoveis',
-      name: 'Imoveis',
-      component: ListaImoveis,
+      path: '/qualidade',
+      name: 'QualidadeDados',
+      component: QualidadeDados,
     },
     {
       path: '/mapa-indicadores/:car?',
       name: 'MapaIndicadores',
       component: MapaIndicadores,
       props: true,
+    },
+    {
+      path: '/imoveis',
+      name: 'ListaImoveis',
+      component: ListaImoveis,
     },
     {
       path: '/',
