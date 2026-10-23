@@ -7,8 +7,8 @@ import {
 } from 'vue'
 
 import {
-  ingestaoService,
   consultaIngestaoCancelada,
+  ingestaoService,
 } from '../services/ingestaoService'
 
 defineOptions({
@@ -18,9 +18,13 @@ defineOptions({
 const props = defineProps({
   conjuntoId: {
     type: [String, Number],
-    default: '',
+    default: null,
   },
   disabled: {
+    type: Boolean,
+    default: false,
+  },
+  desabilitado: {
     type: Boolean,
     default: false,
   },
@@ -29,6 +33,7 @@ const props = defineProps({
 const emit = defineEmits([
   'consultado',
   'selecionar',
+  'limpar',
   'erro',
 ])
 
@@ -36,9 +41,25 @@ const carregando = ref(false)
 const consultado = ref(false)
 const resposta = ref(null)
 const selecionados = ref([])
+const mensagemErro = ref('')
 
 let consulta = null
 let destruido = false
+
+const bloqueado = computed(
+  () => props.disabled || props.desabilitado,
+)
+
+const temConjunto = computed(
+  () => String(props.conjuntoId ?? '').trim() !== '',
+)
+
+const podeConsultar = computed(
+  () =>
+    !bloqueado.value &&
+    !carregando.value &&
+    temConjunto.value,
+)
 
 const itens = computed(() => {
   if (Array.isArray(resposta.value)) {
@@ -56,17 +77,8 @@ const itens = computed(() => {
   return []
 })
 
-const podeConsultar = computed(() =>
-  !props.disabled &&
-  !carregando.value &&
-  String(props.conjuntoId ?? '').trim() !== '',
-)
-
 function identificador(item) {
-  if (
-    item &&
-    typeof item === 'object'
-  ) {
+  if (item && typeof item === 'object') {
     return item.id ?? item.codigo ?? item.url ?? null
   }
 
@@ -96,15 +108,14 @@ function estaSelecionado(indice) {
   return selecionados.value.includes(indice)
 }
 
-function notificarSelecao() {
-  emit(
-    'selecionar',
-    selecionados.value.map(indice => itens.value[indice]),
-  )
-}
-
 function alternarSelecao(indice) {
-  if (props.disabled || carregando.value) return
+  if (
+    bloqueado.value ||
+    carregando.value ||
+    identificador(itens.value[indice]) === null
+  ) {
+    return
+  }
 
   if (estaSelecionado(indice)) {
     selecionados.value = selecionados.value.filter(
@@ -117,19 +128,30 @@ function alternarSelecao(indice) {
     ]
   }
 
-  notificarSelecao()
+  emit(
+    'selecionar',
+    selecionados.value.map(
+      atual => itens.value[atual],
+    ),
+  )
 }
 
-function limpar() {
-  consulta?.abort()
-  consulta = null
-
-  carregando.value = false
+function limparResultado() {
   consultado.value = false
   resposta.value = null
   selecionados.value = []
+  mensagemErro.value = ''
 
   emit('selecionar', [])
+  emit('limpar')
+}
+
+function limparConsulta() {
+  consulta?.abort()
+  consulta = null
+  carregando.value = false
+
+  limparResultado()
 }
 
 async function consultar() {
@@ -138,26 +160,25 @@ async function consultar() {
   consulta?.abort()
 
   const atual = new AbortController()
+  const conjuntoId = props.conjuntoId
+
   consulta = atual
-
   carregando.value = true
-  consultado.value = false
-  resposta.value = null
-  selecionados.value = []
 
-  emit('selecionar', [])
+  limparResultado()
 
   try {
     const dados =
       await ingestaoService.consultarDisponiveis(
-        props.conjuntoId,
+        conjuntoId,
         { signal: atual.signal },
       )
 
     if (
       destruido ||
       atual.signal.aborted ||
-      consulta !== atual
+      consulta !== atual ||
+      props.conjuntoId !== conjuntoId
     ) {
       return
     }
@@ -165,22 +186,26 @@ async function consultar() {
     resposta.value = dados
     consultado.value = true
 
-    emit('consultado', dados)
-  } catch (erro) {
+    emit('consultado', {
+      conjuntoId,
+      resposta: dados,
+    })
+  } catch (falha) {
     if (
       destruido ||
       atual.signal.aborted ||
       consulta !== atual ||
-      consultaIngestaoCancelada(erro)
+      props.conjuntoId !== conjuntoId ||
+      consultaIngestaoCancelada(falha)
     ) {
       return
     }
 
-    emit(
-      'erro',
-      erro?.message ||
-        'Não foi possível consultar a API.',
-    )
+    mensagemErro.value =
+      falha?.message ||
+      'Não foi possível consultar a API.'
+
+    emit('erro', mensagemErro.value)
   } finally {
     if (!destruido && consulta === atual) {
       carregando.value = false
@@ -191,12 +216,14 @@ async function consultar() {
 
 watch(
   () => props.conjuntoId,
-  limpar,
+  limparConsulta,
+  { flush: 'sync' },
 )
 
 onBeforeUnmount(() => {
   destruido = true
   consulta?.abort()
+  consulta = null
 })
 </script>
 
@@ -212,7 +239,7 @@ onBeforeUnmount(() => {
           Consultar dados disponíveis
         </h3>
 
-        <p>
+        <p class="consulta-api-descricao">
           Consulte os itens disponibilizados pela API
           do conjunto selecionado.
         </p>
@@ -226,28 +253,45 @@ onBeforeUnmount(() => {
       >
         {{
           carregando
-            ? 'Consultando...'
-            : 'Consultar API'
+            ? 'Consultando API...'
+            : mensagemErro
+              ? 'Tentar novamente'
+              : 'Consultar disponibilidade'
         }}
       </button>
     </header>
 
     <p
-      v-if="!conjuntoId"
-      class="consulta-api-estado"
+      v-if="!temConjunto"
+      class="consulta-api-ajuda"
     >
-      Selecione um conjunto para consultar a API.
+      Selecione uma fonte e um conjunto para continuar.
     </p>
 
     <p
       v-else-if="carregando"
-      class="consulta-api-estado"
+      class="consulta-api-ajuda"
       role="status"
     >
       Consultando os dados disponíveis...
     </p>
 
-    <template v-else-if="consultado">
+    <p
+      v-if="mensagemErro"
+      class="consulta-api-erro"
+      role="alert"
+    >
+      {{ mensagemErro }}
+    </p>
+
+    <template v-if="consultado">
+      <p
+        class="consulta-api-sucesso"
+        role="status"
+      >
+        Consulta concluída pelo backend.
+      </p>
+
       <p
         v-if="!itens.length"
         class="consulta-api-estado"
@@ -281,7 +325,8 @@ onBeforeUnmount(() => {
                 type="checkbox"
                 :checked="estaSelecionado(indice)"
                 :disabled="
-                  disabled ||
+                  bloqueado ||
+                  carregando ||
                   identificador(item) === null
                 "
                 @change="alternarSelecao(indice)"

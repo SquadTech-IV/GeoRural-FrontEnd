@@ -1,23 +1,38 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import {
+  createRouter,
+  createWebHistory,
+} from 'vue-router'
 
 import ListaImoveis from '../views/ListaImoveis.vue'
 import MapaIndicadores from '../views/MapaIndicadores.vue'
 import Regras from '../views/Regras.vue'
 import IngestaoPagina from '../views/Ingestao.vue'
+
 import AuditoriaDados from '../views/AuditoriaDados.vue'
+
+import ProcessarDados from '../views/ProcessarDados.vue'
+import RastreabilidadeDados from '../views/RastreabilidadeDados.vue'
+
 
 import ModalSalvarRegras from '../components/ModalSalvarRegras.vue'
 import ModalDetalheVersao from '../components/ModalDetalheVersao.vue'
 import ModalCompararVersoes from '../components/ModalCompararVersoes.vue'
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHistory(
+    import.meta.env.BASE_URL,
+  ),
 
   routes: [
     {
       path: '/ingestao',
       name: 'Ingestao',
       component: IngestaoPagina,
+    },
+    {
+      path: '/processar',
+      name: 'ProcessarDados',
+      component: ProcessarDados,
     },
     {
       path: '/imoveis',
@@ -56,6 +71,11 @@ const router = createRouter({
           component: ModalCompararVersoes,
         },
       ],
+    },
+    {
+      path: '/rastreabilidade',
+      name: 'Rastreabilidade',
+      component: RastreabilidadeDados,
     },
   ],
 })

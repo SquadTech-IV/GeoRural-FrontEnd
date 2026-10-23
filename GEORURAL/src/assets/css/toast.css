@@ -1,47 +1,44 @@
 .toast-mensagem {
-  --toast-cor: var(--cor-sucesso);
+  --toast-cor: var(--cor-roxo, #8520bd);
 
   position: fixed;
   right: 24px;
   bottom: 24px;
-  z-index: 1500;
+  z-index: 3000;
 
   display: flex;
   align-items: flex-start;
   gap: 12px;
 
-  box-sizing: border-box;
-  width: 420px;
-  max-width: calc(100vw - 48px);
-  padding: 18px;
+  width: min(420px, calc(100vw - 32px));
+  padding: 16px;
 
-  border: 1px solid var(--cor-borda);
+  border: 1px solid var(--cor-borda, #ded8e7);
   border-left: 4px solid var(--toast-cor);
   border-radius: 12px;
 
-  background: var(--cor-painel);
-  color: var(--cor-texto);
-  font-family: var(--fonte-padrao);
+  background: var(--cor-painel, #fff);
+  color: var(--cor-texto, #24202d);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.15);
 
-  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+  font-family: var(--fonte-padrao, Arial, sans-serif);
+}
+
+.toast-mensagem--sucesso {
+  --toast-cor: var(--cor-sucesso, #18733c);
 }
 
 .toast-mensagem--erro {
-  --toast-cor: var(--cor-erro);
+  --toast-cor: var(--cor-erro, #b42335);
 }
 
 .toast-mensagem--aviso {
-  --toast-cor: var(--cor-aviso);
+  --toast-cor: var(--cor-aviso, #8a5b00);
 }
 
 .toast-mensagem-icone {
   display: inline-flex;
   flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-
-  width: 30px;
-  height: 30px;
   color: var(--toast-cor);
 }
 
@@ -58,18 +55,15 @@
 .toast-mensagem-conteudo strong {
   display: block;
   margin-bottom: 5px;
-
-  color: var(--toast-cor);
-  font-family: var(--fonte-titulo);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .toast-mensagem-conteudo p {
   margin: 0;
-  color: var(--cor-texto);
-  font-size: 12px;
-  line-height: 1.8;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 13px;
+  line-height: 1.6;
   overflow-wrap: anywhere;
 }
 
@@ -81,13 +75,24 @@
 
   width: 28px;
   height: 28px;
-  padding: 5px;
+  padding: 4px;
 
   border: 0;
-  border-radius: 7px;
+  border-radius: 6px;
+
   background: transparent;
-  color: var(--cor-texto-secundario);
+  color: var(--cor-texto-secundario, #686273);
   cursor: pointer;
+}
+
+.toast-mensagem-fechar:hover {
+  background: var(--cor-menu-hover, #f6f0fb);
+  color: var(--cor-texto, #24202d);
+}
+
+.toast-mensagem-fechar:focus-visible {
+  outline: 2px solid var(--toast-cor);
+  outline-offset: 3px;
 }
 
 .toast-mensagem-fechar svg {
@@ -95,12 +100,9 @@
   height: 18px;
 }
 
-.toast-mensagem-fechar:hover {
-  background: var(--cor-menu-hover);
-  color: var(--cor-roxo);
-}
-
-.toast-mensagem-fechar:focus-visible {
-  outline: 2px solid var(--cor-roxo);
-  outline-offset: 3px;
+@media (max-width: 600px) {
+  .toast-mensagem {
+    right: 16px;
+    bottom: 16px;
+  }
 }

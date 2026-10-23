@@ -34,6 +34,16 @@ const itens = [
     titulo: 'Linhagem e auditoria',
     icone: 'auditoria',
   },
+  {
+    caminho: '/processar',
+    titulo: 'Processar dados',
+    icone: 'processar',
+  },
+  {
+    caminho: '/rastreabilidade',
+    titulo: 'Trajetória no datalake',
+    icone: 'rastreabilidade',
+  },
 ]
 
 function estaAtivo(caminho) {
@@ -41,6 +51,20 @@ function estaAtivo(caminho) {
     return (
       route.path === '/' ||
       route.path === '/ingestao'
+      [
+        'RegraNovaVersao',
+        'RegraDetalheVersao',
+        'RegraCompararVersoes',
+      ].includes(route.name)
+    )
+  }
+
+  if (caminho === '/imoveis') {
+    return (
+      route.path === '/imoveis' ||
+      route.path.startsWith('/resultado/') ||
+      route.path === '/mapa-indicadores' ||
+      route.path.startsWith('/mapa-indicadores/')
     )
   }
 
@@ -127,6 +151,7 @@ function alternarTema() {
             </template>
 
             <template
+
               v-else-if="item.icone === 'processar'"
             >
               <path d="M20 7h-9M5 7H4M20 17h-1M13 17H4" />
@@ -136,10 +161,13 @@ function alternarTema() {
 
             <template
               v-else-if="item.icone === 'arquivos'"
+              v-else-if="item.icone === 'regras'"
+
             >
               <path
-                d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+                d="M4 7h2M12 7h8M4 17h8M18 17h2"
               />
+
               <path d="M14 3v6h6" />
               <path d="M8 13h8M8 17h6" />
             </template>
@@ -159,6 +187,30 @@ function alternarTema() {
               <circle cx="6" cy="5" r="2" />
               <circle cx="6" cy="19" r="2" />
               <circle cx="18" cy="12" r="2" />
+
+              <circle cx="9" cy="7" r="3" />
+              <circle cx="15" cy="17" r="3" />
+            </template>
+
+            <template
+              v-else-if="item.icone === 'processar'"
+            >
+              <path d="m9 5 11 7-11 7z" />
+              <path d="M4 5v14" />
+            </template>
+
+            <template
+              v-else-if="item.icone === 'rastreabilidade'"
+            >
+              <circle cx="5" cy="5" r="2" />
+              <circle cx="19" cy="19" r="2" />
+              <path
+                d="M7 5h8a4 4 0 0 1 0 8H9a4 4 0 0 0 0 8h8"
+              />
+            </template>
+
+            <template v-else>
+
               <path
                 d="M6 7v10M8 5h3a7 7 0 0 1 7 5"
               />
