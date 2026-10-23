@@ -167,7 +167,7 @@ function alterar(versaoId, acao, motivo) {
     try {
       const corpo = acao === 'reprovar'
         ? { motivo: motivo.trim() }
-        : null
+        : { justificativa: typeof motivo === 'string' ? motivo.trim() : '' }
 
       const { data } = await api.post(
         `/api/versoes/${id}/${acao}`,
@@ -183,6 +183,13 @@ function alterar(versaoId, acao, motivo) {
 }
 
 export const publicacaoService = {
+  listarVersoes({ situacao, signal } = {}) {
+    return executar(async () => {
+      const { data } = await api.get('/api/versoes', { params: { situacao }, signal })
+      if (!Array.isArray(data)) throw new Error('O backend retornou uma lista de versões inválida.')
+      return data.map(item => ({ ...item, id: validarIdPublicacao(item.versaoId ?? item.id) }))
+    }, 'versoes')
+  },
   consultarQualidade(execucaoId, { signal } = {}) {
     return executar(async () => {
       const id = validarIdPublicacao(execucaoId)
@@ -199,8 +206,8 @@ export const publicacaoService = {
     }, 'conferencia')
   },
 
-  publicar(versaoId) {
-    return alterar(versaoId, 'publicar')
+  publicar(versaoId, justificativa) {
+    return alterar(versaoId, 'publicar', justificativa)
   },
 
   reprovar(versaoId, motivo) {

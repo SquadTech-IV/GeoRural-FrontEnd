@@ -2,6 +2,7 @@
 import {
   computed,
   onBeforeUnmount,
+  onMounted,
   watch,
 } from 'vue'
 
@@ -23,6 +24,9 @@ import {
 const route = useRoute()
 
 const {
+  versoes,
+  carregandoVersoes,
+  carregarVersoes,
   execucaoId,
   versaoId,
   motivoReprovacao,
@@ -83,6 +87,7 @@ watch(
 )
 
 onBeforeUnmount(destruir)
+onMounted(carregarVersoes)
 </script>
 
 <template>
@@ -137,6 +142,7 @@ onBeforeUnmount(destruir)
 
             <input
               id="qualidade-versao"
+              list="qualidade-versoes"
               :value="versaoId"
               type="text"
               inputmode="numeric"
@@ -146,6 +152,11 @@ onBeforeUnmount(destruir)
                 selecionarVersao($event.target.value)
               "
             />
+            <datalist id="qualidade-versoes">
+              <option v-for="item in versoes" :key="item.id" :value="item.id">
+                {{ item.conjuntoNome }} · {{ item.numero }} · {{ item.situacao }}
+              </option>
+            </datalist>
           </div>
 
           <button
@@ -459,10 +470,13 @@ onBeforeUnmount(destruir)
 
       <ListaVersoesPublicadas
         :versoes="versoesPublicadas"
-        titulo="Publicações confirmadas nesta sessão"
-        descricao="Exibe somente as respostas de publicação recebidas enquanto esta página permanece aberta. O histórico completo ainda não está disponível."
-        mensagem-vazia="Nenhuma publicação confirmada nesta sessão."
+        titulo="Versões publicadas"
+        descricao="Versões vigentes e anteriores consultadas no servidor."
+        mensagem-vazia="Nenhuma versão publicada encontrada."
       />
+      <button type="button" class="qualidade-tentar" :disabled="carregandoVersoes || ocupado" @click="carregarVersoes">
+        {{ carregandoVersoes ? 'Consultando versões...' : 'Atualizar versões' }}
+      </button>
     </main>
 
     <ToastMensagem

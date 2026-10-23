@@ -29,6 +29,7 @@ const props = defineProps({
 const emit = defineEmits(['confirmar'])
 
 const dialogo = ref(null)
+const justificativa = ref('')
 
 const avaliacao = computed(() =>
   avaliarPublicacao({
@@ -40,6 +41,7 @@ const avaliacao = computed(() =>
 
 function abrirConfirmacao() {
   if (!avaliacao.value.permitido) return
+  justificativa.value = ''
 
   if (dialogo.value && !dialogo.value.open) {
     dialogo.value.showModal()
@@ -57,6 +59,7 @@ function cancelar(evento) {
 
 function confirmar() {
   if (!avaliacao.value.permitido) return
+  if (props.resultado?.registrosEmQuarentena > 0 && !justificativa.value.trim()) return
 
   const solicitacao = prepararSolicitacaoPublicacao({
     resultado: props.resultado,
@@ -65,7 +68,7 @@ function confirmar() {
   })
 
   fecharConfirmacao()
-  emit('confirmar', solicitacao)
+  emit('confirmar', { ...solicitacao, justificativa: justificativa.value.trim() })
 }
 
 watch(
@@ -138,6 +141,10 @@ onBeforeUnmount(fecharConfirmacao)
         </header>
 
         <div class="publicacao-dialogo-conteudo">
+          <template v-if="resultado?.registrosEmQuarentena > 0">
+            <label for="publicacao-justificativa">Justificativa para publicar com quarentena</label>
+            <textarea id="publicacao-justificativa" v-model="justificativa" required rows="3" />
+          </template>
           <p id="publicacao-confirmacao-descricao">
             Deseja solicitar a publicação da versão
             <strong>{{ versao?.numero ?? versao?.id }}</strong>,

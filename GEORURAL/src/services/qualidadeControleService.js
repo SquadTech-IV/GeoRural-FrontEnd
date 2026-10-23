@@ -28,6 +28,9 @@ export function criarControleQualidade() {
   const falhouConferencia = ref(false)
 
   const versoesPublicadas = ref([])
+  const versoes = ref([])
+  const carregandoVersoes = ref(false)
+  const consultaVersoes = new AbortController()
 
   const feedback = criarFeedbackPublicacao()
 
@@ -71,7 +74,7 @@ export function criarControleQualidade() {
       return versao.value
     }
 
-    return id ? { id } : null
+    return versoes.value.find(item => item.id === id) ?? (id ? { id } : null)
   })
 
   const versaoConfirmada = computed(() =>
@@ -161,15 +164,20 @@ export function criarControleQualidade() {
       }
 
       publicando.value = true
+      if (resultado.value?.registrosEmQuarentena > 0 && !solicitacao?.justificativa?.trim()) {
+        throw new Error('Informe a justificativa para publicar com quarentena.')
+      }
 
       const publicada =
         await publicacaoService.publicar(
           dados.versaoId,
+          solicitacao?.justificativa,
         )
 
       if (destruido) return
 
       versao.value = publicada
+      await carregarVersoes()
 
       versoesPublicadas.value = [
         publicada,
@@ -245,6 +253,7 @@ export function criarControleQualidade() {
       if (destruido) return
 
       versao.value = resposta
+      await carregarVersoes()
       motivoReprovacao.value = ''
 
       feedback.notificar(
@@ -263,12 +272,32 @@ export function criarControleQualidade() {
     }
   }
 
+  async function carregarVersoes() {
+    if (destruido || carregandoVersoes.value) return
+    carregandoVersoes.value = true
+    feedback.registrarErro('versoes', null)
+    try {
+      const dados = await publicacaoService.listarVersoes({ signal: consultaVersoes.signal })
+      if (destruido) return
+      versoes.value = dados
+      versoesPublicadas.value = dados.filter(item => ['VIGENTE', 'ANTERIOR'].includes(item.situacao))
+    } catch (erro) {
+      if (!destruido) feedback.registrarErro('versoes', erro)
+    } finally {
+      carregandoVersoes.value = false
+    }
+  }
+
   function destruir() {
     destruido = true
     consulta?.abort()
+    consultaVersoes.abort()
   }
 
   return {
+    versoes,
+    carregandoVersoes,
+    carregarVersoes,
     execucaoId,
     versaoId,
     motivoReprovacao,
