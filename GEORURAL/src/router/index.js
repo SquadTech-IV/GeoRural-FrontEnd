@@ -8,9 +8,13 @@ const router = createRouter({
 
   routes: [
     {
+      path: '/',
+      redirect: { name: 'ArquivosRecebidos' },
+    },
+    {
       path: '/ingestao',
       redirect: {
-        name: 'IngestaoFontes',
+        name: 'ArquivosRecebidos',
       },
     },
     {

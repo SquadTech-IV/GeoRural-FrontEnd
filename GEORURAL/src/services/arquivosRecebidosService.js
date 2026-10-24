@@ -1,18 +1,11 @@
-import api from './api'
+import { arquivoService } from './arquivoService'
 
-import {
-  executarOperacaoArquivo,
-} from './arquivoRecebidoErroService'
+import { executarOperacaoArquivo } from './arquivoRecebidoErroService'
 
-export {
-  consultaArquivoCancelada,
-} from './arquivoRecebidoErroService'
+export { consultaArquivoCancelada } from './arquivoRecebidoErroService'
 
 function validarId(valor) {
-  if (
-    typeof valor === 'number' &&
-    !Number.isSafeInteger(valor)
-  ) {
+  if (typeof valor === 'number' && !Number.isSafeInteger(valor)) {
     throw new Error('O identificador do arquivo é inválido.')
   }
 
@@ -26,20 +19,13 @@ function validarId(valor) {
 }
 
 function validarObjeto(valor, mensagem) {
-  if (
-    !valor ||
-    typeof valor !== 'object' ||
-    Array.isArray(valor)
-  ) {
+  if (!valor || typeof valor !== 'object' || Array.isArray(valor)) {
     throw new Error(mensagem)
   }
 }
 
 function adaptarResumo(dado) {
-  validarObjeto(
-    dado,
-    'O backend retornou um arquivo inválido.',
-  )
+  validarObjeto(dado, 'O backend retornou um arquivo inválido.')
 
   return {
     ...dado,
@@ -50,22 +36,14 @@ function adaptarResumo(dado) {
 function adaptarDetalhe(dado) {
   const arquivo = adaptarResumo(dado)
 
-  if (
-    dado.arquivos != null &&
-    !Array.isArray(dado.arquivos)
-  ) {
-    throw new Error(
-      'O backend retornou uma lista de itens inválida.',
-    )
+  if (dado.arquivos != null && !Array.isArray(dado.arquivos)) {
+    throw new Error('O backend retornou uma lista de itens inválida.')
   }
 
   return {
     ...arquivo,
-    arquivos: (dado.arquivos ?? []).map(item => {
-      validarObjeto(
-        item,
-        'O backend retornou um item de arquivo inválido.',
-      )
+    arquivos: (dado.arquivos ?? []).map((item) => {
+      validarObjeto(item, 'O backend retornou um item de arquivo inválido.')
 
       return {
         ...item,
@@ -106,10 +84,7 @@ export function formatarTamanhoArquivo(valor) {
   let tamanho = bytes
   let unidade = 0
 
-  while (
-    tamanho >= 1024 &&
-    unidade < unidades.length - 1
-  ) {
+  while (tamanho >= 1024 && unidade < unidades.length - 1) {
     tamanho /= 1024
     unidade++
   }
@@ -122,38 +97,18 @@ export function formatarTamanhoArquivo(valor) {
 }
 
 export const arquivosRecebidosService = {
-  listar({
-    nome = '',
-    situacao = '',
-    signal,
-  } = {}) {
+  listar({ nome = '', situacao = '', signal } = {}) {
     return executarOperacaoArquivo(async () => {
-      const params = {}
-
       const filtroNome = String(nome ?? '').trim()
 
       const filtroSituacao = String(situacao ?? '')
         .trim()
         .toUpperCase()
 
-      if (filtroNome) {
-        params.nome = filtroNome
-      }
-
-      if (filtroSituacao) {
-        params.situacao = filtroSituacao
-      }
-
-      const { data } = await api.get('/api/arquivos', {
-        params,
-        signal,
-        timeout: 30000,
-      })
+      const data = await arquivoService.listar(filtroNome, filtroSituacao, { signal })
 
       if (!Array.isArray(data)) {
-        throw new Error(
-          'O backend retornou uma lista de arquivos inválida.',
-        )
+        throw new Error('O backend retornou uma lista de arquivos inválida.')
       }
 
       return data.map(adaptarResumo)
@@ -164,13 +119,7 @@ export const arquivosRecebidosService = {
     return executarOperacaoArquivo(async () => {
       const arquivoId = validarId(id)
 
-      const { data } = await api.get(
-        `/api/arquivos/${arquivoId}`,
-        {
-          signal,
-          timeout: 30000,
-        },
-      )
+      const data = await arquivoService.detalhe(arquivoId, { signal })
 
       return adaptarDetalhe(data)
     }, 'detalhe')
@@ -180,19 +129,10 @@ export const arquivosRecebidosService = {
     return executarOperacaoArquivo(async () => {
       const arquivoId = validarId(id)
 
-      const { data } = await api.get(
-        `/api/arquivos/${arquivoId}/download`,
-        {
-          signal,
-          responseType: 'blob',
-          timeout: 60000,
-        },
-      )
+      const data = await arquivoService.baixarOriginal(arquivoId, { signal })
 
       if (!(data instanceof Blob)) {
-        throw new Error(
-          'O servidor retornou um conteúdo inválido para download.',
-        )
+        throw new Error('O servidor retornou um conteúdo inválido para download.')
       }
 
       return data

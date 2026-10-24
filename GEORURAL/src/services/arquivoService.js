@@ -1,34 +1,63 @@
 import api from './api'
 
+function validarId(valor) {
+  const id = String(valor ?? '').trim()
+  if (!/^[1-9]\d*$/.test(id) || (typeof valor === 'number' && !Number.isSafeInteger(valor))) {
+    throw new Error('Informe um identificador válido.')
+  }
+  return id
+}
+
 export const arquivoService = {
-  async listar(nome, situacao) {
+  async listar(nome, situacao, { signal } = {}) {
     const params = {}
 
     if (nome) params.nome = nome
     if (situacao) params.situacao = situacao
 
-    const response = await api.get('/api/arquivos', { params })
+    const response = await api.get('/api/arquivos', { params, signal })
     return response.data
   },
 
-  async detalhe(id) {
-    const response = await api.get(`/api/arquivos/${id}`)
+  async detalhe(id, { signal } = {}) {
+    const response = await api.get(`/api/arquivos/${validarId(id)}`, { signal })
     return response.data
   },
 
-  async enviar(arquivos) {
-    const formData = new FormData()
+  // Recebimento na zona bruta: o backend aceita um arquivo por requisição.
+  async enviar(arquivos, { conId, usuId, signal } = {}) {
+    const conjuntoId = validarId(conId)
+    const usuarioId = validarId(usuId)
+    const itens = arquivos instanceof Blob ? [arquivos] : Array.from(arquivos ?? [])
+    if (!itens.length || itens.some((arquivo) => !(arquivo instanceof Blob))) {
+      throw new Error('Selecione os arquivos para envio.')
+    }
+    const resultados = []
+    for (const arquivo of itens) {
+      const formData = new FormData()
+      formData.append('arquivo', arquivo)
+      formData.append('conId', conjuntoId)
+      formData.append('usuId', usuarioId)
+      const { data } = await api.post('/api/arquivos/brutos/upload', formData, {
+        signal,
+        timeout: 60000,
+      })
+      resultados.push(data)
+    }
+    return resultados
+  },
 
-    Array.from(arquivos).forEach((arquivo) => {
-      formData.append('files', arquivo)
+  async baixarOriginal(id, { signal } = {}) {
+    const { data } = await api.get(`/api/arquivos/${validarId(id)}/download`, {
+      signal,
+      responseType: 'blob',
+      timeout: 60000,
     })
-
-    const response = await api.post('/api/ingestao/upload', formData)
-    return response.data
+    return data
   },
 
   async processar(id) {
-    const response = await api.post(`/api/arquivos/${id}/processar`)
+    const response = await api.post(`/api/arquivos/${validarId(id)}/processar`)
     return response.data
   },
 }
