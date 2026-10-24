@@ -1,9 +1,8 @@
 import api from './api'
 
-// Contratos de ConjuntoController e ConjuntoDadosController.
 const ROTAS = {
   conjuntos: '/api/conjuntos',
-  trajetoria: (id) => `/api/conjuntos/${id}/arquivos-trajetoria`,
+  trajetoria: (id) => `/api/trajetoria-conjuntos/${id}/arquivos-trajetoria`,
 }
 
 export function requisicaoZonaTratadaCancelada(erro) {
