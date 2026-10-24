@@ -1,18 +1,9 @@
-import {
-  computed,
-  ref,
-} from 'vue'
+import { computed, ref } from 'vue'
 
-import {
-  zonaTratadaService,
-  requisicaoZonaTratadaCancelada,
-} from './zonaTratadaService'
+import { zonaTratadaService, requisicaoZonaTratadaCancelada } from './zonaTratadaService'
 
 function texto(valor) {
-  if (
-    typeof valor === 'string' ||
-    typeof valor === 'number'
-  ) {
+  if (typeof valor === 'string' || typeof valor === 'number') {
     return String(valor).trim()
   }
 
@@ -28,58 +19,29 @@ function normalizar(valor) {
 
 function prepararConjuntos(lista) {
   return lista.map((item, indice) => {
-    if (
-      !item ||
-      typeof item !== 'object' ||
-      Array.isArray(item)
-    ) {
-      throw new Error(
-        'A listagem contém um conjunto tratado inválido.',
-      )
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new Error('A listagem contém um conjunto tratado inválido.')
     }
 
-    const id =
-      item.conjuntoId ??
-      item.conjunto?.id ??
-      item.id ??
-      null
+    const id = item.conjuntoId ?? item.conjunto?.id ?? item.id ?? null
 
     return {
-      chave: `${id ?? 'conjunto'}-${indice}`,
+      chave: `${id ?? 'conjunto'}-${item.execucaoId ?? 'execucao'}-${item.versaoId ?? indice}`,
       id,
-      execucaoId:
-        item.execucaoId ??
-        item.execucao?.id ??
-        null,
-      nome: texto(
-        item.conjuntoNome ??
-        item.conjunto?.nome ??
-        item.nome,
-      ) || 'Não informado',
-      fonte: texto(
-        item.fonteNome ??
-        item.fonte?.nome ??
-        (
-          typeof item.fonte === 'string'
-            ? item.fonte
-            : null
-        ),
-      ) || 'Não informada',
-      tipo: texto(
-        item.tipoNome ??
-        item.tipo?.nome ??
-        (
-          typeof item.tipo === 'string'
-            ? item.tipo
-            : null
-        ),
-      ) || 'Não informado',
-      situacao: texto(
-        item.situacao ?? item.status,
-      ) || 'Não informada',
-      competencia: texto(
-        item.competencia,
-      ) || 'Não informada',
+      execucaoId: item.execucaoId ?? item.execucao?.id ?? null,
+      nome: texto(item.conjuntoNome ?? item.conjunto?.nome ?? item.nome) || 'Não informado',
+      fonte:
+        texto(
+          item.fonteNome ??
+            item.fonte?.nome ??
+            (typeof item.fonte === 'string' ? item.fonte : null),
+        ) || 'Não informada',
+      tipo:
+        texto(
+          item.tipoNome ?? item.tipo?.nome ?? (typeof item.tipo === 'string' ? item.tipo : null),
+        ) || 'Não informado',
+      situacao: texto(item.situacao ?? item.status) || 'Não informada',
+      competencia: texto(item.competencia) || 'Não informada',
       original: item,
     }
   })
@@ -107,14 +69,16 @@ export function criarConsultaZonaTratada() {
       return conjuntos.value
     }
 
-    return conjuntos.value.filter(conjunto => {
+    return conjuntos.value.filter((conjunto) => {
       const conteudo = [
         conjunto.nome,
         conjunto.fonte,
         conjunto.tipo,
         conjunto.situacao,
         conjunto.competencia,
-      ].map(normalizar).join(' ')
+      ]
+        .map(normalizar)
+        .join(' ')
 
       return conteudo.includes(termo)
     })
@@ -138,23 +102,13 @@ export function criarConsultaZonaTratada() {
     selecionado.value = null
 
     try {
-      const resposta =
-        await zonaTratadaService.listarConjuntos(
-          {},
-          { signal: atual.signal },
-        )
+      const resposta = await zonaTratadaService.listarConjuntos({}, { signal: atual.signal })
 
-      if (
-        destruido ||
-        atual.signal.aborted ||
-        consulta !== atual
-      ) {
+      if (destruido || atual.signal.aborted || consulta !== atual) {
         return
       }
 
-      const lista = Array.isArray(resposta)
-        ? resposta
-        : resposta.content
+      const lista = Array.isArray(resposta) ? resposta : resposta.content
 
       conjuntos.value = prepararConjuntos(lista)
 

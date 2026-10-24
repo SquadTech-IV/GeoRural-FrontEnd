@@ -1,17 +1,10 @@
 <script setup>
-import {
-  onBeforeUnmount,
-  onMounted,
-} from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
-import HistoricoTransformacoes from '../components/HistoricoTransformacoes.vue'
-import InformacoesProcessamento from '../components/InformacoesProcessamento.vue'
 
-import {
-  criarConsultaZonaTratada,
-} from '../services/zonaTratadaConsultaService'
+import { criarConsultaZonaTratada } from '../services/zonaTratadaConsultaService'
 
 defineOptions({
   name: 'ZonaTratadaDadosPagina',
@@ -34,10 +27,6 @@ const {
   destruir,
 } = criarConsultaZonaTratada()
 
-function exibirErro(erro) {
-  mensagem.value = erro
-}
-
 onMounted(consultar)
 onBeforeUnmount(destruir)
 </script>
@@ -50,11 +39,7 @@ onBeforeUnmount(destruir)
       <header class="tratada-cabecalho">
         <h1>Zona tratada</h1>
 
-        <p>
-          Consulte os conjuntos tratados, o histórico
-          das transformações e as informações do
-          processamento.
-        </p>
+        <p>Consulte os conjuntos com passagem registrada pela zona tratada.</p>
       </header>
 
       <section
@@ -63,29 +48,16 @@ onBeforeUnmount(destruir)
         :aria-busy="carregando"
       >
         <header class="tratada-secao-cabecalho">
-          <h2 id="tratada-consulta-titulo">
-            Conjuntos tratados
-          </h2>
+          <h2 id="tratada-consulta-titulo">Conjuntos tratados</h2>
 
-          <button
-            type="button"
-            class="tratada-botao"
-            :disabled="carregando"
-            @click="consultar"
-          >
-            {{
-              carregando
-                ? 'Consultando...'
-                : 'Atualizar'
-            }}
+          <button type="button" class="tratada-botao" :disabled="carregando" @click="consultar">
+            {{ carregando ? 'Consultando...' : 'Atualizar' }}
           </button>
         </header>
 
         <div class="tratada-busca">
           <div class="tratada-campo">
-            <label for="tratada-busca">
-              Buscar conjunto
-            </label>
+            <label for="tratada-busca"> Buscar conjunto </label>
 
             <input
               id="tratada-busca"
@@ -106,57 +78,29 @@ onBeforeUnmount(destruir)
           </button>
         </div>
 
-        <p
-          v-if="carregando"
-          class="tratada-estado"
-          role="status"
-        >
+        <p v-if="carregando" class="tratada-estado" role="status">
           Consultando conjuntos tratados...
         </p>
 
-        <div
-          v-else-if="falhou"
-          class="tratada-estado"
-        >
-          <button
-            type="button"
-            class="tratada-botao"
-            @click="consultar"
-          >
-            Tentar novamente
-          </button>
+        <div v-else-if="falhou" class="tratada-estado">
+          <button type="button" class="tratada-botao" @click="consultar">Tentar novamente</button>
         </div>
 
         <template v-else-if="consultado">
-          <p
-            v-if="listaParcial"
-            class="tratada-ajuda"
-          >
-            A API retornou uma página dos resultados.
-            A busca considera apenas os registros
+          <p v-if="listaParcial" class="tratada-ajuda">
+            A API retornou uma página dos resultados. A busca considera apenas os registros
             carregados.
           </p>
 
-          <p
-            class="tratada-contagem"
-            role="status"
-          >
+          <p class="tratada-contagem" role="status">
             {{ conjuntosFiltrados.length }}
             de {{ conjuntos.length }}
             registro(s) carregado(s)
           </p>
 
-          <p
-            v-if="!conjuntos.length"
-            class="tratada-estado"
-          >
-            Nenhum conjunto tratado disponível.
-          </p>
+          <p v-if="!conjuntos.length" class="tratada-estado">Nenhum conjunto tratado disponível.</p>
 
-          <p
-            v-else-if="!conjuntosFiltrados.length"
-            class="tratada-estado"
-          >
+          <p v-else-if="!conjuntosFiltrados.length" class="tratada-estado">
             Nenhum conjunto encontrado para esta busca.
           </p>
 
@@ -184,8 +128,7 @@ onBeforeUnmount(destruir)
                   v-for="conjunto in conjuntosFiltrados"
                   :key="conjunto.chave"
                   :class="{
-                    'tratada-linha--selecionada':
-                      selecionado?.chave === conjunto.chave,
+                    'tratada-linha--selecionada': selecionado?.chave === conjunto.chave,
                   }"
                 >
                   <th scope="row">
@@ -206,9 +149,7 @@ onBeforeUnmount(destruir)
                     <button
                       type="button"
                       class="tratada-botao"
-                      :aria-pressed="
-                        selecionado?.chave === conjunto.chave
-                      "
+                      :aria-pressed="selecionado?.chave === conjunto.chave"
                       @click="selecionar(conjunto)"
                     >
                       Selecionar
@@ -221,14 +162,8 @@ onBeforeUnmount(destruir)
         </template>
       </section>
 
-      <section
-        v-if="selecionado"
-        class="tratada-card"
-        aria-labelledby="tratada-selecionado-titulo"
-      >
-        <h2 id="tratada-selecionado-titulo">
-          Conjunto selecionado
-        </h2>
+      <section v-if="selecionado" class="tratada-card" aria-labelledby="tratada-selecionado-titulo">
+        <h2 id="tratada-selecionado-titulo">Conjunto selecionado</h2>
 
         <dl class="tratada-resumo">
           <div>
@@ -257,17 +192,10 @@ onBeforeUnmount(destruir)
           </div>
         </dl>
 
-        <HistoricoTransformacoes
-          :key="`historico-${selecionado.chave}`"
-          :execucao-id="selecionado.execucaoId"
-          @erro="exibirErro"
-        />
-
-        <InformacoesProcessamento
-          :key="`processamento-${selecionado.chave}`"
-          :execucao-id="selecionado.execucaoId"
-          @erro="exibirErro"
-        />
+        <p class="tratada-ajuda">
+          O histórico das transformações e os detalhes do processamento ainda não estão disponíveis
+          para consulta.
+        </p>
       </section>
     </main>
 
