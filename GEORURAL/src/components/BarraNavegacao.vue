@@ -11,18 +11,28 @@ const tema = ref(
 const itens = [
   {
     caminho: '/',
-    titulo: 'Regras e Métodos',
-    icone: 'regras',
-  },
-  {
-    caminho: '/imoveis',
-    titulo: 'Imóveis',
-    icone: 'mapa',
-  },
-  {
-    caminho: '/ingestao',
-    titulo: 'Ingestão de Fontes',
+    titulo: 'Ingestão de fontes',
     icone: 'upload',
+  },
+  {
+    caminho: '/processar',
+    titulo: 'Processar dados',
+    icone: 'processar',
+  },
+  {
+    caminho: '/arquivos-recebidos',
+    titulo: 'Arquivos recebidos',
+    icone: 'arquivos',
+  },
+  {
+    caminho: '/qualidade',
+    titulo: 'Conferência dos resultados',
+    icone: 'qualidade',
+  },
+  {
+    caminho: '/auditoria',
+    titulo: 'Linhagem e auditoria',
+    icone: 'auditoria',
   },
   {
     caminho: '/processar',
@@ -40,6 +50,7 @@ function estaAtivo(caminho) {
   if (caminho === '/') {
     return (
       route.path === '/' ||
+      route.path === '/ingestao'
       [
         'RegraNovaVersao',
         'RegraDetalheVersao',
@@ -140,11 +151,43 @@ function alternarTema() {
             </template>
 
             <template
+
+              v-else-if="item.icone === 'processar'"
+            >
+              <path d="M20 7h-9M5 7H4M20 17h-1M13 17H4" />
+              <circle cx="8" cy="7" r="3" />
+              <circle cx="16" cy="17" r="3" />
+            </template>
+
+            <template
+              v-else-if="item.icone === 'arquivos'"
               v-else-if="item.icone === 'regras'"
+
             >
               <path
                 d="M4 7h2M12 7h8M4 17h8M18 17h2"
               />
+
+              <path d="M14 3v6h6" />
+              <path d="M8 13h8M8 17h6" />
+            </template>
+
+            <template
+              v-else-if="item.icone === 'qualidade'"
+            >
+              <path
+                d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z"
+              />
+              <path d="m8 12 3 3 5-6" />
+            </template>
+
+            <template
+              v-else-if="item.icone === 'auditoria'"
+            >
+              <circle cx="6" cy="5" r="2" />
+              <circle cx="6" cy="19" r="2" />
+              <circle cx="18" cy="12" r="2" />
+
               <circle cx="9" cy="7" r="3" />
               <circle cx="15" cy="17" r="3" />
             </template>
@@ -167,10 +210,13 @@ function alternarTema() {
             </template>
 
             <template v-else>
+
               <path
-                d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"
+                d="M6 7v10M8 5h3a7 7 0 0 1 7 5"
               />
-              <path d="M9 3v15M15 6v15" />
+              <path
+                d="M8 19h3a7 7 0 0 0 7-5"
+              />
             </template>
           </svg>
 
@@ -211,7 +257,11 @@ function alternarTema() {
             />
 
             <template v-else>
-              <circle cx="12" cy="12" r="4" />
+              <circle
+                cx="12"
+                cy="12"
+                r="4"
+              />
 
               <path
                 d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"
