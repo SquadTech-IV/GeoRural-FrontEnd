@@ -1,0 +1,114 @@
+.detalhe-execucao {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--cor-borda, #ded8e7);
+}
+
+.detalhe-execucao h3 {
+  margin: 0 0 14px;
+  color: var(--cor-texto, #24202d);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.detalhe-execucao-painel {
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 10px;
+  background: var(--cor-painel, #fff);
+}
+
+.detalhe-execucao-painel summary {
+  padding: 14px;
+  color: var(--cor-roxo, #8520bd);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.detalhe-execucao-painel[open] summary {
+  border-bottom: 1px solid var(--cor-borda, #ded8e7);
+}
+
+.detalhe-execucao-conteudo {
+  padding: 16px;
+}
+
+.detalhe-execucao-campos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0 0 20px;
+}
+
+.detalhe-execucao-campos dt {
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 11px;
+}
+
+.detalhe-execucao-campos dd {
+  margin: 6px 0 0;
+  color: var(--cor-texto, #24202d);
+  font-size: 12px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.detalhe-execucao-estado {
+  margin: 0;
+  padding: 16px 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.detalhe-execucao-observacao {
+  margin-bottom: 20px;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--cor-painel-secundario, #f0edf5);
+}
+
+.detalhe-execucao-observacao h4 {
+  margin: 0;
+  color: var(--cor-texto, #24202d);
+  font-size: 12px;
+}
+
+.detalhe-execucao-observacao p {
+  margin: 8px 0 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.detalhe-execucao-botao {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 8px;
+  background: var(--cor-painel, #fff);
+  color: var(--cor-roxo, #8520bd);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.detalhe-execucao-botao:hover {
+  border-color: var(--cor-roxo, #8520bd);
+  background: var(--cor-menu-hover, #f6f0fb);
+}
+
+.detalhe-execucao-botao:focus-visible,
+.detalhe-execucao-painel summary:focus-visible {
+  outline: 2px solid var(--cor-roxo, #8520bd);
+  outline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .detalhe-execucao-campos {
+    grid-template-columns: 1fr;
+  }
+}

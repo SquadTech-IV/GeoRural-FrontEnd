@@ -1,0 +1,643 @@
+<script setup>
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from 'vue'
+
+import {
+  criarFormularioConjunto,
+  criarDadosConjunto,
+  validarFormularioConjunto,
+  selecoesFormularioConjunto,
+  conjuntosFornecidos,
+  formatosApi,
+} from '../services/conjuntoService'
+
+import {
+  catalogoConjuntoService,
+} from '../services/catalogoConjuntoService'
+
+import {
+  mensagemErroCadastro,
+} from '../services/cadastroService'
+
+const props = defineProps({
+  conjunto: {
+    type: Object,
+    default: null,
+  },
+  fontes: {
+    type: Array,
+    default: () => [],
+  },
+  conjuntos: {
+    type: Array,
+    default: () => [],
+  },
+  fonteId: {
+    type: [String, Number],
+    default: null,
+  },
+  salvando: {
+    type: Boolean,
+    default: false,
+  },
+})
+
+const emit = defineEmits(['fechar', 'salvar', 'erro'])
+
+const catalogo = ref([])
+const carregandoCatalogo = ref(false)
+const erroCatalogo = ref(false)
+const catalogoAbort = new AbortController()
+
+const registroAtual = computed(() => props.conjunto)
+const fonteSelect = ref(null)
+const formularioElement = ref(null)
+const tentouSalvar = ref(false)
+const tocados = ref({})
+const formulario = ref({})
+
+const editando = computed(() => props.conjunto?.id != null)
+
+let elementoAnterior
+let overflowAnterior
+
+async function carregarCatalogo() {
+  if (carregandoCatalogo.value) return
+
+  carregandoCatalogo.value = true
+  erroCatalogo.value = false
+
+  try {
+    const tipos = await catalogoConjuntoService.listar({
+      signal: catalogoAbort.signal,
+    })
+
+    if (!catalogoAbort.signal.aborted) {
+      catalogo.value = tipos
+    }
+  } catch (erro) {
+    if (!catalogoAbort.signal.aborted) {
+      erroCatalogo.value = true
+      emit('erro', mensagemErroCadastro(erro))
+    }
+  } finally {
+    carregandoCatalogo.value = false
+  }
+}
+
+watch(
+  [() => props.conjunto, () => props.fonteId],
+  ([conjunto, fonteId]) => {
+    formulario.value = criarFormularioConjunto(
+      conjunto,
+      fonteId,
+    )
+
+    tentouSalvar.value = false
+    tocados.value = {}
+  },
+  { immediate: true },
+)
+
+const fontesAtivas = computed(() =>
+  props.fontes.filter((fonte) => fonte.ativo === true),
+)
+
+const fonteSelecionada = computed(() =>
+  fontesAtivas.value.find(
+    (fonte) =>
+      String(fonte.id) === String(formulario.value.fonteId),
+  ),
+)
+
+const conjuntosDisponiveis = computed(() =>
+  conjuntosFornecidos(
+    fonteSelecionada.value,
+    registroAtual.value,
+    catalogo.value,
+    props.conjuntos,
+  ),
+)
+
+const camposSelecao = computed(() =>
+  selecoesFormularioConjunto(
+    props.fontes,
+    fonteSelecionada.value,
+    registroAtual.value,
+    catalogo.value,
+    props.conjuntos,
+  ),
+)
+
+const erros = computed(() =>
+  validarFormularioConjunto(
+    formulario.value,
+    props.fontes,
+    props.conjuntos,
+    registroAtual.value,
+    catalogo.value,
+  ),
+)
+
+function erroVisivel(campo) {
+  return Boolean(
+    (tentouSalvar.value || tocados.value[campo]) &&
+    erros.value[campo],
+  )
+}
+
+function tocar(campo) {
+  tocados.value[campo] = true
+}
+
+function alterarSelecao(campo) {
+  tocar(campo)
+
+  if (campo === 'fonteId') {
+    formulario.value.nome = ''
+  }
+}
+
+function alternarEntrada(tipo) {
+  if (props.salvando) return
+
+  formulario.value[tipo] = !formulario.value[tipo]
+  tocar('entrada')
+}
+
+function fechar() {
+  if (props.salvando) return
+
+  emit('fechar')
+}
+
+async function salvar() {
+  if (props.salvando) return
+
+  tentouSalvar.value = true
+
+  if (Object.keys(erros.value).length) {
+    emit(
+      'erro',
+      [...new Set(Object.values(erros.value))].join(' '),
+    )
+
+    await nextTick()
+
+    const invalido = Array.from(
+      formularioElement.value?.querySelectorAll(
+        '[aria-invalid="true"]',
+      ) ?? [],
+    ).find(
+      (elemento) =>
+        !elemento.matches(':disabled') &&
+        elemento.getClientRects().length,
+    )
+
+    invalido?.focus()
+    return
+  }
+
+  const payload = criarDadosConjunto(
+    formulario.value,
+    catalogo.value,
+    registroAtual.value,
+  )
+
+  emit('salvar', payload)
+}
+
+function tratarTeclado(evento) {
+  if (evento.key === 'Escape') {
+    evento.preventDefault()
+    fechar()
+    return
+  }
+
+  if (evento.key !== 'Tab') return
+
+  const elementos = Array.from(
+    evento.currentTarget.querySelectorAll(
+      'button, input, select, textarea, [tabindex="0"]',
+    ),
+  ).filter(
+    (elemento) =>
+      !elemento.matches(':disabled') &&
+      elemento.getClientRects().length,
+  )
+
+  const primeiro = elementos[0]
+  const ultimo = elementos[elementos.length - 1]
+
+  if (!primeiro) {
+    evento.preventDefault()
+    evento.currentTarget.focus()
+    return
+  }
+
+  if (
+    evento.shiftKey &&
+    (
+      document.activeElement === primeiro ||
+      document.activeElement === evento.currentTarget
+    )
+  ) {
+    evento.preventDefault()
+    ultimo.focus()
+  } else if (
+    !evento.shiftKey &&
+    document.activeElement === ultimo
+  ) {
+    evento.preventDefault()
+    primeiro.focus()
+  }
+}
+
+function registrarSelect(elemento, chave) {
+  if (chave === 'fonteId') {
+    fonteSelect.value = elemento
+  }
+}
+
+onMounted(async () => {
+  carregarCatalogo()
+
+  elementoAnterior = document.activeElement
+  overflowAnterior = document.body.style.overflow
+  document.body.style.overflow = 'hidden'
+
+  await nextTick()
+  fonteSelect.value?.focus()
+})
+
+onBeforeUnmount(() => {
+  catalogoAbort.abort()
+  document.body.style.overflow = overflowAnterior
+  elementoAnterior?.focus()
+})
+</script>
+
+<template>
+  <Teleport to="body">
+    <div class="cadastros-overlay" @click.self="fechar">
+      <section
+        class="cadastros-modal cadastros-modal--amplo"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="titulo-formulario-conjunto"
+        aria-describedby="descricao-formulario-conjunto"
+        :aria-busy="salvando"
+        tabindex="-1"
+        @keydown="tratarTeclado"
+      >
+        <header class="cadastros-modal-cabecalho">
+          <div>
+            <h2 id="titulo-formulario-conjunto">
+              {{
+                editando
+                  ? 'Editar conjunto de dados'
+                  : 'Novo conjunto de dados'
+              }}
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            class="cadastros-fechar"
+            aria-label="Fechar formulário"
+            :disabled="salvando"
+            @click="fechar"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              aria-hidden="true"
+            >
+              <path d="m6 6 12 12M18 6 6 18" />
+            </svg>
+          </button>
+        </header>
+
+        <form
+          ref="formularioElement"
+          novalidate
+          @submit.prevent="salvar"
+        >
+          <div class="cadastros-modal-conteudo">
+            <p
+              id="descricao-formulario-conjunto"
+              class="conjunto-formulario-descricao"
+            >
+              {{
+                editando
+                  ? 'Atualize as informações e as formas de entrada do conjunto.'
+                  : 'Vincule o conjunto a uma fonte e configure suas informações.'
+              }}
+            </p>
+
+            <fieldset
+              class="conjunto-formulario-campos"
+              :disabled="salvando"
+            >
+              <template
+                v-for="campo in camposSelecao"
+                :key="campo.chave"
+              >
+                <div class="cadastros-campo">
+                  <label :for="`conjunto-${campo.chave}`">
+                    {{ campo.titulo }}
+                  </label>
+
+                  <select
+                    :id="`conjunto-${campo.chave}`"
+                    :ref="(elemento) => registrarSelect(elemento, campo.chave)"
+                    v-model="formulario[campo.chave]"
+                    required
+                    :disabled="
+                      campo.chave === 'nome' &&
+                      !conjuntosDisponiveis.length
+                    "
+                    :aria-invalid="erroVisivel(campo.chave)"
+                    :aria-describedby="
+                      campo.ajuda
+                        ? `ajuda-conjunto-${campo.chave}`
+                        : undefined
+                    "
+                    :class="{
+                      'conjunto-campo--invalido':
+                        erroVisivel(campo.chave),
+                    }"
+                    @blur="tocar(campo.chave)"
+                    @change="alterarSelecao(campo.chave)"
+                  >
+                    <option value="" disabled>Selecione</option>
+
+                    <option
+                      v-for="opcao in campo.opcoes"
+                      :key="opcao.valor"
+                      :value="opcao.valor"
+                    >
+                      {{ opcao.nome }}
+                    </option>
+                  </select>
+
+                  <p
+                    v-if="campo.ajuda"
+                    :id="`ajuda-conjunto-${campo.chave}`"
+                    class="cadastros-ajuda"
+                  >
+                    {{ campo.ajuda }}
+                  </p>
+                </div>
+
+                <div
+                  v-if="
+                    campo.chave === 'cobertura' &&
+                    formulario.cobertura === 'Outro'
+                  "
+                  class="cadastros-campo"
+                >
+                  <label for="conjunto-cobertura-personalizada">
+                    Descrição da cobertura
+                  </label>
+
+                  <input
+                    id="conjunto-cobertura-personalizada"
+                    v-model="formulario.coberturaPersonalizada"
+                    type="text"
+                    required
+                    maxlength="200"
+                    placeholder="Informe a região abrangida"
+                    :aria-invalid="erroVisivel('coberturaPersonalizada')"
+                    :class="{
+                      'conjunto-campo--invalido':
+                        erroVisivel('coberturaPersonalizada'),
+                    }"
+                    @blur="tocar('coberturaPersonalizada')"
+                  />
+                </div>
+              </template>
+
+              <p
+                v-if="carregandoCatalogo"
+                class="cadastros-ajuda"
+                role="status"
+              >
+                Carregando tipos de conjunto...
+              </p>
+
+              <button
+                v-if="erroCatalogo"
+                type="button"
+                class="cadastros-botao"
+                :disabled="carregandoCatalogo || salvando"
+                @click="carregarCatalogo"
+              >
+                Tentar carregar os tipos novamente
+              </button>
+
+              <p
+                v-if="
+                  fonteSelecionada &&
+                  !carregandoCatalogo &&
+                  !erroCatalogo &&
+                  !conjuntosDisponiveis.length
+                "
+                class="cadastros-ajuda"
+              >
+                Nenhum tipo disponível. Confira se o catálogo foi
+                preenchido e se a fonte já possui conjuntos desses tipos.
+              </p>
+
+              <fieldset class="cadastros-entrada">
+                <legend>Como o dado chega</legend>
+
+                <div class="cadastros-segmentos">
+                  <button
+                    type="button"
+                    :class="{
+                      'cadastros-segmento--ativo': formulario.upload,
+                    }"
+                    :aria-pressed="formulario.upload"
+                    :aria-invalid="erroVisivel('entrada')"
+                    @click="alternarEntrada('upload')"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 16V4m-5 5 5-5 5 5M4 16v4h16v-4" />
+                    </svg>
+
+                    <strong>Upload</strong>
+                    <small>Envio manual de arquivos</small>
+                  </button>
+
+                  <button
+                    type="button"
+                    :class="{
+                      'cadastros-segmento--ativo': formulario.api,
+                    }"
+                    :aria-pressed="formulario.api"
+                    @click="alternarEntrada('api')"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path d="m8 8-4 4 4 4m8-8 4 4-4 4m-3-12-2 16" />
+                    </svg>
+
+                    <strong>API</strong>
+                    <small>Consulta pelo sistema</small>
+                  </button>
+                </div>
+
+                <p class="cadastros-ajuda">
+                  Selecione uma ou ambas as formas de entrada.
+                </p>
+              </fieldset>
+
+              <section
+                v-if="formulario.api"
+                class="cadastros-api"
+                aria-labelledby="titulo-configuracao-api"
+              >
+                <h3 id="titulo-configuracao-api">
+                  Configuração da API
+                </h3>
+
+                <div class="cadastros-campo">
+                  <label for="conjunto-endpoint">Endpoint</label>
+
+                  <input
+                    id="conjunto-endpoint"
+                    v-model="formulario.endpoint"
+                    type="url"
+                    required
+                    placeholder="https://..."
+                    :aria-invalid="erroVisivel('endpoint')"
+                    :class="{
+                      'conjunto-campo--invalido':
+                        erroVisivel('endpoint'),
+                    }"
+                    @blur="tocar('endpoint')"
+                  />
+                </div>
+
+                <div class="cadastros-duas-colunas">
+                  <div class="cadastros-campo">
+                    <label for="conjunto-formato-api">
+                      Formato retornado
+                    </label>
+
+                    <select
+                      id="conjunto-formato-api"
+                      v-model="formulario.formatoApi"
+                      required
+                      :aria-invalid="erroVisivel('formatoApi')"
+                      :class="{
+                        'conjunto-campo--invalido':
+                          erroVisivel('formatoApi'),
+                      }"
+                      @blur="tocar('formatoApi')"
+                    >
+                      <option
+                        v-for="formato in formatosApi"
+                        :key="formato"
+                        :value="formato"
+                      >
+                        {{ formato }}
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="cadastros-campo">
+                    <label for="conjunto-autenticacao">
+                      Autenticação <span>(opcional)</span>
+                    </label>
+
+                    <input
+                      id="conjunto-autenticacao"
+                      v-model="formulario.autenticacao"
+                      type="password"
+                      autocomplete="new-password"
+                      :placeholder="
+                        editando
+                          ? 'Informe para substituir'
+                          : 'Chave ou token'
+                      "
+                    />
+
+                    <p v-if="editando" class="cadastros-ajuda">
+                      Deixe vazio para manter a autenticação existente.
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </fieldset>
+
+            <p
+              v-if="salvando"
+              class="cadastros-ajuda"
+              role="status"
+            >
+              {{
+                editando
+                  ? 'Salvando alterações...'
+                  : 'Salvando conjunto...'
+              }}
+            </p>
+          </div>
+
+          <footer class="cadastros-modal-rodape">
+            <button
+              type="button"
+              class="cadastros-botao"
+              :disabled="salvando"
+              @click="fechar"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="submit"
+              class="cadastros-botao cadastros-botao--principal"
+              :disabled="salvando"
+            >
+              {{
+                salvando
+                  ? 'Salvando...'
+                  : editando
+                    ? 'Salvar alterações'
+                    : 'Salvar conjunto'
+              }}
+            </button>
+          </footer>
+        </form>
+      </section>
+    </div>
+  </Teleport>
+</template>
+
+<style scoped src="../assets/css/cadastros.css"></style>
+<style scoped src="../assets/css/formulario-conjunto.css"></style>

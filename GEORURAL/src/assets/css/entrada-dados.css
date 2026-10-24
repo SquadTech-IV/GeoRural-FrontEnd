@@ -1,0 +1,241 @@
+.entrada-card {
+  padding: 24px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 14px;
+  background: var(--cor-painel, #fff);
+  color: var(--cor-texto, #24202d);
+}
+
+.entrada-cabecalho {
+  margin-bottom: 24px;
+}
+
+.entrada-cabecalho h2 {
+  margin: 0 0 8px;
+  font-family: var(--fonte-titulo, Arial, sans-serif);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.entrada-cabecalho p {
+  margin: 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.entrada-campos {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.entrada-grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.entrada-campo {
+  min-width: 0;
+}
+
+.entrada-campo > label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.entrada-campo input:not([type='file']),
+.entrada-campo select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 10px;
+  background: var(--cor-painel, #fff);
+  color: var(--cor-texto, #24202d);
+  font: inherit;
+  font-size: 14px;
+}
+
+.entrada-campo input::placeholder {
+  color: var(--cor-texto-secundario, #686273);
+}
+
+.entrada-campo input:focus-visible,
+.entrada-campo select:focus-visible,
+.entrada-card button:focus-visible {
+  outline: 2px solid var(--cor-roxo, #8520bd);
+  outline-offset: 3px;
+}
+
+.entrada-ajuda {
+  margin: 7px 0 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.entrada-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 170px;
+  padding: 28px 20px;
+  border: 1px dashed var(--cor-borda, #ded8e7);
+  border-radius: 12px;
+  background: var(--cor-painel-secundario, #f0edf5);
+  color: var(--cor-texto, #24202d);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.entrada-drop:hover,
+.entrada-drop--arrastando,
+.entrada-drop--selecionado {
+  border-color: var(--cor-roxo, #8520bd);
+  background: var(--cor-menu-fundo, #f1e6f9);
+}
+
+.entrada-drop svg {
+  width: 32px;
+  height: 32px;
+  color: var(--cor-roxo, #8520bd);
+  pointer-events: none;
+}
+
+.entrada-drop strong {
+  max-width: 100%;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+}
+
+.entrada-drop span {
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.entrada-remover {
+  margin-top: 10px;
+  padding: 5px 0;
+  border: 0;
+  background: transparent;
+  color: var(--cor-roxo, #8520bd);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.entrada-remover:hover {
+  text-decoration: underline;
+}
+
+.entrada-rodape {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--cor-borda, #ded8e7);
+}
+
+.entrada-botao {
+  min-height: 44px;
+  padding: 10px 24px;
+  border: 1px solid var(--cor-roxo, #8520bd);
+  border-radius: 10px;
+  background: var(--cor-roxo, #8520bd);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.entrada-botao:hover:not(:disabled) {
+  filter: brightness(.92);
+}
+
+.entrada-card button:disabled,
+.entrada-card input:disabled,
+.entrada-card select:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.entrada-informacao {
+  margin: 0 0 20px;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 14px;
+}
+
+.entrada-somente-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.entrada-api {
+  padding: 18px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 10px;
+  background: var(--cor-painel-secundario, #f0edf5);
+}
+
+.entrada-api h3 {
+  margin: 0 0 8px;
+  color: var(--cor-roxo, #8520bd);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.entrada-api p {
+  margin: 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.entrada-api .entrada-ajuda {
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+
+
+@media (max-width: 640px) {
+  .entrada-card {
+    padding: 18px;
+  }
+
+  .entrada-grade {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .entrada-drop {
+    padding: 24px 16px;
+  }
+
+  .entrada-botao {
+    width: 100%;
+  }
+}

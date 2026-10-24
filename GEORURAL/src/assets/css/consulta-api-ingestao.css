@@ -1,0 +1,86 @@
+.consulta-api {
+  padding: 14px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 10px;
+  background: var(--cor-painel-secundario, #f0edf5);
+}
+
+.consulta-api h3 {
+  margin: 0 0 8px;
+  color: var(--cor-roxo, #8520bd);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.consulta-api-descricao {
+  margin: 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.consulta-api-botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  margin-top: 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 8px;
+  background: var(--cor-painel, #fff);
+  color: var(--cor-roxo, #8520bd);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.consulta-api-botao svg {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+}
+
+.consulta-api-botao:hover:not(:disabled) {
+  border-color: var(--cor-roxo, #8520bd);
+  background: var(--cor-menu-hover, #f6f0fb);
+}
+
+.consulta-api-botao:focus-visible {
+  outline: 2px solid var(--cor-roxo, #8520bd);
+  outline-offset: 3px;
+}
+
+.consulta-api-botao:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.consulta-api-ajuda,
+.consulta-api-sucesso,
+.consulta-api-erro {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.consulta-api-ajuda {
+  color: var(--cor-texto-secundario, #686273);
+}
+
+.consulta-api-sucesso {
+  color: var(--cor-sucesso, #18733c);
+}
+
+.consulta-api-erro {
+  color: var(--cor-erro, #b42335);
+}
+
+@media (max-width: 640px) {
+  .consulta-api-botao {
+    width: 100%;
+  }
+}

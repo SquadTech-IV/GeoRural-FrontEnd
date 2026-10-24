@@ -8,6 +8,19 @@ function validarId(valor) {
   return id
 }
 
+export function prepararArquivosUpload(arquivos) {
+  const lista = Array.from(arquivos ?? [])
+  if (!lista.length) throw new Error('Selecione pelo menos um arquivo.')
+  for (const arquivo of lista) {
+    if (!(arquivo instanceof File) || !arquivo.size)
+      throw new Error('Selecione arquivos que não estejam vazios.')
+    if (!/\.(zip|gpkg|geojson)$/i.test(arquivo.name)) {
+      throw new Error(`Formato não aceito: ${arquivo.name}. Envie .zip, .gpkg ou .geojson.`)
+    }
+  }
+  return lista
+}
+
 export const arquivoService = {
   async listar(nome, situacao, { signal } = {}) {
     const params = {}
@@ -56,6 +69,13 @@ export const arquivoService = {
     return data
   },
 
+  async enviarIngestao(arquivos, conjuntoId) {
+    const formData = new FormData()
+    formData.append('conjuntoId', validarId(conjuntoId))
+    prepararArquivosUpload(arquivos).forEach((arquivo) => formData.append('files', arquivo))
+    const { data } = await api.post('/api/ingestao/upload', formData)
+    return data
+  },
   async processar(id) {
     const response = await api.post(`/api/arquivos/${validarId(id)}/processar`)
     return response.data

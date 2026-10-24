@@ -4,25 +4,46 @@ import { RouterLink, useRoute } from 'vue-router'
 
 const route = useRoute()
 
-const tema = ref(
-  document.documentElement.dataset.tema || 'light',
-)
+const tema = ref(document.documentElement.dataset.tema || 'light')
 
 const itens = [
+  { caminho: '/arquivos-recebidos', titulo: 'Arquivos recebidos', icone: 'arquivos' },
+  { caminho: '/cadastros', titulo: 'Cadastros', icone: 'upload' },
+  { caminho: '/mapa-indicadores', titulo: 'Mapa de indicadores', icone: 'mapa' },
   {
     caminho: '/',
-    titulo: 'Ingestão de Fontes',
-    icone: 'upload',
+    titulo: 'Regras e Métodos',
+    icone: 'regras',
   },
   {
-    caminho: '/arquivos-recebidos',
-    titulo: 'Arquivos recebidos',
-    icone: 'arquivos',
+    caminho: '/ingestao',
+    titulo: 'Ingestão de Fontes',
+    icone: 'upload',
   },
   {
     caminho: '/processar',
     titulo: 'Processar dados',
     icone: 'processar',
+  },
+  {
+    caminho: '/imoveis',
+    titulo: 'Imóveis',
+    icone: 'mapa',
+  },
+  {
+    caminho: '/qualidade',
+    titulo: 'Conferência dos resultados',
+    icone: 'qualidade',
+  },
+  {
+    caminho: '/auditoria',
+    titulo: 'Linhagem e auditoria',
+    icone: 'auditoria',
+  },
+  {
+    caminho: '/rastreabilidade',
+    titulo: 'Trajetória no datalake',
+    icone: 'rastreabilidade',
   },
 ]
 
@@ -30,20 +51,24 @@ function estaAtivo(caminho) {
   if (caminho === '/') {
     return (
       route.path === '/' ||
-      route.path === '/ingestao'
+      ['RegraNovaVersao', 'RegraDetalheVersao', 'RegraCompararVersoes'].includes(route.name)
     )
   }
 
-  return (
-    route.path === caminho ||
-    route.path.startsWith(`${caminho}/`)
-  )
+  if (caminho === '/imoveis') {
+    return (
+      route.path === '/imoveis' ||
+      route.path.startsWith('/resultado/') ||
+      route.path === '/mapa-indicadores' ||
+      route.path.startsWith('/mapa-indicadores/')
+    )
+  }
+
+  return route.path === caminho || route.path.startsWith(`${caminho}/`)
 }
 
 function alternarTema() {
-  tema.value = tema.value === 'light'
-    ? 'dark'
-    : 'light'
+  tema.value = tema.value === 'light' ? 'dark' : 'light'
 
   document.documentElement.dataset.tema = tema.value
 
@@ -58,26 +83,15 @@ function alternarTema() {
 <template>
   <aside class="sidebar" aria-label="Menu principal">
     <div class="sidebar-cabecalho">
-      <RouterLink
-        to="/"
-        class="sidebar-marca"
-        aria-label="GeoRural — página inicial"
-      >
-        <img
-          src="@/assets/LogoSquadTech.png"
-          alt=""
-          class="sidebar-logo"
-        />
+      <RouterLink to="/" class="sidebar-marca" aria-label="GeoRural — página inicial">
+        <img src="@/assets/LogoSquadTech.png" alt="" class="sidebar-logo" />
 
-        <span class="sidebar-nome">GEORURAL</span>
+        <span class="sidebar-nome"> GEORURAL </span>
       </RouterLink>
     </div>
 
     <div class="sidebar-conteudo">
-      <nav
-        class="sidebar-links"
-        aria-label="Navegação principal"
-      >
+      <nav class="sidebar-links" aria-label="Navegação principal">
         <RouterLink
           v-for="item in itens"
           :key="item.caminho"
@@ -86,9 +100,7 @@ function alternarTema() {
           :class="{
             'sidebar-link--ativo': estaAtivo(item.caminho),
           }"
-          :aria-current="
-            estaAtivo(item.caminho) ? 'page' : undefined
-          "
+          :aria-current="estaAtivo(item.caminho) ? 'page' : undefined"
         >
           <svg
             class="sidebar-icone"
@@ -106,17 +118,42 @@ function alternarTema() {
               <path d="M4 16v4h16v-4" />
             </template>
 
-            <template v-else-if="item.icone === 'arquivos'">
-              <path
-                d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
-              />
-              <path d="M14 3v6h6" />
-              <path d="M8 13h8M8 17h5" />
+            <template v-else-if="item.icone === 'regras'">
+              <path d="M4 7h2M12 7h8M4 17h8M18 17h2" />
+              <circle cx="9" cy="7" r="3" />
+              <circle cx="15" cy="17" r="3" />
             </template>
 
             <template v-else-if="item.icone === 'processar'">
               <path d="m9 5 11 7-11 7z" />
               <path d="M4 5v14" />
+            </template>
+
+            <template v-else-if="item.icone === 'qualidade'">
+              <path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z" />
+              <path d="m8 12 3 3 5-6" />
+            </template>
+
+            <template v-else-if="item.icone === 'auditoria'">
+              <circle cx="6" cy="5" r="2" />
+              <circle cx="6" cy="19" r="2" />
+              <circle cx="18" cy="12" r="2" />
+              <path d="M6 7v10M8 5h3a7 7 0 0 1 7 5" />
+              <path d="M8 19h3a7 7 0 0 0 7-5" />
+            </template>
+
+            <template v-else-if="item.icone === 'rastreabilidade'">
+              <circle cx="5" cy="5" r="2" />
+              <circle cx="19" cy="19" r="2" />
+              <path d="M7 5h8a4 4 0 0 1 0 8H9a4 4 0 0 0 0 8h8" />
+            </template>
+
+            <template v-else-if="item.icone === 'arquivos'">
+              <path d="M14 3H6v18h12V9zM14 3v6h4M8 13h8M8 17h5" />
+            </template>
+            <template v-else>
+              <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z" />
+              <path d="M9 3v15M15 6v15" />
             </template>
           </svg>
 
@@ -129,16 +166,8 @@ function alternarTema() {
       <button
         type="button"
         class="sidebar-tema"
-        :aria-label="
-          tema === 'light'
-            ? 'Ativar tema escuro'
-            : 'Ativar tema claro'
-        "
-        :title="
-          tema === 'light'
-            ? 'Ativar tema escuro'
-            : 'Ativar tema claro'
-        "
+        :aria-label="tema === 'light' ? 'Ativar tema escuro' : 'Ativar tema claro'"
+        :title="tema === 'light' ? 'Ativar tema escuro' : 'Ativar tema claro'"
         @click="alternarTema"
       >
         <span class="sidebar-tema-icone">
@@ -151,10 +180,7 @@ function alternarTema() {
             stroke-linejoin="round"
             aria-hidden="true"
           >
-            <path
-              v-if="tema === 'light'"
-              d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"
-            />
+            <path v-if="tema === 'light'" d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" />
 
             <template v-else>
               <circle cx="12" cy="12" r="4" />
