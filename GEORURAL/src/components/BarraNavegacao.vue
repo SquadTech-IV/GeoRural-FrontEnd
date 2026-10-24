@@ -11,26 +11,8 @@ const tema = ref(
 const itens = [
   {
     caminho: '/',
-    titulo: 'Ingestão de Fontes',
-    icone: 'upload',
-  },
-  {
-    caminho: '/arquivos-recebidos',
-    titulo: 'Arquivos recebidos',
-    icone: 'arquivos',
-  },
-  {
-    caminho: '/processar',
-    titulo: 'Processar dados',
-    icone: 'processar',
-  },
-  {
-    caminho: '/qualidade',
-    titulo: 'Qualidade dos dados',
-    icone: 'qualidade',
-    caminho: '/imoveis',
-    titulo: 'Imóveis',
-    icone: 'mapa',
+    titulo: 'Regras e Métodos',
+    icone: 'regras',
   },
   {
     caminho: '/ingestao',
@@ -43,6 +25,21 @@ const itens = [
     icone: 'processar',
   },
   {
+    caminho: '/imoveis',
+    titulo: 'Imóveis',
+    icone: 'mapa',
+  },
+  {
+    caminho: '/qualidade',
+    titulo: 'Conferência dos resultados',
+    icone: 'qualidade',
+  },
+  {
+    caminho: '/auditoria',
+    titulo: 'Linhagem e auditoria',
+    icone: 'auditoria',
+  },
+  {
     caminho: '/rastreabilidade',
     titulo: 'Trajetória no datalake',
     icone: 'rastreabilidade',
@@ -53,7 +50,20 @@ function estaAtivo(caminho) {
   if (caminho === '/') {
     return (
       route.path === '/' ||
-      route.path === '/ingestao'
+      [
+        'RegraNovaVersao',
+        'RegraDetalheVersao',
+        'RegraCompararVersoes',
+      ].includes(route.name)
+    )
+  }
+
+  if (caminho === '/imoveis') {
+    return (
+      route.path === '/imoveis' ||
+      route.path.startsWith('/resultado/') ||
+      route.path === '/mapa-indicadores' ||
+      route.path.startsWith('/mapa-indicadores/')
     )
   }
 
@@ -64,9 +74,8 @@ function estaAtivo(caminho) {
 }
 
 function alternarTema() {
-  tema.value = tema.value === 'light'
-    ? 'dark'
-    : 'light'
+  tema.value =
+    tema.value === 'light' ? 'dark' : 'light'
 
   document.documentElement.dataset.tema = tema.value
 
@@ -146,13 +155,6 @@ function alternarTema() {
               <path
                 d="M4 7h2M12 7h8M4 17h8M18 17h2"
               />
-              <path d="M14 3v6h6" />
-              <path d="M8 13h8M8 17h5" />
-            </template>
-
-            <template v-else-if="item.icone === 'processar'">
-              <path d="m9 5 11 7-11 7z" />
-              <path d="M4 5v14" />
               <circle cx="9" cy="7" r="3" />
               <circle cx="15" cy="17" r="3" />
             </template>
@@ -165,6 +167,29 @@ function alternarTema() {
             </template>
 
             <template
+              v-else-if="item.icone === 'qualidade'"
+            >
+              <path
+                d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z"
+              />
+              <path d="m8 12 3 3 5-6" />
+            </template>
+
+            <template
+              v-else-if="item.icone === 'auditoria'"
+            >
+              <circle cx="6" cy="5" r="2" />
+              <circle cx="6" cy="19" r="2" />
+              <circle cx="18" cy="12" r="2" />
+              <path
+                d="M6 7v10M8 5h3a7 7 0 0 1 7 5"
+              />
+              <path
+                d="M8 19h3a7 7 0 0 0 7-5"
+              />
+            </template>
+
+            <template
               v-else-if="item.icone === 'rastreabilidade'"
             >
               <circle cx="5" cy="5" r="2" />
@@ -174,10 +199,11 @@ function alternarTema() {
               />
             </template>
 
-            <template v-else-if="item.icone === 'qualidade'">
-              <path d="M9 3H5v18h14V3h-4" />
-              <path d="M9 2h6v4H9z" />
-              <path d="m8 14 3 3 5-6" />
+            <template v-else>
+              <path
+                d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"
+              />
+              <path d="M9 3v15M15 6v15" />
             </template>
           </svg>
 
@@ -218,7 +244,11 @@ function alternarTema() {
             />
 
             <template v-else>
-              <circle cx="12" cy="12" r="4" />
+              <circle
+                cx="12"
+                cy="12"
+                r="4"
+              />
 
               <path
                 d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"

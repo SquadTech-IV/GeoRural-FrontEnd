@@ -9,6 +9,7 @@ import ListaImoveis from '../views/ListaImoveis.vue'
 import MapaIndicadores from '../views/MapaIndicadores.vue'
 import Regras from '../views/Regras.vue'
 import IngestaoPagina from '../views/Ingestao.vue'
+import AuditoriaDados from '../views/AuditoriaDados.vue'
 import RastreabilidadeDados from '../views/RastreabilidadeDados.vue'
 
 import ModalSalvarRegras from '../components/ModalSalvarRegras.vue'
@@ -46,6 +47,11 @@ const router = createRouter({
       path: '/imoveis',
       name: 'ListaImoveis',
       component: ListaImoveis,
+    },
+    {
+      path: '/auditoria',
+      name: 'AuditoriaDados',
+      component: AuditoriaDados,
     },
     {
       path: '/',

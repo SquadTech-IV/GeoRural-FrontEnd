@@ -1,0 +1,116 @@
+.origens-auditoria {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--cor-borda, #ded8e7);
+}
+
+.origens-auditoria-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.origens-auditoria-cabecalho h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.origens-auditoria-cabecalho p,
+.origens-auditoria-estado {
+  margin: 7px 0 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.origens-auditoria-estado {
+  padding: 18px 0;
+}
+
+.origens-auditoria-lista {
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.origens-auditoria-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--cor-borda, #ded8e7);
+}
+
+.origens-auditoria-item:last-child {
+  border-bottom: 0;
+}
+
+.origens-auditoria-dados {
+  min-width: 0;
+}
+
+.origens-auditoria-dados strong {
+  display: block;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.origens-auditoria-hash {
+  display: block;
+  margin-top: 6px;
+  color: var(--cor-texto-secundario, #686273);
+  font-family: monospace;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
+.origens-auditoria-botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 8px;
+  background: var(--cor-painel, #fff);
+  color: var(--cor-roxo, #8520bd);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.origens-auditoria-botao:hover:not(:disabled) {
+  border-color: var(--cor-roxo, #8520bd);
+  background: var(--cor-menu-hover, #f6f0fb);
+}
+
+.origens-auditoria-botao:focus-visible {
+  outline: 2px solid var(--cor-roxo, #8520bd);
+  outline-offset: 3px;
+}
+
+.origens-auditoria-botao:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.origens-auditoria-indisponivel {
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 11px;
+}
+
+@media (max-width: 640px) {
+  .origens-auditoria-item {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+}
