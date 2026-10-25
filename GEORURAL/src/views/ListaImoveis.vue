@@ -108,7 +108,6 @@ onMounted(carregar)
             <th scope="col">CAR</th>
             <th scope="col">Município</th>
             <th scope="col">Área total</th>
-            <th scope="col">IAE</th>
             <th scope="col">Mapa</th>
           </tr>
         </thead>
@@ -131,15 +130,6 @@ onMounted(carregar)
                 formatarNumero(
                   imovel.areaTotal,
                   ' ha',
-                )
-              }}
-            </td>
-
-            <td>
-              {{
-                formatarNumero(
-                  imovel.iaePercentual,
-                  '%',
                 )
               }}
             </td>
