@@ -20,14 +20,14 @@ const props = defineProps({
     default: false,
   },
   metodo: {
-  type: String,
-  default: 'upload',
-  validator: valor =>
-    ['upload', 'api'].includes(valor),
+    type: String,
+    default: 'upload',
+    validator: valor => ['upload', 'api'].includes(valor),
   },
 })
 
 const emit = defineEmits([
+  'update:metodo',
   'configurar',
   'api-consultada',
   'api-selecionada',
@@ -44,9 +44,9 @@ const conjuntoId = ref('')
 const formato = ref('')
 const abrangencia = ref('')
 const arquivo = ref(null)
-
 const inputArquivo = ref(null)
 const arrastando = ref(false)
+const itensApi = ref([])
 
 const formatos = [
   {
@@ -70,77 +70,66 @@ const formatos = [
     extensoes: '.csv',
   },
   {
-    valor: 'KML',
-    nome: 'KML',
-    extensoes: '.kml',
+    valor: 'TIFF',
+    nome: 'GeoTIFF',
+    extensoes: '.tif,.tiff',
   },
 ]
 
-const bloqueado = computed(
-  () => props.carregando || props.desabilitado,
+const bloqueado = computed(() =>
+  props.carregando || props.desabilitado,
 )
 
 const fontesDisponiveis = computed(() =>
-  props.fontes.filter(
-    fonte => fonte.ativo === true,
-  ),
+  props.fontes.filter(fonte => fonte.ativo === true),
 )
 
 const fonteSelecionada = computed(() =>
-  fontesDisponiveis.value.find(
-    fonte =>
-      String(fonte.id) === String(fonteId.value),
+  fontesDisponiveis.value.find(fonte =>
+    String(fonte.id) === String(fonteId.value),
   ) ?? null,
 )
 
 const conjuntosDisponiveis = computed(() => {
   if (!fonteSelecionada.value) return []
 
-  return props.conjuntos.filter(
-    conjunto =>
-      conjunto.ativo === true &&
-      String(conjunto.fonteId) ===
-        String(fonteSelecionada.value.id) &&
-      (
-        metodo.value === 'api'
-          ? conjunto.api === true
-          : conjunto.upload === true
-      ),
+  return props.conjuntos.filter(conjunto =>
+    conjunto.ativo === true &&
+    String(conjunto.fonteId) ===
+      String(fonteSelecionada.value.id) &&
+    (
+      metodo.value === 'api'
+        ? conjunto.api === true
+        : conjunto.upload === true
+    ),
   )
 })
 
 const conjuntoSelecionado = computed(() =>
-  conjuntosDisponiveis.value.find(
-    conjunto =>
-      String(conjunto.id) ===
-      String(conjuntoId.value),
+  conjuntosDisponiveis.value.find(conjunto =>
+    String(conjunto.id) === String(conjuntoId.value),
   ) ?? null,
 )
 
 const formatoSelecionado = computed(() =>
-  formatos.find(
-    item => item.valor === formato.value,
-  ),
+  formatos.find(item => item.valor === formato.value),
 )
 
 const tamanhoArquivo = computed(() => {
-  if (!arquivo.value) return ''
+  const bytes = arquivo.value?.size
 
-  const bytes = arquivo.value.size
+  if (bytes == null) return ''
+  if (bytes < 1024) return `${bytes} B`
 
-  if (bytes < 1024) {
-    return `${bytes} B`
-  }
+  const divisor = bytes < 1024 * 1024
+    ? 1024
+    : 1024 * 1024
 
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toLocaleString('pt-BR', {
-      maximumFractionDigits: 1,
-    })} KB`
-  }
+  const unidade = divisor === 1024 ? 'KB' : 'MB'
 
-  return `${(bytes / (1024 * 1024)).toLocaleString('pt-BR', {
+  return `${(bytes / divisor).toLocaleString('pt-BR', {
     maximumFractionDigits: 1,
-  })} MB`
+  })} ${unidade}`
 })
 
 const podeContinuar = computed(() => {
@@ -153,109 +142,12 @@ const podeContinuar = computed(() => {
   }
 
   if (metodo.value === 'api') {
-    return true
+    return itensApi.value.length > 0
   }
 
-  return Boolean(
-    formato.value &&
-    abrangencia.value.trim() &&
-    arquivo.value,
-  )
+  // Abrangência é opcional.
+  return Boolean(formato.value && arquivo.value)
 })
-
-watch(fonteId, () => {
-  conjuntoId.value = ''
-})
-
-watch(conjuntoSelecionado, conjunto => {
-  abrangencia.value = conjunto?.cobertura ?? ''
-})
-
-watch(fontesDisponiveis, fontes => {
-  const existe = fontes.some(
-    fonte =>
-      String(fonte.id) === String(fonteId.value),
-  )
-
-  if (!existe) {
-    fonteId.value = ''
-  }
-})
-
-watch(conjuntosDisponiveis, conjuntos => {
-  const existe = conjuntos.some(
-    conjunto =>
-      String(conjunto.id) ===
-      String(conjuntoId.value),
-  )
-
-  if (!existe) {
-    conjuntoId.value = ''
-  }
-})
-
-watch(formato, () => {
-  limparArquivo()
-})
-
-watch(metodo, () => {
-  arrastando.value = false
-})
-
-function abrirSeletor() {
-  if (
-    bloqueado.value ||
-    metodo.value !== 'upload'
-  ) {
-    return
-  }
-
-  inputArquivo.value?.click()
-}
-
-function selecionarArquivo(evento) {
-  if (
-    bloqueado.value ||
-    metodo.value !== 'upload'
-  ) {
-    return
-  }
-
-  const selecionado = evento.target.files?.[0]
-
-  if (selecionado) {
-    arquivo.value = selecionado
-  }
-}
-
-function receberArquivo(evento) {
-  arrastando.value = false
-
-  if (
-    bloqueado.value ||
-    metodo.value !== 'upload'
-  ) {
-    return
-  }
-
-  const selecionado =
-    evento.dataTransfer?.files?.[0]
-
-  if (selecionado) {
-    arquivo.value = selecionado
-  }
-}
-
-function marcarArraste() {
-  if (
-    bloqueado.value ||
-    metodo.value !== 'upload'
-  ) {
-    return
-  }
-
-  arrastando.value = true
-}
 
 function limparArquivo() {
   arquivo.value = null
@@ -265,34 +157,149 @@ function limparArquivo() {
   }
 }
 
-function removerArquivo() {
-  if (bloqueado.value) return
+function limparSelecaoApi() {
+  itensApi.value = []
 
+  emit('api-consultada', null)
+  emit('api-selecionada', [])
+}
+
+watch(fonteId, () => {
+  conjuntoId.value = ''
   limparArquivo()
+  limparSelecaoApi()
+})
+
+watch(conjuntoId, () => {
+  limparArquivo()
+  limparSelecaoApi()
+})
+
+watch(conjuntoSelecionado, conjunto => {
+  abrangencia.value = conjunto?.cobertura ?? ''
+})
+
+watch(metodo, () => {
+  arrastando.value = false
+  limparArquivo()
+  limparSelecaoApi()
+})
+
+watch(formato, limparArquivo)
+
+watch(fontesDisponiveis, fontes => {
+  const existe = fontes.some(fonte =>
+    String(fonte.id) === String(fonteId.value),
+  )
+
+  if (!existe) {
+    fonteId.value = ''
+  }
+})
+
+watch(conjuntosDisponiveis, conjuntos => {
+  const existe = conjuntos.some(conjunto =>
+    String(conjunto.id) === String(conjuntoId.value),
+  )
+
+  if (!existe) {
+    conjuntoId.value = ''
+  }
+})
+
+function abrirSeletor() {
+  if (bloqueado.value || metodo.value !== 'upload') return
+
+  if (!formatoSelecionado.value) {
+    emit(
+      'erro',
+      'Selecione o formato antes de escolher o arquivo.',
+    )
+    return
+  }
+
+  inputArquivo.value?.click()
+}
+
+function aceitarArquivo(selecionado) {
+  if (bloqueado.value || metodo.value !== 'upload') return
+  if (!selecionado) return
+
+  const extensoes =
+    formatoSelecionado.value?.extensoes.split(',') ?? []
+
+  const formatoValido = extensoes.some(extensao =>
+    selecionado.name.toLowerCase().endsWith(extensao),
+  )
+
+  if (!formatoValido) {
+    limparArquivo()
+
+    emit(
+      'erro',
+      'O arquivo não corresponde ao formato selecionado.',
+    )
+    return
+  }
+
+  if (!selecionado.size) {
+    limparArquivo()
+
+    emit(
+      'erro',
+      'Selecione um arquivo que não esteja vazio.',
+    )
+    return
+  }
+
+  arquivo.value = selecionado
+}
+
+function selecionarArquivo(evento) {
+  aceitarArquivo(evento.target.files?.[0])
+}
+
+function receberArquivo(evento) {
+  arrastando.value = false
+  aceitarArquivo(evento.dataTransfer?.files?.[0])
+}
+
+function marcarArraste() {
+  if (!bloqueado.value && metodo.value === 'upload') {
+    arrastando.value = true
+  }
+}
+
+function removerArquivo() {
+  if (!bloqueado.value) {
+    limparArquivo()
+  }
 }
 
 function receberConsultaApi(dados) {
   emit('api-consultada', dados)
 }
 
+function receberSelecaoApi(itens) {
+  itensApi.value = Array.isArray(itens) ? itens : []
+  emit('api-selecionada', itensApi.value)
+}
+
 function configurar() {
   if (!podeContinuar.value) return
 
-  const dados = {
+  emit('configurar', {
     metodo: metodo.value,
     fonteId: fonteSelecionada.value.id,
     conjuntoId: conjuntoSelecionado.value.id,
-  }
-
-  if (metodo.value === 'upload') {
-    Object.assign(dados, {
-      formato: formato.value,
-      abrangencia: abrangencia.value.trim(),
-      arquivo: arquivo.value,
-    })
-  }
-
-  emit('configurar', dados)
+    ...(metodo.value === 'upload'
+      ? {
+          formato: formato.value,
+          abrangencia: abrangencia.value.trim(),
+          arquivo: arquivo.value,
+        }
+      : {}),
+  })
 }
 </script>
 
@@ -303,9 +310,7 @@ function configurar() {
     :aria-busy="carregando"
   >
     <header class="entrada-cabecalho">
-      <h2 id="entrada-titulo">
-        Nova ingestão
-      </h2>
+      <h2 id="entrada-titulo">Nova ingestão</h2>
 
       <p>
         Escolha a forma de entrada e o conjunto de destino.
@@ -317,7 +322,7 @@ function configurar() {
       class="entrada-informacao"
       role="status"
     >
-      Carregando fontes e conjuntos...
+      Aguarde a conclusão da operação...
     </p>
 
     <form @submit.prevent="configurar">
@@ -400,7 +405,7 @@ function configurar() {
                 !fonteSelecionada
                   ? 'Selecione uma fonte primeiro.'
                   : !conjuntosDisponiveis.length
-                    ? 'Esta fonte não possui conjuntos ativos compatíveis com a forma de entrada selecionada.'
+                    ? 'Nenhum conjunto ativo compatível com esta forma de entrada.'
                     : 'Conjuntos vinculados à fonte selecionada.'
               }}
             </p>
@@ -436,7 +441,7 @@ function configurar() {
 
             <div class="entrada-campo">
               <label for="entrada-abrangencia">
-                Abrangência
+                Abrangência (opcional)
               </label>
 
               <input
@@ -444,10 +449,18 @@ function configurar() {
                 v-model="abrangencia"
                 type="text"
                 maxlength="200"
-                :required="metodo === 'upload'"
                 :disabled="metodo !== 'upload'"
                 placeholder="Ex.: Estado do Paraná"
+                aria-describedby="entrada-abrangencia-ajuda"
               />
+
+              <p
+                id="entrada-abrangencia-ajuda"
+                class="entrada-ajuda"
+              >
+                Pode deixar vazio. A cobertura armazenada pelo
+                servidor é a cadastrada no conjunto.
+              </p>
             </div>
           </div>
 
@@ -537,7 +550,7 @@ function configurar() {
           :conjunto-id="conjuntoSelecionado?.id ?? null"
           :desabilitado="bloqueado"
           @consultado="receberConsultaApi"
-          @selecionar="emit('api-selecionada', $event)"
+          @selecionar="receberSelecaoApi"
           @erro="emit('erro', $event)"
         />
 
@@ -547,7 +560,13 @@ function configurar() {
             class="entrada-botao"
             :disabled="!podeContinuar"
           >
-            Continuar
+            {{
+              bloqueado
+                ? 'Aguarde...'
+                : metodo === 'api'
+                  ? 'Importar selecionados'
+                  : 'Enviar arquivo'
+            }}
           </button>
         </footer>
       </fieldset>

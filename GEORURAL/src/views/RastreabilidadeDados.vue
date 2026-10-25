@@ -1,7 +1,8 @@
 <script setup>
-import { onBeforeUnmount } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
+import ListaArquivosConjunto from '../components/ListaArquivosConjunto.vue'
 import LinhaTempoZonas from '../components/LinhaTempoZonas.vue'
 import DetalheMovimentacao from '../components/DetalheMovimentacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
@@ -10,19 +11,17 @@ import {
   criarConsultaRastreabilidade,
 } from '../services/rastreabilidadeConsultaService'
 
-defineProps({
-  conjuntos: {
-    type: Array,
-    default: () => [],
-  },
-})
-
 const controle = criarConsultaRastreabilidade()
 
 const {
+  conjuntos,
   conjuntoId,
+  arquivoId,
+  arquivos,
   trajetoria,
+  carregandoConjuntos,
   carregando,
+  falhouConjuntos,
   falhou,
   feedback,
   detalheAberto,
@@ -30,6 +29,7 @@ const {
   eventoSelecionado,
 } = controle
 
+onMounted(controle.carregarConjuntos)
 onBeforeUnmount(controle.destruir)
 </script>
 
@@ -42,38 +42,51 @@ onBeforeUnmount(controle.destruir)
         <h1>Trajetória no datalake</h1>
 
         <p>
-          Consulte a trajetória do conjunto e os eventos
-          registrados nas zonas do Data Lake.
+          Selecione o conjunto e consulte as passagens
+          de cada arquivo pelas zonas do Data Lake.
         </p>
       </div>
     </header>
 
     <div class="rastreabilidade-seletor">
-      <label for="rastreabilidade-conjunto">
-        Conjunto
-      </label>
+      <label for="rastreabilidade-conjunto">Conjunto</label>
 
       <select
         id="rastreabilidade-conjunto"
         v-model="conjuntoId"
-        :disabled="!conjuntos.length"
+        :disabled="carregandoConjuntos || !conjuntos.length"
         @change="controle.consultar()"
       >
-        <option value="" disabled>
-          Selecione um conjunto
-        </option>
+        <option value="" disabled>Selecione um conjunto</option>
 
         <option
           v-for="conjunto in conjuntos"
           :key="conjunto.id"
-          :value="String(conjunto.id)"
+          :value="conjunto.id"
         >
           {{ conjunto.nome }}
         </option>
       </select>
 
       <p
-        v-if="!conjuntos.length"
+        v-if="carregandoConjuntos"
+        class="rastreabilidade-ajuda"
+        role="status"
+      >
+        Carregando conjuntos...
+      </p>
+
+      <button
+        v-else-if="falhouConjuntos"
+        type="button"
+        class="rastreabilidade-botao"
+        @click="controle.carregarConjuntos"
+      >
+        Tentar carregar conjuntos novamente
+      </button>
+
+      <p
+        v-else-if="!conjuntos.length"
         class="rastreabilidade-ajuda"
         role="status"
       >
@@ -81,96 +94,80 @@ onBeforeUnmount(controle.destruir)
       </p>
     </div>
 
-    <div
-      v-if="carregando"
-      class="rastreabilidade-estado"
-      role="status"
-    >
-      Consultando trajetória...
-    </div>
-
-    <div
-      v-else-if="falhou"
-      class="rastreabilidade-estado"
-    >
-      <button
-        type="button"
-        class="rastreabilidade-botao"
-        @click="controle.tentarNovamente()"
-      >
-        Tentar novamente
-      </button>
-    </div>
-
-    <div
-      v-else-if="trajetoria"
-      class="rastreabilidade-colunas"
-    >
-      <section
-        class="rastreabilidade-lista"
-        aria-labelledby="titulo-eventos"
-      >
-        <h2
-          id="titulo-eventos"
-          class="rastreabilidade-lista-titulo"
-        >
-          Movimentações do conjunto
-        </h2>
-
-        <p
-          v-if="!trajetoria.eventos.length"
-          class="rastreabilidade-estado"
-          role="status"
-        >
-          Nenhuma movimentação registrada.
-        </p>
-
-        <div v-else class="rastreabilidade-arquivos">
-          <button
-            v-for="evento in trajetoria.eventos"
-            :key="evento.chave"
-            type="button"
-            class="rastreabilidade-arquivo"
-            :class="{
-              'rastreabilidade-arquivo--ativo':
-                eventoSelecionado === evento.chave,
-            }"
-            :aria-pressed="
-              eventoSelecionado === evento.chave
-            "
-            @click="controle.abrirEvento(evento.chave)"
-          >
-            <span class="rastreabilidade-arquivo-informacoes">
-              <strong :title="evento.titulo">
-                {{ evento.titulo }}
-              </strong>
-
-              <small>
-                {{ evento.dataFormatada }}
-              </small>
-            </span>
-          </button>
-        </div>
-      </section>
+    <div class="rastreabilidade-colunas">
+      <ListaArquivosConjunto
+        :arquivos="arquivos"
+        :selecionado="arquivoId"
+        :carregando="carregando"
+        :falhou="falhou"
+        :possui-conjunto="Boolean(conjuntoId)"
+        @selecionar="controle.selecionarArquivo"
+        @tentar-novamente="controle.tentarNovamente"
+      />
 
       <section
         class="rastreabilidade-detalhe"
         aria-labelledby="titulo-trajetoria"
       >
-        <h2 id="titulo-trajetoria">
-          {{ trajetoria.conjuntoNome }}
-        </h2>
+        <template v-if="trajetoria">
+          <h2 id="titulo-trajetoria">{{ trajetoria.nome }}</h2>
 
-        <LinhaTempoZonas
-          :trajetoria="trajetoria"
-          @erro="controle.notificarErro"
-        />
+          <p class="rastreabilidade-ajuda">
+            {{ trajetoria.conjuntoNome }}
+          </p>
+
+          <LinhaTempoZonas
+            :trajetoria="trajetoria"
+            @erro="controle.notificarErro"
+          />
+
+          <h3 class="rastreabilidade-lista-titulo">
+            Passagens registradas
+          </h3>
+
+          <p
+            v-if="!trajetoria.eventos.length"
+            class="rastreabilidade-estado"
+            role="status"
+          >
+            Nenhuma passagem registrada para este arquivo.
+          </p>
+
+          <div v-else class="rastreabilidade-arquivos">
+            <button
+              v-for="evento in trajetoria.eventos"
+              :key="evento.chave"
+              type="button"
+              class="rastreabilidade-arquivo"
+              :class="{
+                'rastreabilidade-arquivo--ativo':
+                  eventoSelecionado === evento.chave,
+              }"
+              :aria-pressed="eventoSelecionado === evento.chave"
+              @click="controle.abrirEvento(evento.chave)"
+            >
+              <span class="rastreabilidade-arquivo-informacoes">
+                <strong>{{ evento.titulo }}</strong>
+                <small>{{ evento.dataFormatada }}</small>
+              </span>
+            </button>
+          </div>
+
+          <p class="rastreabilidade-ajuda">
+            A consulta apresenta a última passagem registrada
+            em cada zona para o arquivo selecionado.
+          </p>
+        </template>
+
+        <p v-else class="rastreabilidade-estado">
+          {{
+            carregando
+              ? 'Consultando trajetória...'
+              : 'Selecione um arquivo para consultar sua trajetória.'
+          }}
+        </p>
       </section>
     </div>
-
-    <p v-else class="rastreabilidade-estado">
-      Selecione um conjunto para consultar sua trajetória.
-    </p>
   </main>
 
   <DetalheMovimentacao

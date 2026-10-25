@@ -3,6 +3,7 @@ import {
   onBeforeUnmount,
   onMounted,
   ref,
+  watch,
 } from 'vue'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
@@ -14,11 +15,10 @@ import {
   criarControleIngestao,
 } from '../services/ingestaoControleService'
 
-defineOptions({
-  name: 'IngestaoPagina',
-})
+defineOptions({ name: 'IngestaoPagina' })
 
 const metodo = ref('upload')
+const controle = criarControleIngestao()
 
 const {
   fontes,
@@ -26,20 +26,18 @@ const {
   carregando,
   falhou,
   mensagem,
+  tipoMensagem,
   configuracao,
+  resultado,
   fonteConfigurada,
   conjuntoConfigurado,
-  carregar,
-  receberConfiguracao,
-  receberConsultaApi,
-  receberSelecaoApi,
-  exibirErro,
-  fecharMensagem,
-  destruir,
-} = criarControleIngestao()
+  chaveFormulario,
+} = controle
 
-onMounted(carregar)
-onBeforeUnmount(destruir)
+watch(metodo, controle.limparResultado)
+
+onMounted(controle.carregar)
+onBeforeUnmount(controle.destruir)
 </script>
 
 <template>
@@ -65,56 +63,63 @@ onBeforeUnmount(destruir)
         v-if="falhou"
         type="button"
         class="ingestao-tentar"
-        @click="carregar"
+        :disabled="carregando"
+        @click="controle.carregar"
       >
         Tentar carregar fontes e conjuntos novamente
       </button>
 
       <FormularioEntradaDados
+        :key="chaveFormulario"
         v-model:metodo="metodo"
         :fontes="fontes"
         :conjuntos="conjuntos"
         :carregando="carregando"
-        @configurar="receberConfiguracao"
-        @api-consultada="receberConsultaApi"
-        @api-selecionada="receberSelecaoApi"
-        @erro="exibirErro"
+        @configurar="controle.receberConfiguracao"
+        @api-consultada="controle.receberConsultaApi"
+        @api-selecionada="controle.receberSelecaoApi"
+        @erro="controle.exibirErro"
       />
 
       <section
-        v-if="configuracao"
+        v-if="configuracao && resultado"
         class="ingestao-resumo"
         aria-labelledby="ingestao-resumo-titulo"
         role="status"
       >
         <h2 id="ingestao-resumo-titulo">
-          Configuração preparada
+          Resultado do recebimento
         </h2>
 
         <p>
           {{
-            configuracao.metodo === 'api'
-              ? 'A configuração por API foi preparada. Consultar a disponibilidade não importa os itens.'
-              : 'O arquivo foi selecionado. Nenhum dado foi enviado ao servidor.'
+            configuracao.metodo === 'upload'
+              ? resultado[0]?.aceito
+                ? 'O servidor confirmou o recebimento do arquivo.'
+                : 'O servidor recusou o arquivo.'
+              : `${resultado.importados} item(ns) importado(s), ${resultado.jaRecebidos} já recebido(s) e ${resultado.falhas} falha(s).`
           }}
         </p>
 
         <dl>
           <div>
             <dt>Método de entrada</dt>
-
             <dd>
-              {{
-                configuracao.metodo === 'api'
-                  ? 'API'
-                  : 'Upload'
-              }}
+              {{ configuracao.metodo === 'api' ? 'API' : 'Upload' }}
             </dd>
           </div>
 
-          <template
-            v-if="configuracao.metodo !== 'api'"
-          >
+          <div>
+            <dt>Fonte</dt>
+            <dd>{{ fonteConfigurada?.nome }}</dd>
+          </div>
+
+          <div>
+            <dt>Conjunto</dt>
+            <dd>{{ conjuntoConfigurado?.nome }}</dd>
+          </div>
+
+          <template v-if="configuracao.metodo === 'upload'">
             <div>
               <dt>Arquivo</dt>
               <dd>{{ configuracao.arquivo?.name }}</dd>
@@ -130,30 +135,6 @@ onBeforeUnmount(destruir)
               <dd>{{ configuracao.abrangencia }}</dd>
             </div>
           </template>
-
-          <template v-else>
-            <div>
-              <dt>Fonte</dt>
-
-              <dd>
-                {{
-                  fonteConfigurada?.nome ??
-                  'Fonte selecionada'
-                }}
-              </dd>
-            </div>
-
-            <div>
-              <dt>Conjunto</dt>
-
-              <dd>
-                {{
-                  conjuntoConfigurado?.nome ??
-                  'Conjunto selecionado'
-                }}
-              </dd>
-            </div>
-          </template>
         </dl>
       </section>
     </main>
@@ -161,9 +142,9 @@ onBeforeUnmount(destruir)
     <ToastMensagem
       v-if="mensagem"
       :mensagem="mensagem"
-      tipo="erro"
-      :duracao="0"
-      @fechar="fecharMensagem"
+      :tipo="tipoMensagem"
+      :duracao="tipoMensagem === 'sucesso' ? 6000 : 0"
+      @fechar="controle.fecharMensagem"
     />
   </div>
 </template>
