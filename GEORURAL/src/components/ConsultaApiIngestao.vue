@@ -1,17 +1,14 @@
 <script setup>
-import {
-  computed,
-  onBeforeUnmount,
-  ref,
-  watch,
-} from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 
 import {
   consultaIngestaoCancelada,
   ingestaoService,
 } from '../services/ingestaoService'
 
-defineOptions({ name: 'ConsultaApiIngestao' })
+defineOptions({
+  name: 'ConsultaApiIngestao',
+})
 
 const props = defineProps({
   conjuntoId: {
@@ -53,7 +50,9 @@ const temConjunto = computed(() =>
 )
 
 const podeConsultar = computed(() =>
-  !bloqueado.value && !carregando.value && temConjunto.value,
+  !bloqueado.value &&
+  !carregando.value &&
+  temConjunto.value,
 )
 
 function identificador(item) {
@@ -121,7 +120,9 @@ async function consultar() {
   try {
     const dados = await ingestaoService.consultarDisponiveis(
       conjuntoId,
-      { signal: atual.signal },
+      {
+        signal: atual.signal,
+      },
     )
 
     if (
@@ -163,7 +164,9 @@ async function consultar() {
 watch(
   () => props.conjuntoId,
   limparConsulta,
-  { flush: 'sync' },
+  {
+    flush: 'sync',
+  },
 )
 
 onBeforeUnmount(() => {
@@ -241,11 +244,7 @@ onBeforeUnmount(() => {
               <input
                 type="checkbox"
                 :checked="estaSelecionado(item)"
-                :disabled="
-                  bloqueado ||
-                  carregando ||
-                  item.jaRecebido
-                "
+                :disabled="bloqueado || carregando || item.jaRecebido"
                 @change="alternarSelecao(item)"
               />
 
