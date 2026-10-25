@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 import {
   rastreabilidadeService,
@@ -11,10 +11,14 @@ import {
 } from './rastreabilidadeErroService'
 
 export function criarConsultaRastreabilidade() {
+  const conjuntos = ref([])
   const conjuntoId = ref('')
-  const trajetoria = ref(null)
+  const arquivoId = ref('')
+  const resposta = ref(null)
 
+  const carregandoConjuntos = ref(false)
   const carregando = ref(false)
+  const falhouConjuntos = ref(false)
   const falhou = ref(false)
   const feedback = ref(null)
 
@@ -22,30 +26,34 @@ export function criarConsultaRastreabilidade() {
   const camposDetalhe = ref([])
   const eventoSelecionado = ref('')
 
+  let consultaConjuntos = null
   let consultaAtual = null
   let destruido = false
   let sequencia = 0
-  let ultimoId = ''
 
-  function notificarErro(mensagem) {
-    if (
-      destruido ||
-      typeof mensagem !== 'string' ||
-      !mensagem.trim()
-    ) {
-      return
-    }
+  const arquivos = computed(() =>
+    resposta.value?.arquivos ?? [],
+  )
 
-    const texto = mensagem.trim()
+  const trajetoria = computed(() =>
+    arquivos.value.find(arquivo =>
+      arquivo.id === String(arquivoId.value),
+    ) ?? null,
+  )
 
-    if (feedback.value?.mensagem === texto) {
-      return
-    }
+  function notificarErro(erro) {
+    if (destruido || requisicaoCancelada(erro)) return
+
+    const mensagem = typeof erro === 'string'
+      ? erro.trim()
+      : obterMensagemErro(erro)
+
+    if (!mensagem) return
 
     feedback.value = {
       id: ++sequencia,
       tipo: 'erro',
-      mensagem: texto,
+      mensagem,
     }
   }
 
@@ -59,9 +67,14 @@ export function criarConsultaRastreabilidade() {
     eventoSelecionado.value = ''
   }
 
+  function selecionarArquivo(id) {
+    arquivoId.value = String(id ?? '')
+    fecharDetalhe()
+  }
+
   function abrirEvento(chave) {
-    const evento = trajetoria.value?.eventos.find(
-      (item) => item.chave === chave,
+    const evento = trajetoria.value?.eventos.find(item =>
+      item.chave === chave,
     )
 
     if (!evento) return
@@ -71,81 +84,138 @@ export function criarConsultaRastreabilidade() {
     detalheAberto.value = true
   }
 
+  async function carregarConjuntos() {
+    if (destruido) return
+
+    consultaConjuntos?.abort()
+
+    const atual = new AbortController()
+    consultaConjuntos = atual
+
+    carregandoConjuntos.value = true
+    falhouConjuntos.value = false
+
+    try {
+      const dados = await rastreabilidadeService.listarConjuntos({
+        signal: atual.signal,
+      })
+
+      if (
+        destruido ||
+        atual.signal.aborted ||
+        consultaConjuntos !== atual
+      ) {
+        return
+      }
+
+      conjuntos.value = dados
+    } catch (erro) {
+      if (
+        destruido ||
+        atual.signal.aborted ||
+        consultaConjuntos !== atual ||
+        requisicaoCancelada(erro)
+      ) {
+        return
+      }
+
+      falhouConjuntos.value = true
+      notificarErro(erro)
+    } finally {
+      if (!destruido && consultaConjuntos === atual) {
+        carregandoConjuntos.value = false
+        consultaConjuntos = null
+      }
+    }
+  }
+
   async function consultar(id = conjuntoId.value) {
     if (destruido) return
 
     consultaAtual?.abort()
 
-    const consulta = new AbortController()
-    consultaAtual = consulta
+    const atual = new AbortController()
+    consultaAtual = atual
 
-    ultimoId = String(id ?? '').trim()
+    conjuntoId.value = String(id ?? '')
+    resposta.value = null
+    arquivoId.value = ''
+    falhou.value = false
 
     fecharFeedback()
     fecharDetalhe()
 
-    trajetoria.value = null
-    falhou.value = false
+    if (!conjuntoId.value) {
+      carregando.value = false
+      return
+    }
+
     carregando.value = true
 
     try {
-      const dados =
-        await rastreabilidadeService.consultarTrajetoria(
-          ultimoId,
-          { signal: consulta.signal },
-        )
+      const dados = await rastreabilidadeService.consultarTrajetoria(
+        conjuntoId.value,
+        { signal: atual.signal },
+      )
 
       if (
         destruido ||
-        consulta.signal.aborted ||
-        consultaAtual !== consulta
+        atual.signal.aborted ||
+        consultaAtual !== atual
       ) {
         return
       }
 
-      trajetoria.value = dados
+      resposta.value = dados
+      arquivoId.value = dados.arquivos[0]?.id ?? ''
     } catch (erro) {
       if (
         destruido ||
-        consulta.signal.aborted ||
-        consultaAtual !== consulta ||
+        atual.signal.aborted ||
+        consultaAtual !== atual ||
         requisicaoCancelada(erro)
       ) {
         return
       }
 
       falhou.value = true
-
-      notificarErro(
-        obterMensagemErro(erro),
-      )
+      notificarErro(erro)
     } finally {
-      if (!destruido && consultaAtual === consulta) {
+      if (!destruido && consultaAtual === atual) {
         carregando.value = false
+        consultaAtual = null
       }
     }
   }
 
   function tentarNovamente() {
-    return consultar(ultimoId)
+    return consultar(conjuntoId.value)
   }
 
   function destruir() {
     destruido = true
     consultaAtual?.abort()
+    consultaConjuntos?.abort()
   }
 
   return {
+    conjuntos,
     conjuntoId,
+    arquivoId,
+    arquivos,
     trajetoria,
+    carregandoConjuntos,
     carregando,
+    falhouConjuntos,
     falhou,
     feedback,
     detalheAberto,
     camposDetalhe,
     eventoSelecionado,
+    carregarConjuntos,
     consultar,
     tentarNovamente,
+    selecionarArquivo,
     abrirEvento,
     fecharDetalhe,
     notificarErro,

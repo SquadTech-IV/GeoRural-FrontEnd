@@ -11,9 +11,7 @@ import {
   ingestaoService,
 } from '../services/ingestaoService'
 
-defineOptions({
-  name: 'ConsultaApiIngestao',
-})
+defineOptions({ name: 'ConsultaApiIngestao' })
 
 const props = defineProps({
   conjuntoId: {
@@ -39,109 +37,64 @@ const emit = defineEmits([
 
 const carregando = ref(false)
 const consultado = ref(false)
-const resposta = ref(null)
+const itens = ref([])
 const selecionados = ref([])
-const mensagemErro = ref('')
+const falhou = ref(false)
 
 let consulta = null
 let destruido = false
 
-const bloqueado = computed(
-  () => props.disabled || props.desabilitado,
+const bloqueado = computed(() =>
+  props.disabled || props.desabilitado,
 )
 
-const temConjunto = computed(
-  () => String(props.conjuntoId ?? '').trim() !== '',
+const temConjunto = computed(() =>
+  String(props.conjuntoId ?? '').trim() !== '',
 )
 
-const podeConsultar = computed(
-  () =>
-    !bloqueado.value &&
-    !carregando.value &&
-    temConjunto.value,
+const podeConsultar = computed(() =>
+  !bloqueado.value && !carregando.value && temConjunto.value,
 )
-
-const itens = computed(() => {
-  if (Array.isArray(resposta.value)) {
-    return resposta.value
-  }
-
-  if (Array.isArray(resposta.value?.itens)) {
-    return resposta.value.itens
-  }
-
-  if (Array.isArray(resposta.value?.content)) {
-    return resposta.value.content
-  }
-
-  return []
-})
 
 function identificador(item) {
-  if (item && typeof item === 'object') {
-    return item.id ?? item.codigo ?? item.url ?? null
-  }
-
-  return typeof item === 'string' ||
-    typeof item === 'number'
-    ? item
-    : null
+  return item?.identificador ?? null
 }
 
-function nomeItem(item, indice) {
-  if (
-    typeof item === 'string' ||
-    typeof item === 'number'
-  ) {
-    return String(item)
-  }
-
-  return (
-    item?.nome ??
-    item?.nomeArquivo ??
-    item?.titulo ??
-    `Item ${indice + 1}`
-  )
+function estaSelecionado(item) {
+  return selecionados.value.includes(identificador(item))
 }
 
-function estaSelecionado(indice) {
-  return selecionados.value.includes(indice)
-}
+function alternarSelecao(item) {
+  const id = identificador(item)
 
-function alternarSelecao(indice) {
   if (
     bloqueado.value ||
     carregando.value ||
-    identificador(itens.value[indice]) === null
+    !id ||
+    item.jaRecebido
   ) {
     return
   }
 
-  if (estaSelecionado(indice)) {
-    selecionados.value = selecionados.value.filter(
-      atual => atual !== indice,
-    )
-  } else {
-    selecionados.value = [
-      ...selecionados.value,
-      indice,
-    ]
-  }
+  selecionados.value = estaSelecionado(item)
+    ? selecionados.value.filter(atual => atual !== id)
+    : [...selecionados.value, id]
 
   emit(
     'selecionar',
-    selecionados.value.map(
-      atual => itens.value[atual],
+    itens.value.filter(atual =>
+      selecionados.value.includes(atual.identificador),
     ),
   )
 }
 
 function limparResultado() {
   consultado.value = false
-  resposta.value = null
+  itens.value = []
   selecionados.value = []
-  mensagemErro.value = ''
+  falhou.value = false
 
+  emit('consultado', null)
   emit('selecionar', [])
   emit('limpar')
 }
@@ -150,7 +103,6 @@ function limparConsulta() {
   consulta?.abort()
   consulta = null
   carregando.value = false
-
   limparResultado()
 }
 
@@ -160,52 +112,46 @@ async function consultar() {
   consulta?.abort()
 
   const atual = new AbortController()
-  const conjuntoId = props.conjuntoId
+  const conjuntoId = String(props.conjuntoId)
 
   consulta = atual
   carregando.value = true
-
   limparResultado()
 
   try {
-    const dados =
-      await ingestaoService.consultarDisponiveis(
-        conjuntoId,
-        { signal: atual.signal },
-      )
+    const dados = await ingestaoService.consultarDisponiveis(
+      conjuntoId,
+      { signal: atual.signal },
+    )
 
     if (
       destruido ||
       atual.signal.aborted ||
       consulta !== atual ||
-      props.conjuntoId !== conjuntoId
+      String(props.conjuntoId) !== conjuntoId
     ) {
       return
     }
 
-    resposta.value = dados
+    itens.value = dados
     consultado.value = true
 
     emit('consultado', {
       conjuntoId,
       resposta: dados,
     })
-  } catch (falha) {
+  } catch (erro) {
     if (
       destruido ||
       atual.signal.aborted ||
       consulta !== atual ||
-      props.conjuntoId !== conjuntoId ||
-      consultaIngestaoCancelada(falha)
+      consultaIngestaoCancelada(erro)
     ) {
       return
     }
 
-    mensagemErro.value =
-      falha?.message ||
-      'Não foi possível consultar a API.'
-
-    emit('erro', mensagemErro.value)
+    falhou.value = true
+    emit('erro', erro)
   } finally {
     if (!destruido && consulta === atual) {
       carregando.value = false
@@ -223,7 +169,6 @@ watch(
 onBeforeUnmount(() => {
   destruido = true
   consulta?.abort()
-  consulta = null
 })
 </script>
 
@@ -240,8 +185,7 @@ onBeforeUnmount(() => {
         </h3>
 
         <p class="consulta-api-descricao">
-          Consulte os itens disponibilizados pela API
-          do conjunto selecionado.
+          Consulte os itens disponibilizados para o conjunto.
         </p>
       </div>
 
@@ -254,17 +198,14 @@ onBeforeUnmount(() => {
         {{
           carregando
             ? 'Consultando API...'
-            : mensagemErro
+            : falhou
               ? 'Tentar novamente'
               : 'Consultar disponibilidade'
         }}
       </button>
     </header>
 
-    <p
-      v-if="!temConjunto"
-      class="consulta-api-ajuda"
-    >
+    <p v-if="!temConjunto" class="consulta-api-ajuda">
       Selecione uma fonte e um conjunto para continuar.
     </p>
 
@@ -276,84 +217,54 @@ onBeforeUnmount(() => {
       Consultando os dados disponíveis...
     </p>
 
-    <p
-      v-if="mensagemErro"
-      class="consulta-api-erro"
-      role="alert"
-    >
-      {{ mensagemErro }}
-    </p>
-
     <template v-if="consultado">
-      <p
-        class="consulta-api-sucesso"
-        role="status"
-      >
-        Consulta concluída pelo backend.
-      </p>
-
       <p
         v-if="!itens.length"
         class="consulta-api-estado"
         role="status"
       >
-        A resposta recebida não contém uma lista de
-        itens reconhecida para seleção.
+        Nenhum item disponível para este conjunto.
       </p>
 
       <template v-else>
-        <p
-          class="consulta-api-contagem"
-          role="status"
-        >
-          {{ itens.length }}
-          {{
-            itens.length === 1
-              ? 'item disponível'
-              : 'itens disponíveis'
-          }}
+        <p class="consulta-api-contagem" role="status">
+          {{ itens.length }} item(ns) encontrado(s).
         </p>
 
         <ul class="consulta-api-lista">
           <li
-            v-for="(item, indice) in itens"
-            :key="indice"
+            v-for="item in itens"
+            :key="item.identificador"
             class="consulta-api-item"
           >
             <label>
               <input
                 type="checkbox"
-                :checked="estaSelecionado(indice)"
+                :checked="estaSelecionado(item)"
                 :disabled="
                   bloqueado ||
                   carregando ||
-                  identificador(item) === null
+                  item.jaRecebido
                 "
-                @change="alternarSelecao(indice)"
+                @change="alternarSelecao(item)"
               />
 
-              <span>
-                {{ nomeItem(item, indice) }}
-              </span>
+              <span>{{ item.nome || item.identificador }}</span>
             </label>
 
-            <span
-              v-if="identificador(item) === null"
-              class="consulta-api-observacao"
-            >
-              Sem identificador para seleção
+            <span class="consulta-api-observacao">
+              {{
+                item.jaRecebido
+                  ? 'Já recebido no datalake'
+                  : item.descricao
+              }}
             </span>
           </li>
         </ul>
 
         <p class="consulta-api-ajuda">
-          {{ selecionados.length }}
-          {{
-            selecionados.length === 1
-              ? 'item selecionado.'
-              : 'itens selecionados.'
-          }}
-          A consulta não realiza a importação.
+          {{ selecionados.length }} item(ns) selecionado(s).
+          Use o botão de importação para enviar.
         </p>
       </template>
     </template>

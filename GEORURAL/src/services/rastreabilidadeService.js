@@ -1,9 +1,5 @@
 import api from './api'
 
-import {
-  prepararErroConsulta,
-} from './rastreabilidadeErroService'
-
 const ZONAS = [
   'BRUTA',
   'QUARENTENA',
@@ -11,226 +7,207 @@ const ZONAS = [
   'PUBLICADA',
 ]
 
-const CONCLUIDOS = new Set([
-  'CONCLUIDO',
-  'CONCLUIDA',
-  'SUCESSO',
-  'APROVADO',
-  'PROCESSADO',
-  'PUBLICADO',
-  'RECEBIDO',
-  'FINALIZADO',
-  'OK',
-])
+const STATUS = [
+  'done',
+  'atual',
+  'ressalva',
+  'pendente',
+]
 
-const EM_ANDAMENTO = new Set([
-  'PENDENTE',
-  'EM_ANDAMENTO',
-  'PROCESSANDO',
-  'VALIDANDO',
-  'EM_EXECUCAO',
-  'EM_TRATAMENTO',
-  'INICIADO',
-])
+const NOMES_STATUS = {
+  done: 'Concluída',
+  atual: 'Em andamento',
+  ressalva: 'Com ressalva',
+  pendente: 'Pendente',
+}
 
 function validarId(valor) {
   const id = String(valor ?? '').trim()
 
-  if (!/^[1-9]\d*$/.test(id)) {
-    throw new Error(
-      'Informe um ID de conjunto positivo válido.',
+  if (
+    !/^[1-9]\d*$/.test(id) ||
+    (
+      typeof valor === 'number' &&
+      !Number.isSafeInteger(valor)
     )
+  ) {
+    throw new Error('Informe um identificador válido.')
   }
 
   return id
 }
 
-function texto(valor) {
-  return valor == null ? '' : String(valor).trim()
+function formatarData(valor) {
+  if (!valor) return 'Não informada'
+
+  const data = new Date(valor)
+
+  return Number.isNaN(data.getTime())
+    ? String(valor)
+    : data.toLocaleString('pt-BR', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+      })
 }
 
-function dataFormatada(valor) {
-  const original = texto(valor)
-
-  if (!original) return 'Não informada'
-
-  const data = new Date(original)
-
-  if (Number.isNaN(data.getTime())) {
-    return original
+function validarObjeto(valor) {
+  if (!valor || typeof valor !== 'object' || Array.isArray(valor)) {
+    throw new Error('A API retornou uma trajetória inválida.')
   }
 
-  return new Intl.DateTimeFormat('pt-BR', {
-    dateStyle: 'short',
-    timeStyle: 'short',
-  }).format(data)
+  return valor
 }
 
-function normalizarStatus(valor) {
-  return texto(valor)
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toUpperCase()
-    .replace(/[ -]+/g, '_')
-}
+function normalizarArquivo(dado, conjuntoId, conjuntoNome) {
+  validarObjeto(dado)
 
-function objeto(dados) {
+  const id = validarId(dado.arquivoId)
+
+  if (!Array.isArray(dado.passagens)) {
+    throw new Error('O arquivo não possui uma lista válida de passagens.')
+  }
+
+  const zonas = new Set()
+
+  const passagens = dado.passagens.map(passagem => {
+    validarObjeto(passagem)
+
+    if (
+      !ZONAS.includes(passagem.zona) ||
+      !STATUS.includes(passagem.status) ||
+      zonas.has(passagem.zona)
+    ) {
+      throw new Error('O arquivo contém passagens inválidas ou repetidas.')
+    }
+
+    zonas.add(passagem.zona)
+
+    return {
+      ...passagem,
+      count: passagem.contagem ?? '',
+      obs: passagem.observacao ?? '',
+    }
+  })
+
   if (
-    !dados ||
-    typeof dados !== 'object' ||
-    Array.isArray(dados)
+    dado.zonaAtual != null &&
+    !ZONAS.includes(dado.zonaAtual)
   ) {
-    throw new Error(
-      'O servidor retornou uma resposta inválida.',
-    )
+    throw new Error('O arquivo possui uma zona atual inválida.')
   }
 
-  return dados
+  const eventos = passagens
+    .filter(passagem => passagem.quando != null)
+    .map(passagem => ({
+      chave: `${id}:${passagem.zona}`,
+      arquivoNome: dado.nome,
+      zona: passagem.zona,
+      tipo: 'Passagem de zona',
+      status: NOMES_STATUS[passagem.status],
+      dataHora: passagem.quando,
+      descricao: passagem.observacao ?? '',
+      contagem: passagem.contagem ?? '',
+      titulo: `${passagem.zona} · ${NOMES_STATUS[passagem.status]}`,
+      dataFormatada: formatarData(passagem.quando),
+    }))
+
+  return {
+    ...dado,
+    id,
+    conjuntoId,
+    conjuntoNome,
+    passagens,
+    eventos,
+  }
 }
 
 export function normalizarTrajetoria(dados) {
-  objeto(dados)
+  validarObjeto(dados)
 
-  if (!Array.isArray(dados.eventos)) {
-    throw new Error(
-      'A trajetória não possui uma lista válida de eventos.',
-    )
+  const conjuntoId = validarId(dados.conjuntoId)
+  const conjuntoNome = String(dados.conjuntoNome ?? '')
+
+  if (!Array.isArray(dados.arquivos)) {
+    throw new Error('A API retornou uma lista de arquivos inválida.')
   }
 
-  const eventos = dados.eventos.map((item, indice) => {
-    objeto(item)
+  const arquivos = dados.arquivos.map(arquivo =>
+    normalizarArquivo(arquivo, conjuntoId, conjuntoNome),
+  )
 
-    const zona = texto(item.zona).toUpperCase()
-
-    if (!ZONAS.includes(zona)) {
-      throw new Error(
-        'A trajetória contém uma zona desconhecida.',
-      )
-    }
-
-    return {
-      ...item,
-      zona,
-      chave: String(indice),
-      titulo: `${zona} · ${texto(item.status) || 'Sem situação'}`,
-      dataFormatada: dataFormatada(item.dataHora),
-    }
-  })
-
-  const ultimas = new Map()
-
-  for (const evento of eventos) {
-    ultimas.set(evento.zona, evento)
+  if (new Set(arquivos.map(arquivo => arquivo.id)).size !== arquivos.length) {
+    throw new Error('A API retornou arquivos repetidos.')
   }
-
-  const ultimo = eventos.at(-1)
-
-  const zonaAtual = eventos.length
-    ? texto(dados.zonaAtual || ultimo.zona).toUpperCase()
-    : null
-
-  if (zonaAtual && !ZONAS.includes(zonaAtual)) {
-    throw new Error(
-      'A zona atual informada é inválida.',
-    )
-  }
-
-  const passagens = [...ultimas.values()].map((evento) => {
-    const original = normalizarStatus(evento.status)
-
-    const status = CONCLUIDOS.has(original)
-      ? 'done'
-      : (
-          EM_ANDAMENTO.has(original) &&
-          evento.chave === ultimo.chave
-        )
-        ? 'atual'
-        : 'ressalva'
-
-    return {
-      zona: evento.zona,
-      status,
-      statusOriginal: texto(evento.status),
-      quando: evento.dataHora,
-      count: '',
-      obs: texto(evento.descricao),
-    }
-  })
 
   return {
     ...dados,
-    eventos,
-    passagens,
-    zonaAtual,
+    conjuntoId,
+    conjuntoNome,
+    arquivos,
   }
 }
 
 export function prepararDetalheEvento(evento) {
   return [
     {
-      titulo: 'Zona',
-      valor: texto(evento.zona) || 'Não informada',
+      titulo: 'Arquivo',
+      valor: evento.arquivoNome || 'Não informado',
     },
     {
-      titulo: 'Tipo',
-      valor: texto(evento.tipo) || 'Não informado',
+      titulo: 'Zona',
+      valor: evento.zona || 'Não informada',
     },
     {
       titulo: 'Data',
-      valor: dataFormatada(evento.dataHora),
+      valor: formatarData(evento.dataHora),
     },
     {
       titulo: 'Situação',
-      valor: texto(evento.status) || 'Não informada',
+      valor: evento.status || 'Não informada',
     },
     {
-      titulo: 'Descrição',
-      valor: texto(evento.descricao) || 'Sem descrição.',
+      titulo: 'Contagem',
+      valor: evento.contagem || 'Não informada',
+    },
+    {
+      titulo: 'Observação',
+      valor: evento.descricao || 'Sem observação.',
     },
   ]
 }
 
-async function consultar(caminho, signal) {
-  try {
-    const { data } = await api.get(caminho, {
-      signal,
-    })
-
-    return data
-  } catch (erro) {
-    throw prepararErroConsulta(
-      erro,
-      'Não foi possível consultar o conjunto.',
-    )
-  }
-}
-
 export const rastreabilidadeService = {
-  async consultarTrajetoria(
-    conjuntoId,
-    { signal } = {},
-  ) {
-    const id = validarId(conjuntoId)
-
-    const dados = await consultar(
-      `/api/conjuntos/${id}/trajetoria`,
-      signal,
+  async listarConjuntos({ signal } = {}) {
+    const { data } = await api.get(
+      '/api/trajetoria-conjuntos/resumo',
+      { signal },
     )
 
-    return normalizarTrajetoria(dados)
+    if (!Array.isArray(data)) {
+      throw new Error('A API retornou uma lista de conjuntos inválida.')
+    }
+
+    return data.map(item => ({
+      ...item,
+      id: validarId(item.id),
+      nome: String(item.rotulo ?? ''),
+    }))
   },
 
-  async consultarStatusAtual(
-    conjuntoId,
-    { signal } = {},
-  ) {
+  async consultarTrajetoria(conjuntoId, { signal } = {}) {
     const id = validarId(conjuntoId)
 
-    const dados = await consultar(
-      `/api/conjuntos/${id}/status-atual`,
-      signal,
+    const { data } = await api.get(
+      `/api/trajetoria-conjuntos/${id}/arquivos-trajetoria`,
+      { signal },
     )
 
-    return objeto(dados)
+    const resposta = normalizarTrajetoria(data)
+
+    if (resposta.conjuntoId !== id) {
+      throw new Error('A API retornou a trajetória de outro conjunto.')
+    }
+
+    return resposta
   },
 }

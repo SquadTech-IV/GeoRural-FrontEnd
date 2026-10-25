@@ -189,3 +189,29 @@
   outline-offset: 4px;
 }
 
+ .sidebar .sidebar-marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.sidebar .sidebar-logo {
+  display: block;
+  width: 42px;
+  height: 42px;
+  max-width: 42px;
+  max-height: 42px;
+  flex: 0 0 42px;
+  object-fit: contain;
+}
+
+
+.sidebar-conteudo {
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.sidebar-conteudo::-webkit-scrollbar {
+  display: none;
+}
