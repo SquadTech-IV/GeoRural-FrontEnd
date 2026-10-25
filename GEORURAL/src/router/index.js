@@ -26,15 +26,27 @@ const router = createRouter({
   ),
 
   routes: [
-    { path: '/zona-tratada', name: 'ZonaTratadaDados', component: ZonaTratadaDados },
-    { path: '/arquivos-recebidos', name: 'ArquivosRecebidos', component: ArquivosRecebidos },
+    {
+      path: '/zona-tratada',
+      name: 'ZonaTratadaDados',
+      component: ZonaTratadaDados,
+    },
+    {
+      path: '/arquivos-recebidos',
+      name: 'ArquivosRecebidos',
+      component: ArquivosRecebidos,
+    },
     {
       path: '/arquivos-recebidos/:id',
       name: 'DetalheArquivoRecebido',
       component: DetalheArquivoRecebido,
       props: true,
     },
-    { path: '/cadastros', name: 'Cadastros', component: Cadastros },
+    {
+      path: '/cadastros',
+      name: 'Cadastros',
+      component: Cadastros,
+    },
     {
       path: '/ingestao',
       name: 'Ingestao',
