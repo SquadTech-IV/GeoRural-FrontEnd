@@ -1,51 +1,45 @@
 <script setup>
-import { computed, ref } from 'vue'
+import {
+  onBeforeUnmount,
+  onMounted,
+  ref,
+} from 'vue'
+
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import FormularioEntradaDados from '../components/FormularioEntradaDados.vue'
+import SeletorMetodoEntrada from '../components/SeletorMetodoEntrada.vue'
+import ToastMensagem from '../components/ToastMensagem.vue'
+
+import {
+  criarControleIngestao,
+} from '../services/ingestaoControleService'
 
 defineOptions({
   name: 'IngestaoPagina',
 })
 
-const props = defineProps({
-  fontes: {
-    type: Array,
-    default: () => [],
-  },
-  conjuntos: {
-    type: Array,
-    default: () => [],
-  },
-  carregando: {
-    type: Boolean,
-    default: false,
-  },
-})
+const metodo = ref('upload')
 
-const emit = defineEmits(['configurar'])
+const {
+  fontes,
+  conjuntos,
+  carregando,
+  falhou,
+  mensagem,
+  configuracao,
+  fonteConfigurada,
+  conjuntoConfigurado,
+  carregar,
+  receberConfiguracao,
+  receberConsultaApi,
+  receberSelecaoApi,
+  exibirErro,
+  fecharMensagem,
+  destruir,
+} = criarControleIngestao()
 
-const configuracao = ref(null)
-
-const fonteConfigurada = computed(() =>
-  props.fontes.find(
-    fonte =>
-      String(fonte.id) ===
-      String(configuracao.value?.fonteId),
-  ) ?? null,
-)
-
-const conjuntoConfigurado = computed(() =>
-  props.conjuntos.find(
-    conjunto =>
-      String(conjunto.id) ===
-      String(configuracao.value?.conjuntoId),
-  ) ?? null,
-)
-
-function receberConfiguracao(dados) {
-  configuracao.value = dados
-  emit('configurar', dados)
-}
+onMounted(carregar)
+onBeforeUnmount(destruir)
 </script>
 
 <template>
@@ -57,16 +51,34 @@ function receberConfiguracao(dados) {
         <h1>Ingestão de fontes</h1>
 
         <p>
-          Configure a entrada dos dados e selecione o conjunto
-          de destino no GeoDataLake.
+          Configure a entrada dos dados e selecione
+          o conjunto de destino no GeoDataLake.
         </p>
       </header>
 
+      <SeletorMetodoEntrada
+        v-model="metodo"
+        :desabilitado="carregando"
+      />
+
+      <button
+        v-if="falhou"
+        type="button"
+        class="ingestao-tentar"
+        @click="carregar"
+      >
+        Tentar carregar fontes e conjuntos novamente
+      </button>
+
       <FormularioEntradaDados
+        v-model:metodo="metodo"
         :fontes="fontes"
         :conjuntos="conjuntos"
         :carregando="carregando"
         @configurar="receberConfiguracao"
+        @api-consultada="receberConsultaApi"
+        @api-selecionada="receberSelecaoApi"
+        @erro="exibirErro"
       />
 
       <section
@@ -82,7 +94,7 @@ function receberConfiguracao(dados) {
         <p>
           {{
             configuracao.metodo === 'api'
-              ? 'A entrada por API foi selecionada. Nenhuma conexão foi executada.'
+              ? 'A configuração por API foi preparada. Consultar a disponibilidade não importa os itens.'
               : 'O arquivo foi selecionado. Nenhum dado foi enviado ao servidor.'
           }}
         </p>
@@ -100,7 +112,9 @@ function receberConfiguracao(dados) {
             </dd>
           </div>
 
-          <template v-if="configuracao.metodo !== 'api'">
+          <template
+            v-if="configuracao.metodo !== 'api'"
+          >
             <div>
               <dt>Arquivo</dt>
               <dd>{{ configuracao.arquivo?.name }}</dd>
@@ -143,6 +157,14 @@ function receberConfiguracao(dados) {
         </dl>
       </section>
     </main>
+
+    <ToastMensagem
+      v-if="mensagem"
+      :mensagem="mensagem"
+      tipo="erro"
+      :duracao="0"
+      @fechar="fecharMensagem"
+    />
   </div>
 </template>
 

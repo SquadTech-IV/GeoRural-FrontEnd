@@ -1,6 +1,5 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import SeletorMetodoEntrada from './SeletorMetodoEntrada.vue'
 import ConsultaApiIngestao from './ConsultaApiIngestao.vue'
 
 const props = defineProps({
@@ -20,14 +19,26 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  metodo: {
+  type: String,
+  default: 'upload',
+  validator: valor =>
+    ['upload', 'api'].includes(valor),
+  },
 })
 
 const emit = defineEmits([
   'configurar',
   'api-consultada',
+  'api-selecionada',
+  'erro',
 ])
 
-const metodo = ref('upload')
+const metodo = computed({
+  get: () => props.metodo,
+  set: valor => emit('update:metodo', valor),
+})
+
 const fonteId = ref('')
 const conjuntoId = ref('')
 const formato = ref('')
@@ -70,12 +81,15 @@ const bloqueado = computed(
 )
 
 const fontesDisponiveis = computed(() =>
-  props.fontes.filter(fonte => fonte.ativo === true),
+  props.fontes.filter(
+    fonte => fonte.ativo === true,
+  ),
 )
 
 const fonteSelecionada = computed(() =>
   fontesDisponiveis.value.find(
-    fonte => String(fonte.id) === String(fonteId.value),
+    fonte =>
+      String(fonte.id) === String(fonteId.value),
   ) ?? null,
 )
 
@@ -86,19 +100,27 @@ const conjuntosDisponiveis = computed(() => {
     conjunto =>
       conjunto.ativo === true &&
       String(conjunto.fonteId) ===
-        String(fonteSelecionada.value.id),
+        String(fonteSelecionada.value.id) &&
+      (
+        metodo.value === 'api'
+          ? conjunto.api === true
+          : conjunto.upload === true
+      ),
   )
 })
 
 const conjuntoSelecionado = computed(() =>
   conjuntosDisponiveis.value.find(
     conjunto =>
-      String(conjunto.id) === String(conjuntoId.value),
+      String(conjunto.id) ===
+      String(conjuntoId.value),
   ) ?? null,
 )
 
 const formatoSelecionado = computed(() =>
-  formatos.find(item => item.valor === formato.value),
+  formatos.find(
+    item => item.valor === formato.value,
+  ),
 )
 
 const tamanhoArquivo = computed(() => {
@@ -151,7 +173,8 @@ watch(conjuntoSelecionado, conjunto => {
 
 watch(fontesDisponiveis, fontes => {
   const existe = fontes.some(
-    fonte => String(fonte.id) === String(fonteId.value),
+    fonte =>
+      String(fonte.id) === String(fonteId.value),
   )
 
   if (!existe) {
@@ -162,7 +185,8 @@ watch(fontesDisponiveis, fontes => {
 watch(conjuntosDisponiveis, conjuntos => {
   const existe = conjuntos.some(
     conjunto =>
-      String(conjunto.id) === String(conjuntoId.value),
+      String(conjunto.id) ===
+      String(conjuntoId.value),
   )
 
   if (!existe) {
@@ -179,13 +203,23 @@ watch(metodo, () => {
 })
 
 function abrirSeletor() {
-  if (bloqueado.value || metodo.value !== 'upload') return
+  if (
+    bloqueado.value ||
+    metodo.value !== 'upload'
+  ) {
+    return
+  }
 
   inputArquivo.value?.click()
 }
 
 function selecionarArquivo(evento) {
-  if (bloqueado.value || metodo.value !== 'upload') return
+  if (
+    bloqueado.value ||
+    metodo.value !== 'upload'
+  ) {
+    return
+  }
 
   const selecionado = evento.target.files?.[0]
 
@@ -197,9 +231,15 @@ function selecionarArquivo(evento) {
 function receberArquivo(evento) {
   arrastando.value = false
 
-  if (bloqueado.value || metodo.value !== 'upload') return
+  if (
+    bloqueado.value ||
+    metodo.value !== 'upload'
+  ) {
+    return
+  }
 
-  const selecionado = evento.dataTransfer?.files?.[0]
+  const selecionado =
+    evento.dataTransfer?.files?.[0]
 
   if (selecionado) {
     arquivo.value = selecionado
@@ -207,7 +247,12 @@ function receberArquivo(evento) {
 }
 
 function marcarArraste() {
-  if (bloqueado.value || metodo.value !== 'upload') return
+  if (
+    bloqueado.value ||
+    metodo.value !== 'upload'
+  ) {
+    return
+  }
 
   arrastando.value = true
 }
@@ -258,7 +303,9 @@ function configurar() {
     :aria-busy="carregando"
   >
     <header class="entrada-cabecalho">
-      <h2 id="entrada-titulo">Nova ingestão</h2>
+      <h2 id="entrada-titulo">
+        Nova ingestão
+      </h2>
 
       <p>
         Escolha a forma de entrada e o conjunto de destino.
@@ -281,11 +328,6 @@ function configurar() {
         <legend class="entrada-somente-leitor">
           Configuração da entrada de dados
         </legend>
-
-        <SeletorMetodoEntrada
-          v-model="metodo"
-          :desabilitado="bloqueado"
-        />
 
         <div class="entrada-grade">
           <div class="entrada-campo">
@@ -358,7 +400,7 @@ function configurar() {
                 !fonteSelecionada
                   ? 'Selecione uma fonte primeiro.'
                   : !conjuntosDisponiveis.length
-                    ? 'Esta fonte não possui conjuntos ativos.'
+                    ? 'Esta fonte não possui conjuntos ativos compatíveis com a forma de entrada selecionada.'
                     : 'Conjuntos vinculados à fonte selecionada.'
               }}
             </p>
@@ -495,6 +537,8 @@ function configurar() {
           :conjunto-id="conjuntoSelecionado?.id ?? null"
           :desabilitado="bloqueado"
           @consultado="receberConsultaApi"
+          @selecionar="emit('api-selecionada', $event)"
+          @erro="emit('erro', $event)"
         />
 
         <footer class="entrada-rodape">
