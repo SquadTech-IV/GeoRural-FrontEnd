@@ -88,3 +88,25 @@
     gap: 16px;
   }
 }
+
+.ingestao-tentar {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 8px;
+  background: var(--cor-painel, #fff);
+  color: var(--cor-roxo, #8520bd);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ingestao-tentar:hover {
+  background: var(--cor-menu-hover, #f6f0fb);
+}
+
+.ingestao-tentar:focus-visible {
+  outline: 2px solid var(--cor-roxo, #8520bd);
+  outline-offset: 3px;
+}

@@ -25,18 +25,13 @@ const itens = [
     icone: 'upload',
   },
   {
-    caminho: '/mapa-indicadores',
-    titulo: 'Mapa de indicadores',
-    icone: 'mapa',
-  },
-  {
     caminho: '/',
-    titulo: 'Regras e Métodos',
+    titulo: 'Regras',
     icone: 'regras',
   },
   {
     caminho: '/ingestao',
-    titulo: 'Ingestão de Fontes',
+    titulo: 'Ingestão de fontes',
     icone: 'upload',
   },
   {
@@ -81,7 +76,9 @@ function estaAtivo(caminho) {
   if (caminho === '/imoveis') {
     return (
       route.path === '/imoveis' ||
-      route.path.startsWith('/resultado/')
+      route.path.startsWith('/resultado/') ||
+      route.path === '/mapa-indicadores' ||
+      route.path.startsWith('/mapa-indicadores/')
     )
   }
 
@@ -270,11 +267,7 @@ function alternarTema() {
             />
 
             <template v-else>
-              <circle
-                cx="12"
-                cy="12"
-                r="4"
-              />
+              <circle cx="12" cy="12" r="4" />
 
               <path
                 d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"
