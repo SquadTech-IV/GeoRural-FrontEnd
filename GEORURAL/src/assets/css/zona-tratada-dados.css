@@ -1,0 +1,226 @@
+.tratada-layout {
+  min-width: 0;
+  min-height: 100vh;
+}
+
+.tratada-pagina {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 30px 28px 60px;
+  color: var(--cor-texto, #24202d);
+}
+
+.tratada-cabecalho {
+  margin-bottom: 24px;
+}
+
+.tratada-cabecalho h1 {
+  margin: 0 0 8px;
+  font-family: var(--fonte-titulo, Arial, sans-serif);
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.tratada-cabecalho p {
+  margin: 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.tratada-card {
+  min-width: 0;
+  margin-bottom: 20px;
+  padding: 20px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 14px;
+  background: var(--cor-painel, #fff);
+}
+
+.tratada-card h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.tratada-secao-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tratada-busca {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.tratada-campo {
+  flex: 1;
+  min-width: 0;
+}
+
+.tratada-campo label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tratada-campo input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 40px;
+  padding: 9px 11px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 8px;
+  background: var(--cor-painel, #fff);
+  color: var(--cor-texto, #24202d);
+  font: inherit;
+  font-size: 12px;
+}
+
+.tratada-botao {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 8px;
+  background: var(--cor-painel, #fff);
+  color: var(--cor-roxo, #8520bd);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tratada-busca > .tratada-botao {
+  min-height: 40px;
+}
+
+.tratada-botao:hover:not(:disabled) {
+  border-color: var(--cor-roxo, #8520bd);
+  background: var(--cor-menu-hover, #f6f0fb);
+}
+
+.tratada-botao:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tratada-botao:focus-visible,
+.tratada-campo input:focus-visible,
+.tratada-tabela-container:focus-visible {
+  outline: 2px solid var(--cor-roxo, #8520bd);
+  outline-offset: 3px;
+}
+
+.tratada-estado {
+  margin: 0;
+  padding: 32px 12px;
+  color: var(--cor-texto-secundario, #686273);
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.tratada-ajuda,
+.tratada-contagem {
+  margin: 16px 0 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.tratada-tabela-container {
+  margin-top: 18px;
+  overflow-x: auto;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 10px;
+}
+
+.tratada-tabela {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.tratada-tabela th,
+.tratada-tabela td {
+  padding: 13px 14px;
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.tratada-tabela thead {
+  background: var(--cor-painel-secundario, #f0edf5);
+  color: var(--cor-texto-secundario, #686273);
+}
+
+.tratada-tabela tbody th,
+.tratada-tabela tbody td {
+  border-top: 1px solid var(--cor-borda, #ded8e7);
+}
+
+.tratada-tabela tbody th {
+  font-weight: 600;
+}
+
+.tratada-tabela tbody tr:hover,
+.tratada-linha--selecionada {
+  background: var(--cor-menu-hover, #f6f0fb);
+}
+
+.tratada-situacao {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 20px;
+  background: var(--cor-painel-secundario, #f0edf5);
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.tratada-resumo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin: 20px 0 0;
+}
+
+.tratada-resumo dt {
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 11px;
+}
+
+.tratada-resumo dd {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .tratada-pagina {
+    padding: 24px 16px 48px;
+  }
+
+  .tratada-card {
+    padding: 16px;
+  }
+
+  .tratada-resumo {
+    grid-template-columns: 1fr;
+  }
+
+  .tratada-busca {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

@@ -10,6 +10,11 @@ const tema = ref(
 
 const itens = [
   {
+    caminho: '/zona-tratada',
+    titulo: 'Zona tratada',
+    icone: 'arquivos',
+  },
+  {
     caminho: '/arquivos-recebidos',
     titulo: 'Arquivos recebidos',
     icone: 'arquivos',

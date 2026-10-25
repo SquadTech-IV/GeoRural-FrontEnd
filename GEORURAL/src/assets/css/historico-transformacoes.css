@@ -1,0 +1,151 @@
+.tratada-historico {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--cor-borda, #ded8e7);
+}
+
+.tratada-historico-cabecalho,
+.tratada-historico-evento {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tratada-historico-cabecalho h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.tratada-historico-cabecalho p,
+.tratada-historico-ajuda {
+  margin: 7px 0 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.tratada-historico-botao {
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 8px;
+  background: var(--cor-painel, #fff);
+  color: var(--cor-roxo, #8520bd);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tratada-historico-botao:hover:not(:disabled) {
+  border-color: var(--cor-roxo, #8520bd);
+  background: var(--cor-menu-hover, #f6f0fb);
+}
+
+.tratada-historico-botao:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tratada-historico-botao:focus-visible {
+  outline: 2px solid var(--cor-roxo, #8520bd);
+  outline-offset: 3px;
+}
+
+.tratada-historico-estado {
+  margin: 0;
+  padding: 24px 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.tratada-historico-lista {
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tratada-historico-item {
+  position: relative;
+  padding: 0 0 20px 28px;
+}
+
+.tratada-historico-item::before {
+  position: absolute;
+  top: 14px;
+  bottom: 0;
+  left: 5px;
+  width: 2px;
+  background: var(--cor-borda, #ded8e7);
+  content: "";
+}
+
+.tratada-historico-item:last-child {
+  padding-bottom: 0;
+}
+
+.tratada-historico-item:last-child::before {
+  display: none;
+}
+
+.tratada-historico-marcador {
+  position: absolute;
+  top: 5px;
+  left: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--cor-roxo, #8520bd);
+}
+
+.tratada-historico-conteudo {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 10px;
+  background: var(--cor-painel, #fff);
+}
+
+.tratada-historico-evento h4 {
+  margin: 0;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.tratada-historico-situacao {
+  padding: 4px 8px;
+  border-radius: 20px;
+  background: var(--cor-painel-secundario, #f0edf5);
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.tratada-historico-descricao {
+  margin: 10px 0 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.tratada-historico-data {
+  margin: 12px 0 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 11px;
+}
+
+@media (max-width: 640px) {
+  .tratada-historico-item {
+    padding-left: 22px;
+  }
+
+  .tratada-historico-conteudo {
+    padding: 12px;
+  }
+}

@@ -64,6 +64,7 @@ export const arquivoService = {
     return data
   },
 
+  // Recebimento na zona bruta: um arquivo por requisição.
   async enviar(arquivos, { conId, usuId, signal } = {}) {
     const conjuntoId = validarId(conId)
     const usuarioId = validarId(usuId)

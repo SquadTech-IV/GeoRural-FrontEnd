@@ -3,6 +3,7 @@ import {
   createWebHistory,
 } from 'vue-router'
 
+import ZonaTratadaDados from '../views/ZonaTratadaDados.vue'
 import ArquivosRecebidos from '../views/ArquivosRecebidos.vue'
 import DetalheArquivoRecebido from '../views/DetalheArquivoRecebido.vue'
 import Cadastros from '../views/Cadastros.vue'
@@ -25,6 +26,11 @@ const router = createRouter({
   ),
 
   routes: [
+    {
+      path: '/zona-tratada',
+      name: 'ZonaTratadaDados',
+      component: ZonaTratadaDados,
+    },
     {
       path: '/arquivos-recebidos',
       name: 'ArquivosRecebidos',
