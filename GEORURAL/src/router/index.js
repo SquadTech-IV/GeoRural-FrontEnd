@@ -3,6 +3,9 @@ import {
   createWebHistory,
 } from 'vue-router'
 
+import ArquivosRecebidos from '../views/ArquivosRecebidos.vue'
+import DetalheArquivoRecebido from '../views/DetalheArquivoRecebido.vue'
+import Cadastros from '../views/Cadastros.vue'
 import ProcessarDados from '../views/ProcessarDados.vue'
 import QualidadeDados from '../views/QualidadeDados.vue'
 import ListaImoveis from '../views/ListaImoveis.vue'
@@ -22,6 +25,22 @@ const router = createRouter({
   ),
 
   routes: [
+    {
+      path: '/arquivos-recebidos',
+      name: 'ArquivosRecebidos',
+      component: ArquivosRecebidos,
+    },
+    {
+      path: '/arquivos-recebidos/:id',
+      name: 'DetalheArquivoRecebido',
+      component: DetalheArquivoRecebido,
+      props: true,
+    },
+    {
+      path: '/cadastros',
+      name: 'Cadastros',
+      component: Cadastros,
+    },
     {
       path: '/ingestao',
       name: 'Ingestao',

@@ -1,0 +1,121 @@
+.arquivo-detalhe-voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
+  color: var(--cor-roxo, #8520bd);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.arquivo-detalhe-voltar svg {
+  width: 17px;
+  height: 17px;
+}
+
+.arquivo-detalhe-voltar:hover {
+  text-decoration: underline;
+}
+
+.arquivo-detalhe-voltar:focus-visible {
+  outline: 2px solid var(--cor-roxo, #8520bd);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.arquivo-detalhe-cabecalho {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--cor-borda, #ded8e7);
+}
+
+.arquivo-detalhe-cabecalho > div {
+  min-width: 0;
+}
+
+.arquivo-detalhe-cabecalho h2 {
+  overflow-wrap: anywhere;
+}
+
+.arquivo-detalhe-cabecalho p {
+  margin: 7px 0 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.arquivo-detalhe-cabecalho > button {
+  flex-shrink: 0;
+}
+
+.arquivo-detalhe-grade {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+  margin: 22px 0 0;
+}
+
+.arquivo-detalhe-grade > div {
+  min-width: 0;
+}
+
+.arquivo-detalhe-grade dt {
+  margin-bottom: 7px;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 11px;
+}
+
+.arquivo-detalhe-grade dd {
+  margin: 0;
+  color: var(--cor-texto, #24202d);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.arquivo-detalhe-linha-completa {
+  grid-column: 1 / -1;
+}
+
+.arquivo-detalhe-localizacao {
+  font-family: var(--fonte-mono, monospace);
+  font-size: 12px;
+}
+
+.arquivo-detalhe-observacao {
+  margin: 20px 0 0;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--cor-painel-secundario, #f0edf5);
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+@media (max-width: 900px) {
+  .arquivo-detalhe-grade {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .arquivo-detalhe-cabecalho {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .arquivo-detalhe-cabecalho > button {
+    width: 100%;
+  }
+
+  .arquivo-detalhe-grade {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+}

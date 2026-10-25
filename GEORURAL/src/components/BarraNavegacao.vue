@@ -10,6 +10,21 @@ const tema = ref(
 
 const itens = [
   {
+    caminho: '/arquivos-recebidos',
+    titulo: 'Arquivos recebidos',
+    icone: 'arquivos',
+  },
+  {
+    caminho: '/cadastros',
+    titulo: 'Cadastros',
+    icone: 'upload',
+  },
+  {
+    caminho: '/mapa-indicadores',
+    titulo: 'Mapa de indicadores',
+    icone: 'mapa',
+  },
+  {
     caminho: '/',
     titulo: 'Regras e Métodos',
     icone: 'regras',
@@ -61,9 +76,7 @@ function estaAtivo(caminho) {
   if (caminho === '/imoveis') {
     return (
       route.path === '/imoveis' ||
-      route.path.startsWith('/resultado/') ||
-      route.path === '/mapa-indicadores' ||
-      route.path.startsWith('/mapa-indicadores/')
+      route.path.startsWith('/resultado/')
     )
   }
 
@@ -196,6 +209,14 @@ function alternarTema() {
               <circle cx="19" cy="19" r="2" />
               <path
                 d="M7 5h8a4 4 0 0 1 0 8H9a4 4 0 0 0 0 8h8"
+              />
+            </template>
+
+            <template
+              v-else-if="item.icone === 'arquivos'"
+            >
+              <path
+                d="M14 3H6v18h12V9zM14 3v6h4M8 13h8M8 17h5"
               />
             </template>
 
