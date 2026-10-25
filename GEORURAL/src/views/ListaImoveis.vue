@@ -1,8 +1,12 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
+
 import BarraNavegacao from '../components/BarraNavegacao.vue'
-import { imovelService } from '../services/imovelService'
+
+import {
+  imovelService,
+} from '../services/imovelService'
 
 const imoveis = ref([])
 const carregando = ref(false)
@@ -14,9 +18,15 @@ async function carregar() {
 
   try {
     const dados = await imovelService.listar()
-    imoveis.value = Array.isArray(dados) ? dados : []
+
+    imoveis.value = Array.isArray(dados)
+      ? dados
+      : []
   } catch (erroRequisicao) {
-    console.error('Erro ao carregar imóveis:', erroRequisicao)
+    console.error(
+      'Erro ao carregar imóveis:',
+      erroRequisicao,
+    )
 
     erro.value =
       'Não foi possível carregar os imóveis. Verifique a conexão e tente novamente.'
@@ -49,8 +59,8 @@ onMounted(carregar)
         <h1>Imóveis rurais</h1>
 
         <p>
-          Consulte os imóveis cadastrados e visualize o IAE
-          e os embargos no mapa.
+          Consulte os imóveis cadastrados e visualize
+          seus indicadores no mapa.
         </p>
       </div>
 
@@ -63,14 +73,23 @@ onMounted(carregar)
       </button>
     </div>
 
-    <p v-if="carregando" role="status">
+    <p
+      v-if="carregando"
+      role="status"
+    >
       Carregando imóveis…
     </p>
 
-    <div v-else-if="erro" role="alert">
+    <div
+      v-else-if="erro"
+      role="alert"
+    >
       <p>{{ erro }}</p>
 
-      <button type="button" @click="carregar">
+      <button
+        type="button"
+        @click="carregar"
+      >
         Tentar novamente
       </button>
     </div>
@@ -79,32 +98,40 @@ onMounted(carregar)
       Nenhum imóvel cadastrado.
     </p>
 
-    <div v-else class="tabela-rolagem">
+    <div
+      v-else
+      class="tabela-rolagem"
+    >
       <table class="tabela-imoveis">
         <thead>
           <tr>
-            <th>CAR</th>
-            <th>Município</th>
-            <th>Área total</th>
-            <th>IAE</th>
-            <th>Mapa</th>
+            <th scope="col">CAR</th>
+            <th scope="col">Município</th>
+            <th scope="col">Área total</th>
+            <th scope="col">Mapa</th>
           </tr>
         </thead>
 
         <tbody>
           <tr
             v-for="imovel in imoveis"
-            :key="imovel.id"
+            :key="imovel.id ?? imovel.codigoCar"
           >
-            <td>{{ imovel.codigoCar || '—' }}</td>
-            <td>{{ imovel.municipio || '—' }}</td>
-
             <td>
-              {{ formatarNumero(imovel.areaTotal, ' ha') }}
+              {{ imovel.codigoCar || '—' }}
             </td>
 
             <td>
-              {{ formatarNumero(imovel.iaePercentual, '%') }}
+              {{ imovel.municipio || '—' }}
+            </td>
+
+            <td>
+              {{
+                formatarNumero(
+                  imovel.areaTotal,
+                  ' ha',
+                )
+              }}
             </td>
 
             <td>
@@ -112,11 +139,20 @@ onMounted(carregar)
                 v-if="imovel.codigoCar"
                 :to="{
                   name: 'MapaIndicadores',
-                  params: { car: imovel.codigoCar },
+                  params: {
+                    car: imovel.codigoCar,
+                  },
                 }"
+                :aria-label="
+                  `Ver mapa do imóvel ${imovel.codigoCar}`
+                "
               >
                 Ver mapa
               </RouterLink>
+
+              <span v-else>
+                CAR não informado
+              </span>
             </td>
           </tr>
         </tbody>

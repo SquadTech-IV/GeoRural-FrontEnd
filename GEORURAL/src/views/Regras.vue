@@ -7,8 +7,6 @@ import PainelDetalheIndicador from '../components/PainelDetalheIndicador.vue'
 import HistoricoVersoes from '../components/HistoricoVersoes.vue'
 import { regraService, mensagemErro } from '../services/regraService'
 
-defineOptions({ name: 'RegrasIndicadores' })
-
 defineOptions({ name: 'RegrasPagina' })
 
 const router = useRouter()

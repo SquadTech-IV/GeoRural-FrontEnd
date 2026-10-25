@@ -1,51 +1,43 @@
 <script setup>
-import { computed, ref } from 'vue'
+import {
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from 'vue'
+
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import FormularioEntradaDados from '../components/FormularioEntradaDados.vue'
+import SeletorMetodoEntrada from '../components/SeletorMetodoEntrada.vue'
+import ToastMensagem from '../components/ToastMensagem.vue'
 
-defineOptions({
-  name: 'IngestaoPagina',
-})
+import {
+  criarControleIngestao,
+} from '../services/ingestaoControleService'
 
-const props = defineProps({
-  fontes: {
-    type: Array,
-    default: () => [],
-  },
-  conjuntos: {
-    type: Array,
-    default: () => [],
-  },
-  carregando: {
-    type: Boolean,
-    default: false,
-  },
-})
+defineOptions({ name: 'IngestaoPagina' })
 
-const emit = defineEmits(['configurar'])
+const metodo = ref('upload')
+const controle = criarControleIngestao()
 
-const configuracao = ref(null)
+const {
+  fontes,
+  conjuntos,
+  carregando,
+  falhou,
+  mensagem,
+  tipoMensagem,
+  configuracao,
+  resultado,
+  fonteConfigurada,
+  conjuntoConfigurado,
+  chaveFormulario,
+} = controle
 
-const fonteConfigurada = computed(() =>
-  props.fontes.find(
-    fonte =>
-      String(fonte.id) ===
-      String(configuracao.value?.fonteId),
-  ) ?? null,
-)
+watch(metodo, controle.limparResultado)
 
-const conjuntoConfigurado = computed(() =>
-  props.conjuntos.find(
-    conjunto =>
-      String(conjunto.id) ===
-      String(configuracao.value?.conjuntoId),
-  ) ?? null,
-)
-
-function receberConfiguracao(dados) {
-  configuracao.value = dados
-  emit('configurar', dados)
-}
+onMounted(controle.carregar)
+onBeforeUnmount(controle.destruir)
 </script>
 
 <template>
@@ -57,50 +49,77 @@ function receberConfiguracao(dados) {
         <h1>Ingestão de fontes</h1>
 
         <p>
-          Configure a entrada dos dados e selecione o conjunto
-          de destino no GeoDataLake.
+          Configure a entrada dos dados e selecione
+          o conjunto de destino no GeoDataLake.
         </p>
       </header>
 
+      <SeletorMetodoEntrada
+        v-model="metodo"
+        :desabilitado="carregando"
+      />
+
+      <button
+        v-if="falhou"
+        type="button"
+        class="ingestao-tentar"
+        :disabled="carregando"
+        @click="controle.carregar"
+      >
+        Tentar carregar fontes e conjuntos novamente
+      </button>
+
       <FormularioEntradaDados
+        :key="chaveFormulario"
+        v-model:metodo="metodo"
         :fontes="fontes"
         :conjuntos="conjuntos"
         :carregando="carregando"
-        @configurar="receberConfiguracao"
+        @configurar="controle.receberConfiguracao"
+        @api-consultada="controle.receberConsultaApi"
+        @api-selecionada="controle.receberSelecaoApi"
+        @erro="controle.exibirErro"
       />
 
       <section
-        v-if="configuracao"
+        v-if="configuracao && resultado"
         class="ingestao-resumo"
         aria-labelledby="ingestao-resumo-titulo"
         role="status"
       >
         <h2 id="ingestao-resumo-titulo">
-          Configuração preparada
+          Resultado do recebimento
         </h2>
 
         <p>
           {{
-            configuracao.metodo === 'api'
-              ? 'A entrada por API foi selecionada. Nenhuma conexão foi executada.'
-              : 'O arquivo foi selecionado. Nenhum dado foi enviado ao servidor.'
+            configuracao.metodo === 'upload'
+              ? resultado[0]?.aceito
+                ? 'O servidor confirmou o recebimento do arquivo.'
+                : 'O servidor recusou o arquivo.'
+              : `${resultado.importados} item(ns) importado(s), ${resultado.jaRecebidos} já recebido(s) e ${resultado.falhas} falha(s).`
           }}
         </p>
 
         <dl>
           <div>
             <dt>Método de entrada</dt>
-
             <dd>
-              {{
-                configuracao.metodo === 'api'
-                  ? 'API'
-                  : 'Upload'
-              }}
+              {{ configuracao.metodo === 'api' ? 'API' : 'Upload' }}
             </dd>
           </div>
 
-          <template v-if="configuracao.metodo !== 'api'">
+          <div>
+            <dt>Fonte</dt>
+            <dd>{{ fonteConfigurada?.nome }}</dd>
+          </div>
+
+          <div>
+            <dt>Conjunto</dt>
+            <dd>{{ conjuntoConfigurado?.nome }}</dd>
+          </div>
+
+          <template v-if="configuracao.metodo === 'upload'">
             <div>
               <dt>Arquivo</dt>
               <dd>{{ configuracao.arquivo?.name }}</dd>
@@ -116,33 +135,17 @@ function receberConfiguracao(dados) {
               <dd>{{ configuracao.abrangencia }}</dd>
             </div>
           </template>
-
-          <template v-else>
-            <div>
-              <dt>Fonte</dt>
-
-              <dd>
-                {{
-                  fonteConfigurada?.nome ??
-                  'Fonte selecionada'
-                }}
-              </dd>
-            </div>
-
-            <div>
-              <dt>Conjunto</dt>
-
-              <dd>
-                {{
-                  conjuntoConfigurado?.nome ??
-                  'Conjunto selecionado'
-                }}
-              </dd>
-            </div>
-          </template>
         </dl>
       </section>
     </main>
+
+    <ToastMensagem
+      v-if="mensagem"
+      :mensagem="mensagem"
+      :tipo="tipoMensagem"
+      :duracao="tipoMensagem === 'sucesso' ? 6000 : 0"
+      @fechar="controle.fecharMensagem"
+    />
   </div>
 </template>
 

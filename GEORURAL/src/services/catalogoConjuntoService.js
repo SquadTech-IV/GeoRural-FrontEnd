@@ -1,52 +1,30 @@
-import api from './api'
-import { validarId } from './cadastroService'
+export const tiposConjunto = [
+  { codigo: 'IMOVEL', nome: 'Imóvel rural (perímetro)' },
+  { codigo: 'APP', nome: 'APP declarada' },
+  { codigo: 'RESERVA_LEGAL', nome: 'Reserva Legal declarada' },
+  { codigo: 'VEGETACAO', nome: 'Vegetação nativa' },
+  { codigo: 'BIOMA', nome: 'Limites de biomas' },
+  {
+    codigo: 'AREA_PROTEGIDA',
+    nome: 'Áreas protegidas e territórios especiais',
+  },
+  { codigo: 'EMBARGO', nome: 'Embargos ambientais' },
+  { codigo: 'DESMATAMENTO', nome: 'Desmatamento' },
+  { codigo: 'FOCO_CALOR', nome: 'Focos de calor' },
+  { codigo: 'MALHA_MUNICIPAL', nome: 'Malha municipal' },
+].map(tipo => Object.freeze({
+  ...tipo,
+  id: tipo.codigo,
+}))
 
 export const catalogoConjuntoService = {
   async listar({ signal } = {}) {
-    const { data } = await api.get('/api/tipos-conjunto', {
-      signal,
-    })
-
-    if (!Array.isArray(data)) {
-      throw new Error(
-        'A API retornou um catálogo de conjuntos inválido.',
-      )
+    if (signal?.aborted) {
+      const erro = new Error('Consulta cancelada.')
+      erro.name = 'AbortError'
+      throw erro
     }
 
-    const ids = new Set()
-    const nomes = new Set()
-
-    return data.map((tipo) => {
-      if (
-        !tipo ||
-        typeof tipo.nome !== 'string' ||
-        !tipo.nome.trim() ||
-        typeof tipo.codigo !== 'string' ||
-        !tipo.codigo.trim()
-      ) {
-        throw new Error(
-          'A API retornou um tipo de conjunto inválido.',
-        )
-      }
-
-      const id = validarId(tipo.id)
-      const nome = tipo.nome.trim()
-
-      if (ids.has(id) || nomes.has(nome)) {
-        throw new Error(
-          'O catálogo contém tipos repetidos.',
-        )
-      }
-
-      ids.add(id)
-      nomes.add(nome)
-
-      return {
-        ...tipo,
-        id,
-        nome,
-        codigo: tipo.codigo.trim().toUpperCase(),
-      }
-    })
+    return tiposConjunto.map(tipo => ({ ...tipo }))
   },
 }

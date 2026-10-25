@@ -10,9 +10,59 @@ const tema = ref(
 
 const itens = [
   {
+    caminho: '/zona-tratada',
+    titulo: 'Zona tratada',
+    icone: 'arquivos',
+  },
+  {
+    caminho: '/arquivos-recebidos',
+    titulo: 'Arquivos recebidos',
+    icone: 'arquivos',
+  },
+  {
+    caminho: '/cadastros',
+    titulo: 'Cadastros',
+    icone: 'upload',
+  },
+  {
     caminho: '/',
+<<<<<<< HEAD
     titulo: 'Ingestão de fontes',
     icone: 'upload',
+=======
+    titulo: 'Regras',
+    icone: 'regras',
+  },
+  {
+    caminho: '/ingestao',
+    titulo: 'Ingestão de fontes',
+    icone: 'upload',
+  },
+  {
+    caminho: '/processar',
+    titulo: 'Processar dados',
+    icone: 'processar',
+  },
+  {
+    caminho: '/imoveis',
+    titulo: 'Imóveis',
+    icone: 'mapa',
+  },
+  {
+    caminho: '/qualidade',
+    titulo: 'Conferência dos resultados',
+    icone: 'qualidade',
+  },
+  {
+    caminho: '/auditoria',
+    titulo: 'Linhagem e auditoria',
+    icone: 'auditoria',
+  },
+  {
+    caminho: '/rastreabilidade',
+    titulo: 'Trajetória no datalake',
+    icone: 'rastreabilidade',
+>>>>>>> cba4571be93906c02346280169a1428756bbb4f0
   },
   {
     caminho: '/processar',
@@ -43,6 +93,20 @@ const itens = [
 
 function estaAtivo(caminho) {
   if (caminho === '/') {
+<<<<<<< HEAD
+=======
+    return (
+      route.path === '/' ||
+      [
+        'RegraNovaVersao',
+        'RegraDetalheVersao',
+        'RegraCompararVersoes',
+      ].includes(route.name)
+    )
+  }
+
+  if (caminho === '/imoveis') {
+>>>>>>> cba4571be93906c02346280169a1428756bbb4f0
     return (
       route.path === '/' ||
       route.path === '/ingestao'
@@ -132,6 +196,7 @@ function alternarTema() {
             </template>
 
             <template
+<<<<<<< HEAD
               v-else-if="item.icone === 'processar'"
             >
               <path
@@ -143,10 +208,14 @@ function alternarTema() {
 
             <template
               v-else-if="item.icone === 'arquivos'"
+=======
+              v-else-if="item.icone === 'regras'"
+>>>>>>> cba4571be93906c02346280169a1428756bbb4f0
             >
               <path
-                d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
+                d="M4 7h2M12 7h8M4 17h8M18 17h2"
               />
+<<<<<<< HEAD
               <path d="M14 3v6h6" />
               <path d="M8 13h8M8 17h6" />
             </template>
@@ -163,6 +232,61 @@ function alternarTema() {
             <template
               v-else-if="item.icone === 'qualidade'"
             >
+=======
+              <circle cx="9" cy="7" r="3" />
+              <circle cx="15" cy="17" r="3" />
+            </template>
+
+            <template
+              v-else-if="item.icone === 'processar'"
+            >
+              <path d="m9 5 11 7-11 7z" />
+              <path d="M4 5v14" />
+            </template>
+
+            <template
+              v-else-if="item.icone === 'qualidade'"
+            >
+              <path
+                d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z"
+              />
+              <path d="m8 12 3 3 5-6" />
+            </template>
+
+            <template
+              v-else-if="item.icone === 'auditoria'"
+            >
+              <circle cx="6" cy="5" r="2" />
+              <circle cx="6" cy="19" r="2" />
+              <circle cx="18" cy="12" r="2" />
+              <path
+                d="M6 7v10M8 5h3a7 7 0 0 1 7 5"
+              />
+              <path
+                d="M8 19h3a7 7 0 0 0 7-5"
+              />
+            </template>
+
+            <template
+              v-else-if="item.icone === 'rastreabilidade'"
+            >
+              <circle cx="5" cy="5" r="2" />
+              <circle cx="19" cy="19" r="2" />
+              <path
+                d="M7 5h8a4 4 0 0 1 0 8H9a4 4 0 0 0 0 8h8"
+              />
+            </template>
+
+            <template
+              v-else-if="item.icone === 'arquivos'"
+            >
+              <path
+                d="M14 3H6v18h12V9zM14 3v6h4M8 13h8M8 17h5"
+              />
+            </template>
+
+            <template v-else>
+>>>>>>> cba4571be93906c02346280169a1428756bbb4f0
               <path
                 d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6z"
               />
