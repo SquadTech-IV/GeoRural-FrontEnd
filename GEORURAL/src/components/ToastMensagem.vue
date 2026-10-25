@@ -9,12 +9,20 @@ const props = defineProps({
   tipo: {
     type: String,
     default: 'sucesso',
-    validator: (valor) =>
+    validator: valor =>
       ['sucesso', 'erro', 'aviso'].includes(valor),
   },
   duracao: {
     type: Number,
     default: 5000,
+  },
+  titulo: {
+    type: String,
+    default: '',
+  },
+  identificador: {
+    type: [String, Number],
+    default: null,
   },
 })
 
@@ -26,7 +34,9 @@ const titulos = {
   aviso: 'Atenção',
 }
 
-const titulo = computed(() => titulos[props.tipo])
+const tituloExibido = computed(() =>
+  props.titulo.trim() || titulos[props.tipo],
+)
 
 let temporizador
 
@@ -49,6 +59,7 @@ watch(
     () => props.mensagem,
     () => props.tipo,
     () => props.duracao,
+    () => props.identificador,
   ],
   iniciarTemporizador,
   { immediate: true },
@@ -99,7 +110,7 @@ onBeforeUnmount(cancelarTemporizador)
         :role="tipo === 'erro' ? 'alert' : 'status'"
         aria-atomic="true"
       >
-        <strong>{{ titulo }}</strong>
+        <strong>{{ tituloExibido }}</strong>
         <p>{{ mensagem }}</p>
       </div>
 
