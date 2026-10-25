@@ -1,6 +1,12 @@
 import { ref } from 'vue'
 
 import {
+  identificadorOriginal,
+  lerDadoOriginal,
+  obterCampoOriginal,
+} from './quarentenaDadosService'
+
+import {
   quarentenaService,
   requisicaoQuarentenaCancelada,
   validarIdQuarentena,
@@ -22,32 +28,21 @@ function texto(valor) {
   return String(valor)
 }
 
-export function prepararDetalheQuarentena(
-  dados,
-  registroId,
-) {
-  if (
-    !dados ||
-    typeof dados !== 'object' ||
-    Array.isArray(dados)
-  ) {
+export function prepararDetalheQuarentena(dados, registroId) {
+  if (!dados || typeof dados !== 'object' || Array.isArray(dados)) {
     throw new Error(
       'O backend retornou um detalhe de quarentena inválido.',
     )
   }
 
   const id = validarIdQuarentena(registroId)
-
-  const idRetornado =
-    dados.id ?? dados.quarentenaId
+  const idRetornado = dados.id ?? dados.quarentenaId
 
   if (
     idRetornado != null &&
     validarIdQuarentena(idRetornado) !== id
   ) {
-    throw new Error(
-      'O detalhe recebido pertence a outro registro.',
-    )
+    throw new Error('O detalhe recebido pertence a outro registro.')
   }
 
   return {
@@ -58,20 +53,20 @@ export function prepararDetalheQuarentena(
         titulo: 'Registro',
         valor: texto(
           dados.identificador ??
-          dados.identificadorRegistro,
+          dados.identificadorRegistro ??
+          identificadorOriginal(dados),
         ),
       },
       {
         chave: 'linha',
         titulo: 'Linha de origem',
-        valor: texto(
-          dados.linhaOrigem ?? dados.linha,
-        ),
+        valor: texto(dados.linhaOrigem ?? dados.linha),
       },
       {
         chave: 'tipo',
         titulo: 'Tipo de inconsistência',
         valor: texto(
+          dados.codigoRegra ??
           dados.tipoRegra ??
           dados.tipo ??
           dados.regra?.tipo,
@@ -80,43 +75,47 @@ export function prepararDetalheQuarentena(
       {
         chave: 'campo',
         titulo: 'Campo',
-        valor: texto(
-          dados.colunaErro ?? dados.campo,
-        ),
+        valor: texto(dados.colunaErro ?? dados.campo),
       },
       {
         chave: 'valor',
         titulo: 'Valor recebido',
-        valor: texto(dados.valorRecebido),
+        valor: (() => {
+          const valor = obterCampoOriginal(
+            dados.dadoOriginal,
+            dados.colunaErro,
+          )
+
+          return valor === null ? 'null' : texto(valor)
+        })(),
       },
       {
         chave: 'regra',
         titulo: 'Regra violada',
-        valor: texto(
-          dados.nomeRegra ??
-          dados.regra?.nome,
-        ),
+        valor: texto(dados.nomeRegra ?? dados.regra?.nome),
       },
       {
         chave: 'situacao',
         titulo: 'Situação',
-        valor: texto(
-          dados.situacao ?? dados.status,
-        ),
+        valor: texto(dados.situacao ?? dados.status),
       },
       {
         chave: 'arquivo',
         titulo: 'Arquivo de origem',
         valor: texto(
+          dados.nomeArquivoBruto ??
           dados.nomeArquivo ??
           dados.arquivo?.nomeOriginal ??
           dados.arquivo?.nome,
         ),
       },
+      {
+        chave: 'original',
+        titulo: 'Dado original recebido',
+        valor: texto(lerDadoOriginal(dados.dadoOriginal)),
+      },
     ],
-    motivo: texto(
-      dados.motivoErro ?? dados.motivo,
-    ),
+    motivo: texto(dados.motivoErro ?? dados.motivo),
   }
 }
 
@@ -137,7 +136,7 @@ export function criarConsultaDetalheQuarentena() {
     falhou.value = false
   }
 
-  async function consultar(registroId) {
+  async function consultar(registroId, { registro } = {}) {
     if (destruido) return
 
     limpar()
@@ -149,11 +148,10 @@ export function criarConsultaDetalheQuarentena() {
     try {
       const id = validarIdQuarentena(registroId)
 
-      const dados =
-        await quarentenaService.consultarRegistro(
-          id,
-          { signal: atual.signal },
-        )
+      const dados = await quarentenaService.consultarRegistro(id, {
+        signal: atual.signal,
+        registro,
+      })
 
       if (
         destruido ||
@@ -163,10 +161,7 @@ export function criarConsultaDetalheQuarentena() {
         return
       }
 
-      detalhe.value = prepararDetalheQuarentena(
-        dados,
-        id,
-      )
+      detalhe.value = prepararDetalheQuarentena(dados, id)
     } catch (erro) {
       if (
         destruido ||

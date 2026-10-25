@@ -1,182 +1,152 @@
 import api from './api'
-
-import {
-  executarConsultaQuarentena,
-} from './quarentenaErroService'
+import { executarConsultaQuarentena } from './quarentenaErroService'
 
 export {
   mensagemErroQuarentena,
   requisicaoQuarentenaCancelada,
 } from './quarentenaErroService'
 
-let rotasConfiguradas = null
+const BASE = '/api/v1/qualidade'
 
 export function validarIdQuarentena(valor) {
-  if (
-    typeof valor === 'number' &&
-    !Number.isSafeInteger(valor)
-  ) {
-    throw new Error(
-      'O identificador informado é inválido.',
-    )
-  }
-
   const id = String(valor ?? '').trim()
 
-  if (!/^[1-9]\d*$/.test(id)) {
-    throw new Error(
-      'Informe um identificador válido.',
-    )
+  if (
+    !/^[1-9]\d*$/.test(id) ||
+    (typeof valor === 'number' && !Number.isSafeInteger(valor))
+  ) {
+    throw new Error('Informe um identificador válido.')
   }
 
   return id
 }
 
-function validarCaminho(caminho) {
+function inteiro(valor, padrao, minimo, maximo) {
+  const numero = valor ?? padrao
+
   if (
-    typeof caminho !== 'string' ||
-    !caminho.startsWith('/') ||
-    caminho.startsWith('//')
+    !Number.isSafeInteger(numero) ||
+    numero < minimo ||
+    numero > maximo
   ) {
-    throw new Error(
-      'A rota de quarentena configurada é inválida.',
-    )
+    throw new Error('Informe uma página e um tamanho de consulta válidos.')
   }
 
-  return caminho
+  return numero
 }
 
-export function configurarRotasQuarentena(rotas) {
-  if (
-    !rotas ||
-    typeof rotas.execucoes !== 'string' ||
-    typeof rotas.registros !== 'function' ||
-    typeof rotas.detalhe !== 'function'
-  ) {
-    throw new Error(
-      'Configure as rotas de execuções, registros e detalhes da quarentena.',
-    )
-  }
-
-  validarCaminho(rotas.execucoes)
-
-  rotasConfiguradas = {
-    execucoes: rotas.execucoes,
-    registros: rotas.registros,
-    detalhe: rotas.detalhe,
-  }
-}
-
-function obterCaminho(tipo, id) {
-  if (!rotasConfiguradas) {
-    throw new Error(
-      'As rotas da quarentena ainda não foram configuradas com os endpoints do backend.',
-    )
-  }
-
-  const rota = rotasConfiguradas[tipo]
-
-  return validarCaminho(
-    typeof rota === 'function'
-      ? rota(id)
-      : rota,
-  )
-}
-
-function validarObjeto(dados) {
+export function validarPaginaQuarentena(dados, pagina) {
   if (
     !dados ||
-    typeof dados !== 'object' ||
-    Array.isArray(dados)
-  ) {
-    throw new Error(
-      'O backend retornou um registro de quarentena inválido.',
+    !Array.isArray(dados.content) ||
+    !Number.isSafeInteger(dados.number) ||
+    dados.number !== pagina ||
+    !Number.isSafeInteger(dados.totalElements) ||
+    dados.totalElements < 0 ||
+    !Number.isSafeInteger(dados.totalPages) ||
+    dados.totalPages < 0 ||
+    !Number.isSafeInteger(dados.size) ||
+    dados.size < 1 ||
+    dados.content.length > dados.size ||
+    dados.content.length > dados.totalElements ||
+    (
+      dados.totalPages > 0 &&
+      dados.number >= dados.totalPages &&
+      dados.content.length > 0
     )
+  ) {
+    throw new Error('O backend retornou uma página de quarentena inválida.')
   }
 
   return dados
 }
 
-function validarLista(dados) {
-  if (Array.isArray(dados)) {
-    return dados
+function parametros(filtros, ordenacao) {
+  const params = {
+    page: inteiro(filtros.page, 0, 0, Number.MAX_SAFE_INTEGER),
+    size: inteiro(filtros.size, 20, 1, 100),
+    sort: ordenacao,
   }
 
-  if (
-    dados &&
-    typeof dados === 'object' &&
-    Array.isArray(dados.content)
-  ) {
-    return dados
+  if (filtros.conjuntoId != null && filtros.conjuntoId !== '') {
+    params.conjuntoId = validarIdQuarentena(filtros.conjuntoId)
   }
 
-  throw new Error(
-    'O backend retornou uma listagem de quarentena inválida.',
-  )
-}
-
-function executarConsulta(
-  tipo,
-  {
-    id,
-    params,
-    signal,
-    validar,
-  },
-) {
-  return executarConsultaQuarentena(async () => {
-    const identificador = id === undefined
-      ? undefined
-      : validarIdQuarentena(id)
-
-    const caminho = obterCaminho(
-      tipo,
-      identificador,
-    )
-
-    const { data } = await api.get(caminho, {
-      params,
-      signal,
-      timeout: 30000,
-    })
-
-    return validar(data)
-  })
+  return params
 }
 
 export const quarentenaService = {
-  listarExecucoes(
-    filtros = {},
-    { signal } = {},
-  ) {
-    return executarConsulta('execucoes', {
-      params: filtros,
-      signal,
-      validar: validarLista,
+  listarExecucoes(filtros = {}, { signal } = {}) {
+    return executarConsultaQuarentena(async () => {
+      const params = parametros(filtros, 'inicio,desc')
+
+      const { data } = await api.get(`${BASE}/execucoes`, {
+        params,
+        signal,
+      })
+
+      validarPaginaQuarentena(data, params.page)
+
+      data.content.forEach(item => {
+        validarIdQuarentena(item?.id)
+      })
+
+      return data
     })
   },
 
-  listarRegistros(
-    execucaoId,
-    filtros = {},
-    { signal } = {},
-  ) {
-    return executarConsulta('registros', {
-      id: execucaoId,
-      params: filtros,
-      signal,
-      validar: validarLista,
+  listarRegistros(execucaoId, filtros = {}, { signal } = {}) {
+    return executarConsultaQuarentena(async () => {
+      const params = parametros(filtros, 'dataRegistro,desc')
+
+      params.execucaoId = validarIdQuarentena(execucaoId)
+
+      if (filtros.situacao) {
+        const situacao = String(filtros.situacao).trim().toUpperCase()
+
+        if (!['PENDENTE', 'CORRIGIDO', 'DESCARTADO'].includes(situacao)) {
+          throw new Error('Selecione uma situação de quarentena válida.')
+        }
+
+        params.situacao = situacao
+      }
+
+      const { data } = await api.get(`${BASE}/quarentena`, {
+        params,
+        signal,
+      })
+
+      validarPaginaQuarentena(data, params.page)
+
+      data.content.forEach(item => {
+        validarIdQuarentena(item?.quarentenaId)
+
+        if (validarIdQuarentena(item?.execucaoId) !== params.execucaoId) {
+          throw new Error('A API retornou registros de outra execução.')
+        }
+      })
+
+      return data
     })
   },
 
-  consultarRegistro(
-    registroId,
-    { signal } = {},
-  ) {
-    return executarConsulta('detalhe', {
-      id: registroId,
-      signal,
-      validar: validarObjeto,
+  consultarRegistro(registroId, { registro, signal } = {}) {
+    return executarConsultaQuarentena(async () => {
+      if (signal?.aborted) {
+        const erro = new Error('Consulta cancelada.')
+        erro.name = 'AbortError'
+        throw erro
+      }
+
+      const id = validarIdQuarentena(registroId)
+
+      if (!registro || validarIdQuarentena(registro.quarentenaId) !== id) {
+        throw new Error(
+          'Selecione novamente o registro na listagem de quarentena.',
+        )
+      }
+
+      return { ...registro }
     })
   },
 }

@@ -16,16 +16,17 @@ import {
 } from '../services/quarentenaCamposInvalidosService'
 
 const props = defineProps({
+  registro: {
+    type: Object,
+    default: null,
+  },
   registroId: {
     type: [String, Number],
     required: true,
   },
 })
 
-const emit = defineEmits([
-  'fechar',
-  'erro',
-])
+const emit = defineEmits(['fechar', 'erro'])
 
 const dialogo = ref(null)
 
@@ -42,9 +43,7 @@ const camposExibidos = computed(() =>
 )
 
 const possuiDestaques = computed(() =>
-  camposExibidos.value.some(
-    campo => campo.destaque,
-  ),
+  camposExibidos.value.some(campo => campo.destaque),
 )
 
 let elementoAnterior = null
@@ -53,14 +52,15 @@ let desmontado = false
 
 async function carregar() {
   try {
-    await consultar(props.registroId)
+    await consultar(props.registroId, {
+      registro: props.registro,
+    })
   } catch (erro) {
     if (desmontado) return
 
     emit(
       'erro',
-      erro.message ||
-        'Não foi possível consultar a inconsistência.',
+      erro.message || 'Não foi possível consultar a inconsistência.',
     )
   }
 }
@@ -77,8 +77,7 @@ function cancelar(evento) {
 function clicarFora(evento) {
   if (evento.target !== dialogo.value) return
 
-  const limites =
-    dialogo.value.getBoundingClientRect()
+  const limites = dialogo.value.getBoundingClientRect()
 
   const fora =
     evento.clientX < limites.left ||
@@ -92,7 +91,6 @@ function clicarFora(evento) {
 onMounted(async () => {
   elementoAnterior = document.activeElement
   overflowAnterior = document.body.style.overflow
-
   document.body.style.overflow = 'hidden'
 
   await nextTick()
@@ -105,7 +103,6 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   desmontado = true
-
   destruir()
 
   dialogo.value?.close()
@@ -133,9 +130,7 @@ onBeforeUnmount(() => {
             Detalhamento da inconsistência
           </h2>
 
-          <p>
-            Registro em quarentena {{ registroId }}
-          </p>
+          <p>Registro em quarentena {{ registroId }}</p>
         </div>
 
         <button
@@ -185,8 +180,8 @@ onBeforeUnmount(() => {
             v-if="possuiDestaques"
             class="quarentena-detalhe-legenda"
           >
-            Os destaques identificam o campo apontado
-            pela validação e o valor recebido.
+            Os destaques identificam o campo apontado pela validação
+            e o valor recebido.
           </p>
 
           <dl class="quarentena-detalhe-campos">
@@ -194,12 +189,10 @@ onBeforeUnmount(() => {
               v-for="campo in camposExibidos"
               :key="campo.chave"
               :class="{
-                'quarentena-detalhe-campo--invalido':
-                  campo.destaque,
+                'quarentena-detalhe-campo--invalido': campo.destaque,
               }"
             >
               <dt>{{ campo.titulo }}</dt>
-
               <dd>{{ campo.valor }}</dd>
 
               <dd

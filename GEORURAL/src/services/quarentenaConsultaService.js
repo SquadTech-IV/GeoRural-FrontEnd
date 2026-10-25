@@ -1,7 +1,5 @@
-import {
-  computed,
-  ref,
-} from 'vue'
+import { computed, ref } from 'vue'
+import { identificadorOriginal } from './quarentenaDadosService'
 
 import {
   quarentenaService,
@@ -10,10 +8,7 @@ import {
 } from './quarentenaService'
 
 function texto(valor) {
-  if (
-    typeof valor === 'string' ||
-    typeof valor === 'number'
-  ) {
+  if (typeof valor === 'string' || typeof valor === 'number') {
     return String(valor).trim()
   }
 
@@ -28,61 +23,44 @@ function normalizar(valor) {
 }
 
 function extrairLista(resposta) {
-  return Array.isArray(resposta)
-    ? resposta
-    : resposta.content
+  return Array.isArray(resposta) ? resposta : resposta.content
 }
 
 function prepararExecucoes(lista) {
   return lista.map(item => {
-    if (
-      !item ||
-      typeof item !== 'object' ||
-      Array.isArray(item)
-    ) {
-      throw new Error(
-        'A listagem contém uma execução inválida.',
-      )
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new Error('A listagem contém uma execução inválida.')
     }
 
-    const id = validarIdQuarentena(
-      item.id ?? item.execucaoId,
-    )
+    const id = validarIdQuarentena(item.id ?? item.execucaoId)
 
     const nome = texto(
+      item.nomeArquivoBruto ??
       item.nomeArquivo ??
       item.arquivo?.nomeOriginal ??
       item.arquivo?.nome ??
+      item.nomeConjunto ??
       item.conjuntoNome ??
       item.conjunto?.nome,
     )
 
     return {
       id,
-      nome: nome
-        ? `Execução ${id} — ${nome}`
-        : `Execução ${id}`,
+      nome: nome ? `Execução ${id} — ${nome}` : `Execução ${id}`,
     }
   })
 }
 
 function prepararRegistros(lista) {
   return lista.map((item, indice) => {
-    if (
-      !item ||
-      typeof item !== 'object' ||
-      Array.isArray(item)
-    ) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
       throw new Error(
         'A listagem contém um registro de quarentena inválido.',
       )
     }
 
     const id = item.id ?? item.quarentenaId ?? null
-
-    const linhaRecebida =
-      item.linhaOrigem ?? item.linha
-
+    const linhaRecebida = item.linhaOrigem ?? item.linha
     const linhaTexto = texto(linhaRecebida)
 
     const linhaNumerica =
@@ -96,24 +74,22 @@ function prepararRegistros(lista) {
       id,
       linha: linhaTexto || 'Não informada',
       linhaNumerica,
-      identificador: texto(
-        item.identificador ??
-        item.identificadorRegistro,
-      ) || 'Não informado',
-      tipo: texto(
-        item.tipoRegra ??
-        item.tipo ??
-        item.regra?.tipo,
-      ) || 'Não informado',
-      campo: texto(
-        item.colunaErro ?? item.campo,
-      ) || 'Não informado',
-      motivo: texto(
-        item.motivoErro ?? item.motivo,
-      ) || 'Não informado',
-      situacao: texto(
-        item.situacao ?? item.status,
-      ) || 'Não informada',
+      identificador:
+        texto(
+          item.identificador ??
+          item.identificadorRegistro ??
+          identificadorOriginal(item),
+        ) || 'Não informado',
+      tipo:
+        texto(
+          item.codigoRegra ??
+          item.tipoRegra ??
+          item.tipo ??
+          item.regra?.tipo,
+        ) || 'Não informado',
+      campo: texto(item.colunaErro ?? item.campo) || 'Não informado',
+      motivo: texto(item.motivoErro ?? item.motivo) || 'Não informado',
+      situacao: texto(item.situacao ?? item.status) || 'Não informada',
       original: item,
     }
   })
@@ -138,6 +114,14 @@ export function criarConsultaQuarentena() {
   const mensagem = ref('')
   const listaParcial = ref(false)
 
+  const paginaExecucoes = ref(0)
+  const totalPaginasExecucoes = ref(0)
+  const totalExecucoes = ref(0)
+
+  const paginaRegistros = ref(0)
+  const totalPaginasRegistros = ref(0)
+  const totalRegistros = ref(0)
+
   let consultaExecucoes = null
   let consultaRegistros = null
   let destruido = false
@@ -159,9 +143,8 @@ export function criarConsultaQuarentena() {
       tipos.get(valor).quantidade++
     }
 
-    return [...tipos.values()].sort(
-      (a, b) =>
-        a.nome.localeCompare(b.nome, 'pt-BR'),
+    return [...tipos.values()].sort((a, b) =>
+      a.nome.localeCompare(b.nome, 'pt-BR'),
     )
   })
 
@@ -176,38 +159,34 @@ export function criarConsultaQuarentena() {
   const registrosFiltrados = computed(() => {
     const termo = normalizar(busca.value)
 
-    const filtrados = registros.value.filter(
-      registro => {
-        if (
-          tipoSelecionado.value &&
-          normalizar(registro.tipo) !==
-            tipoSelecionado.value
-        ) {
-          return false
-        }
+    const filtrados = registros.value.filter(registro => {
+      if (
+        tipoSelecionado.value &&
+        normalizar(registro.tipo) !== tipoSelecionado.value
+      ) {
+        return false
+      }
 
-        if (!termo) return true
+      if (!termo) return true
 
-        const conteudo = [
-          registro.linha,
-          registro.identificador,
-          registro.tipo,
-          registro.campo,
-          registro.motivo,
-          registro.situacao,
-        ].map(normalizar).join(' ')
+      const conteudo = [
+        registro.linha,
+        registro.identificador,
+        registro.tipo,
+        registro.campo,
+        registro.motivo,
+        registro.situacao,
+      ]
+        .map(normalizar)
+        .join(' ')
 
-        return conteudo.includes(termo)
-      },
-    )
+      return conteudo.includes(termo)
+    })
 
     return filtrados.sort((a, b) => {
       if (ordenacao.value === 'motivo') {
         return (
-          a.motivo.localeCompare(
-            b.motivo,
-            'pt-BR',
-          ) ||
+          a.motivo.localeCompare(b.motivo, 'pt-BR') ||
           compararLinha(a, b)
         )
       }
@@ -221,10 +200,7 @@ export function criarConsultaQuarentena() {
   })
 
   function compararLinha(a, b, decrescente = false) {
-    if (
-      a.linhaNumerica === null &&
-      b.linhaNumerica === null
-    ) {
+    if (a.linhaNumerica === null && b.linhaNumerica === null) {
       return 0
     }
 
@@ -251,9 +227,11 @@ export function criarConsultaQuarentena() {
     falhouRegistros.value = false
     consultado.value = false
     listaParcial.value = false
+    totalPaginasRegistros.value = 0
+    totalRegistros.value = 0
   }
 
-  async function carregarExecucoes() {
+  async function carregarExecucoes(pagina = 0) {
     if (destruido) return
 
     consultaExecucoes?.abort()
@@ -263,6 +241,10 @@ export function criarConsultaQuarentena() {
     const atual = new AbortController()
     consultaExecucoes = atual
 
+    paginaExecucoes.value = pagina
+    totalPaginasExecucoes.value = 0
+    totalExecucoes.value = 0
+
     execucoes.value = []
     execucaoId.value = ''
     mensagem.value = ''
@@ -271,11 +253,15 @@ export function criarConsultaQuarentena() {
     falhouExecucoes.value = false
 
     try {
-      const resposta =
-        await quarentenaService.listarExecucoes(
-          {},
-          { signal: atual.signal },
-        )
+      const resposta = await quarentenaService.listarExecucoes(
+        {
+          page: pagina,
+          size: 20,
+        },
+        {
+          signal: atual.signal,
+        },
+      )
 
       if (
         destruido ||
@@ -285,9 +271,9 @@ export function criarConsultaQuarentena() {
         return
       }
 
-      execucoes.value = prepararExecucoes(
-        extrairLista(resposta),
-      )
+      totalPaginasExecucoes.value = resposta.totalPages
+      totalExecucoes.value = resposta.totalElements
+      execucoes.value = prepararExecucoes(extrairLista(resposta))
     } catch (erro) {
       if (
         destruido ||
@@ -301,10 +287,7 @@ export function criarConsultaQuarentena() {
       falhouExecucoes.value = true
       mensagem.value = erro.message
     } finally {
-      if (
-        !destruido &&
-        consultaExecucoes === atual
-      ) {
+      if (!destruido && consultaExecucoes === atual) {
         carregandoExecucoes.value = false
         consultaExecucoes = null
       }
@@ -313,7 +296,7 @@ export function criarConsultaQuarentena() {
 
   async function selecionarExecucao(
     valor,
-    { preservarFiltros = false } = {},
+    { preservarFiltros = false, pagina = 0 } = {},
   ) {
     if (destruido) return
 
@@ -323,6 +306,7 @@ export function criarConsultaQuarentena() {
       limparFiltros()
     }
 
+    paginaRegistros.value = pagina
     execucaoId.value = String(valor ?? '')
     mensagem.value = ''
 
@@ -333,12 +317,16 @@ export function criarConsultaQuarentena() {
     carregandoRegistros.value = true
 
     try {
-      const resposta =
-        await quarentenaService.listarRegistros(
-          execucaoId.value,
-          {},
-          { signal: atual.signal },
-        )
+      const resposta = await quarentenaService.listarRegistros(
+        execucaoId.value,
+        {
+          page: pagina,
+          size: 20,
+        },
+        {
+          signal: atual.signal,
+        },
+      )
 
       if (
         destruido ||
@@ -347,6 +335,9 @@ export function criarConsultaQuarentena() {
       ) {
         return
       }
+
+      totalPaginasRegistros.value = resposta.totalPages
+      totalRegistros.value = resposta.totalElements
 
       const lista = extrairLista(resposta)
 
@@ -371,10 +362,7 @@ export function criarConsultaQuarentena() {
       falhouRegistros.value = true
       mensagem.value = erro.message
     } finally {
-      if (
-        !destruido &&
-        consultaRegistros === atual
-      ) {
+      if (!destruido && consultaRegistros === atual) {
         carregandoRegistros.value = false
         consultaRegistros = null
       }
@@ -382,10 +370,10 @@ export function criarConsultaQuarentena() {
   }
 
   function tentarRegistrosNovamente() {
-    return selecionarExecucao(
-      execucaoId.value,
-      { preservarFiltros: true },
-    )
+    return selecionarExecucao(execucaoId.value, {
+      preservarFiltros: true,
+      pagina: paginaRegistros.value,
+    })
   }
 
   function fecharMensagem() {
@@ -394,7 +382,6 @@ export function criarConsultaQuarentena() {
 
   function destruir() {
     destruido = true
-
     consultaExecucoes?.abort()
     consultaRegistros?.abort()
   }
@@ -416,6 +403,12 @@ export function criarConsultaQuarentena() {
     consultado,
     mensagem,
     listaParcial,
+    paginaExecucoes,
+    totalPaginasExecucoes,
+    totalExecucoes,
+    paginaRegistros,
+    totalPaginasRegistros,
+    totalRegistros,
     carregarExecucoes,
     selecionarExecucao,
     tentarRegistrosNovamente,

@@ -1,9 +1,5 @@
 <script setup>
-import {
-  onBeforeUnmount,
-  onMounted,
-  ref,
-} from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
@@ -39,6 +35,12 @@ const {
   consultado,
   mensagem,
   listaParcial,
+  paginaExecucoes,
+  totalPaginasExecucoes,
+  totalExecucoes,
+  paginaRegistros,
+  totalPaginasRegistros,
+  totalRegistros,
   carregarExecucoes,
   selecionarExecucao,
   tentarRegistrosNovamente,
@@ -48,11 +50,12 @@ const {
 } = criarConsultaQuarentena()
 
 const registroDetalhadoId = ref(null)
+const registroDetalhado = ref(null)
 
 function abrirDetalhe(registro) {
   try {
-    registroDetalhadoId.value =
-      validarIdQuarentena(registro.id)
+    registroDetalhadoId.value = validarIdQuarentena(registro.id)
+    registroDetalhado.value = registro.original
   } catch (erro) {
     mensagem.value = erro.message
   }
@@ -60,6 +63,7 @@ function abrirDetalhe(registro) {
 
 function fecharDetalhe() {
   registroDetalhadoId.value = null
+  registroDetalhado.value = null
 }
 
 function exibirErro(erro) {
@@ -68,15 +72,26 @@ function exibirErro(erro) {
 
 function alterarExecucao(evento) {
   fecharDetalhe()
-
-  selecionarExecucao(
-    evento.target.value,
-  )
+  selecionarExecucao(evento.target.value)
 }
 
 function atualizarExecucoes() {
   fecharDetalhe()
   carregarExecucoes()
+}
+
+function mudarPaginaExecucoes(pagina) {
+  fecharDetalhe()
+  carregarExecucoes(pagina)
+}
+
+function mudarPaginaRegistros(pagina) {
+  fecharDetalhe()
+
+  selecionarExecucao(execucaoId.value, {
+    preservarFiltros: true,
+    pagina,
+  })
 }
 
 onMounted(carregarExecucoes)
@@ -92,9 +107,8 @@ onBeforeUnmount(destruir)
         <h1>Registros em quarentena</h1>
 
         <p>
-          Consulte os registros rejeitados, filtre as
-          inconsistências, confira os detalhes e exporte
-          os registros filtrados.
+          Consulte os registros rejeitados, filtre as inconsistências,
+          confira os detalhes e exporte os registros filtrados.
         </p>
       </header>
 
@@ -146,10 +160,7 @@ onBeforeUnmount(destruir)
           Nenhuma execução disponível para consulta.
         </p>
 
-        <div
-          v-else
-          class="quarentena-campo"
-        >
+        <div v-else class="quarentena-campo">
           <label for="quarentena-execucao">
             Selecione uma execução
           </label>
@@ -159,9 +170,7 @@ onBeforeUnmount(destruir)
             :value="execucaoId"
             @change="alterarExecucao"
           >
-            <option value="">
-              Selecione
-            </option>
+            <option value="">Selecione</option>
 
             <option
               v-for="execucao in execucoes"
@@ -173,6 +182,39 @@ onBeforeUnmount(destruir)
           </select>
         </div>
       </section>
+
+      <nav
+        v-if="totalPaginasExecucoes > 1"
+        class="quarentena-secao-cabecalho"
+        aria-label="Páginas de execuções"
+      >
+        <button
+          type="button"
+          class="quarentena-botao"
+          :disabled="carregandoExecucoes || paginaExecucoes === 0"
+          @click="mudarPaginaExecucoes(paginaExecucoes - 1)"
+        >
+          Anteriores
+        </button>
+
+        <span class="quarentena-contagem" role="status">
+          Execuções: página {{ paginaExecucoes + 1 }}
+          de {{ totalPaginasExecucoes }} ·
+          {{ totalExecucoes }} no total
+        </span>
+
+        <button
+          type="button"
+          class="quarentena-botao"
+          :disabled="
+            carregandoExecucoes ||
+            paginaExecucoes + 1 >= totalPaginasExecucoes
+          "
+          @click="mudarPaginaExecucoes(paginaExecucoes + 1)"
+        >
+          Próximas
+        </button>
+      </nav>
 
       <section
         class="quarentena-card"
@@ -190,17 +232,13 @@ onBeforeUnmount(destruir)
             role="status"
           >
             {{ registrosFiltrados.length }}
-            de {{ registros.length }}
-            registro(s) carregado(s)
+            de {{ registros.length }} registro(s) carregado(s) ·
+            {{ totalRegistros }} no total da execução
           </span>
         </header>
 
-        <p
-          v-if="!execucaoId"
-          class="quarentena-estado"
-        >
-          Selecione uma execução para consultar
-          os registros em quarentena.
+        <p v-if="!execucaoId" class="quarentena-estado">
+          Selecione uma execução para consultar os registros em quarentena.
         </p>
 
         <p
@@ -233,21 +271,13 @@ onBeforeUnmount(destruir)
             @erro="exibirErro"
           />
 
-          <p
-            v-if="listaParcial"
-            class="quarentena-ajuda"
-          >
-            A API retornou uma página dos registros.
-            Os filtros e a exportação consideram
-            somente os registros carregados.
+          <p v-if="listaParcial" class="quarentena-ajuda">
+            A API retornou uma página dos registros. Os filtros e a exportação
+            consideram somente os registros carregados.
           </p>
 
-          <p
-            v-if="!registros.length"
-            class="quarentena-estado"
-          >
-            Nenhum registro em quarentena informado
-            para esta execução.
+          <p v-if="!registros.length" class="quarentena-estado">
+            Nenhum registro em quarentena informado para esta execução.
           </p>
 
           <template v-else>
@@ -274,17 +304,14 @@ onBeforeUnmount(destruir)
                   id="quarentena-tipo"
                   v-model="tipoSelecionado"
                 >
-                  <option value="">
-                    Todos os tipos
-                  </option>
+                  <option value="">Todos os tipos</option>
 
                   <option
                     v-for="tipo in tiposDisponiveis"
                     :key="tipo.valor"
                     :value="tipo.valor"
                   >
-                    {{ tipo.nome }}
-                    ({{ tipo.quantidade }})
+                    {{ tipo.nome }} ({{ tipo.quantidade }})
                   </option>
                 </select>
               </div>
@@ -298,17 +325,9 @@ onBeforeUnmount(destruir)
                   id="quarentena-ordenacao"
                   v-model="ordenacao"
                 >
-                  <option value="linha">
-                    Linha crescente
-                  </option>
-
-                  <option value="linha_desc">
-                    Linha decrescente
-                  </option>
-
-                  <option value="motivo">
-                    Motivo
-                  </option>
+                  <option value="linha">Linha crescente</option>
+                  <option value="linha_desc">Linha decrescente</option>
+                  <option value="motivo">Motivo</option>
                 </select>
               </div>
 
@@ -326,8 +345,7 @@ onBeforeUnmount(destruir)
               v-if="!registrosFiltrados.length"
               class="quarentena-estado"
             >
-              Nenhum registro encontrado com os
-              filtros selecionados.
+              Nenhum registro encontrado com os filtros selecionados.
             </p>
 
             <div
@@ -394,12 +412,45 @@ onBeforeUnmount(destruir)
           </template>
         </template>
       </section>
+
+      <nav
+        v-if="consultado && totalPaginasRegistros > 1"
+        class="quarentena-secao-cabecalho"
+        aria-label="Páginas de registros em quarentena"
+      >
+        <button
+          type="button"
+          class="quarentena-botao"
+          :disabled="carregandoRegistros || paginaRegistros === 0"
+          @click="mudarPaginaRegistros(paginaRegistros - 1)"
+        >
+          Anterior
+        </button>
+
+        <span class="quarentena-contagem" role="status">
+          Página {{ paginaRegistros + 1 }}
+          de {{ totalPaginasRegistros }}
+        </span>
+
+        <button
+          type="button"
+          class="quarentena-botao"
+          :disabled="
+            carregandoRegistros ||
+            paginaRegistros + 1 >= totalPaginasRegistros
+          "
+          @click="mudarPaginaRegistros(paginaRegistros + 1)"
+        >
+          Próxima
+        </button>
+      </nav>
     </main>
 
     <DetalheRegistroQuarentena
       v-if="registroDetalhadoId !== null"
       :key="registroDetalhadoId"
       :registro-id="registroDetalhadoId"
+      :registro="registroDetalhado"
       @fechar="fecharDetalhe"
       @erro="exibirErro"
     />
