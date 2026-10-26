@@ -1,0 +1,56 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.Conteudo {
+  max-width: 900px;
+  padding: 32px 24px 16px;
+}
+
+.Conteudo h3 {
+  margin: 0 0 12px;
+  color: var(--cor-texto);
+  font-family: var(--fonte-titulo);
+  font-size: 28px;
+}
+
+.Conteudo p {
+  margin: 0 auto;
+  color: var(--cor-texto-secundario);
+  font-size: 16px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.Dados-Cadastrados {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 24px 16px;
+}
+
+.Dados-Cadastrados-Titulo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.botao-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.botao-icone:hover {
+  opacity: 0.7;
+}

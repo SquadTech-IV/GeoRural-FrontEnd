@@ -1,0 +1,112 @@
+.ingestao-pagina {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 36px 32px 64px;
+  color: var(--cor-texto, #24202d);
+}
+
+.ingestao-cabecalho {
+  margin-bottom: 28px;
+}
+
+.ingestao-cabecalho h1 {
+  margin: 0 0 10px;
+  font-family: var(--fonte-titulo, Arial, sans-serif);
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.ingestao-cabecalho p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.ingestao-resumo {
+  margin-top: 24px;
+  padding: 24px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 14px;
+  background: var(--cor-painel, #fff);
+}
+
+.ingestao-resumo h2 {
+  margin: 0 0 8px;
+  font-family: var(--fonte-titulo, Arial, sans-serif);
+  font-size: 18px;
+}
+
+.ingestao-resumo > p {
+  margin: 0;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.ingestao-resumo dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin: 22px 0 0;
+}
+
+.ingestao-resumo dt {
+  margin-bottom: 6px;
+  color: var(--cor-texto-secundario, #686273);
+  font-size: 12px;
+}
+
+.ingestao-resumo dd {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+
+
+@media (max-width: 640px) {
+  .ingestao-pagina {
+    padding: 24px 16px 48px;
+  }
+
+  .ingestao-cabecalho h1 {
+    font-size: 25px;
+  }
+
+  .ingestao-resumo {
+    padding: 18px;
+  }
+
+  .ingestao-resumo dl {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+.ingestao-tentar {
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 8px;
+  background: var(--cor-painel, #fff);
+  color: var(--cor-roxo, #8520bd);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ingestao-tentar:hover {
+  background: var(--cor-menu-hover, #f6f0fb);
+}
+
+.ingestao-tentar:focus-visible {
+  outline: 2px solid var(--cor-roxo, #8520bd);
+  outline-offset: 3px;
+}

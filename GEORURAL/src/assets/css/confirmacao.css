@@ -1,0 +1,42 @@
+.confirmacao-modal {
+  max-width: 520px;
+}
+
+.confirmacao-mensagem {
+  margin: 0;
+  color: var(--cor-texto);
+  font-size: 14px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.confirmacao-aviso {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border: 1px solid var(--cor-menu-borda);
+  border-left: 3px solid var(--cor-roxo);
+  border-radius: 10px;
+  background: var(--cor-menu-fundo);
+  color: var(--cor-roxo);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.confirmacao-botao {
+  border-color: var(--cor-erro);
+  background: var(--cor-erro);
+  color: #fff;
+}
+
+.confirmacao-botao:hover {
+  border-color: var(--cor-erro);
+  background: var(--cor-erro);
+  color: #fff;
+  filter: brightness(1.08);
+}
+
+.confirmacao-botao:disabled,
+.confirmacao-modal .cadastros-fechar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

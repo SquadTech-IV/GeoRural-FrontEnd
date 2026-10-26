@@ -1,0 +1,113 @@
+/* Upload */
+
+.tela-upload .mensagem-envio {
+  color: var(--cor-texto-envio);
+}
+
+.tela-upload .mensagem-erro {
+  border-color: var(--cor-erro-borda);
+  background: var(--cor-erro-fundo);
+  color: var(--cor-erro);
+}
+
+.tela-upload .mensagem-sucesso {
+  border-color: var(--cor-sucesso-borda);
+  background: var(--cor-sucesso-fundo);
+  color: var(--cor-sucesso);
+}
+
+/* Tabela de imóveis */
+
+.pagina .tabela-rolagem {
+  border-color: var(--cor-borda);
+}
+
+.tabela-imoveis th,
+.tabela-imoveis td {
+  border-bottom-color: var(--cor-borda);
+  color: var(--cor-texto);
+}
+
+.tabela-imoveis th {
+  background: var(--cor-painel-secundario);
+  color: var(--cor-texto-secundario);
+}
+
+/* Tabela do modal */
+
+.informacoes .tabela-informacoes tbody tr:nth-child(even),
+.informacoes .tabela-csv tbody tr:nth-child(even) {
+  background: var(--cor-linha-alternada);
+}
+
+.informacoes .tabela-informacoes tbody tr:hover,
+.informacoes .tabela-csv tbody tr:hover {
+  background: var(--cor-fundo-hover);
+}
+
+/* Botões com fundo roxo */
+
+.pagina button,
+.pagina a {
+  color: var(--cor-texto-botao);
+}
+
+/* Modal de processamento */
+
+.modal-processamento {
+  background: var(--cor-painel);
+}
+
+.modal-processamento .etapa {
+  border-bottom-color: var(--cor-borda);
+}
+
+.modal-processamento .circulo-vazio {
+  border-color: var(--cor-icone-pendente);
+}
+
+.modal-processamento .spinner {
+  border-color: var(--cor-spinner);
+  border-top-color: var(--cor-roxo);
+}
+
+.modal-processamento .check,
+.modal-processamento .falha {
+  color: var(--cor-texto-botao);
+}
+
+/* Mapa: substitui as variáveis locais do tema anterior */
+
+.tela {
+  --fundo: var(--cor-fundo-mapa);
+  --painel: var(--cor-painel-mapa);
+  --borda: var(--cor-borda);
+  --texto: var(--cor-texto);
+  --suave: var(--cor-texto-secundario);
+  --roxo: var(--cor-limite);
+  --vermelho: var(--cor-embargo);
+}
+
+.tela .camadas,
+.tela .zoom,
+.tela .coord {
+  background: var(--cor-controle-mapa);
+}
+
+.tela .apagada .quadro {
+  background: var(--cor-texto-secundario);
+}
+
+.tela .status.pendente {
+  border-color: var(--cor-aviso-borda);
+  background: var(--cor-aviso-fundo);
+  color: var(--cor-aviso);
+}
+
+.tela .barra {
+  background: var(--cor-trilha);
+}
+
+.tela .botao {
+  color: var(--cor-texto-botao);
+}
