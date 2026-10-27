@@ -124,10 +124,15 @@ export function formatarResultado(indicador) {
   }
 
   if (indicador.valorAbsoluto != null) {
+    // A unidade do indicador descreve o percentual, não o valor absoluto.
+    const unidadeAbsoluta = indicador.unidade?.trim() === '%'
+      ? '(valor absoluto)'
+      : indicador.unidade
+
     valores.push(
       formatarNumero(
         indicador.valorAbsoluto,
-        indicador.unidade,
+        unidadeAbsoluta,
       ),
     )
   }
@@ -135,6 +140,34 @@ export function formatarResultado(indicador) {
   return valores.length
     ? valores.join(' · ')
     : 'Resultado não informado'
+}
+
+export function detalharResultado(indicador) {
+  const campos = []
+
+  if (indicador.valorPercentual != null) {
+    campos.push({ legenda: 'Percentual', valor: formatarNumero(indicador.valorPercentual) + '%' })
+  }
+
+  if (indicador.valorHectares != null) {
+    const deficitReserva = indicador.sigla?.toUpperCase() === 'IRL' && Number(indicador.valorHectares) < 0
+    campos.push({
+      legenda: deficitReserva ? 'Déficit de Reserva Legal' : 'Área',
+      valor: formatarNumero(deficitReserva ? Math.abs(Number(indicador.valorHectares)) : indicador.valorHectares, 'ha'),
+    })
+  }
+
+  if (indicador.valorAbsoluto != null) {
+    const numero = Number(indicador.valorAbsoluto)
+    campos.push({
+      legenda: 'Valor absoluto',
+      valor: indicador.valorAbsoluto !== '' && Number.isFinite(numero)
+        ? numero.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
+        : 'Não informado',
+    })
+  }
+
+  return campos
 }
 
 export function requisicaoCancelada(erro) {
