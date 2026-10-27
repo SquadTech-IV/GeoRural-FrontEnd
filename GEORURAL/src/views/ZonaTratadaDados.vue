@@ -3,6 +3,8 @@ import { onBeforeUnmount, onMounted } from 'vue'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
+import InformacoesProcessamento from '../components/InformacoesProcessamento.vue'
+import HistoricoTransformacoes from '../components/HistoricoTransformacoes.vue'
 
 import { criarConsultaZonaTratada } from '../services/zonaTratadaConsultaService'
 
@@ -26,6 +28,14 @@ const {
   fecharMensagem,
   destruir,
 } = criarConsultaZonaTratada()
+
+function formatarNumero(valor) {
+  return typeof valor === 'number' && Number.isFinite(valor) ? valor.toLocaleString('pt-BR') : '—'
+}
+
+function aoErro(texto) {
+  mensagem.value = texto
+}
 
 onMounted(consultar)
 onBeforeUnmount(destruir)
@@ -192,10 +202,25 @@ onBeforeUnmount(destruir)
           </div>
         </dl>
 
-        <p class="tratada-ajuda">
-          O histórico das transformações e os detalhes do processamento ainda não estão disponíveis
-          para consulta.
-        </p>
+        <div class="tratada-fluxo" aria-label="Fluxo de registros no tratamento">
+          <div class="tratada-fluxo-item">
+            <span class="tratada-fluxo-num">{{
+              formatarNumero(selecionado.original?.aprovados)
+            }}</span>
+            <span class="tratada-fluxo-rot">Aprovados que entraram</span>
+          </div>
+
+          <span class="tratada-fluxo-seta" aria-hidden="true">&rarr;</span>
+
+          <div class="tratada-fluxo-item tratada-fluxo-item--ok">
+            <span class="tratada-fluxo-num">{{ formatarNumero(selecionado.original?.tratada) }}</span>
+            <span class="tratada-fluxo-rot">Na zona tratada</span>
+          </div>
+        </div>
+
+        <InformacoesProcessamento :execucao-id="selecionado.execucaoId" @erro="aoErro" />
+
+        <HistoricoTransformacoes :execucao-id="selecionado.execucaoId" @erro="aoErro" />
       </section>
     </main>
 
@@ -210,3 +235,64 @@ onBeforeUnmount(destruir)
 </template>
 
 <style scoped src="../assets/css/zona-tratada-dados.css"></style>
+
+<style scoped>
+.tratada-fluxo {
+  display: flex;
+  align-items: stretch;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.tratada-fluxo-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--cor-borda, #ded8e7);
+  border-radius: 12px;
+  background: var(--cor-painel-secundario, #f0edf5);
+  text-align: center;
+}
+
+.tratada-fluxo-item--ok {
+  border-color: var(--cor-roxo, #8520bd);
+}
+
+.tratada-fluxo-num {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--cor-texto, #24202d);
+}
+
+.tratada-fluxo-item--ok .tratada-fluxo-num {
+  color: var(--cor-roxo, #8520bd);
+}
+
+.tratada-fluxo-rot {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--cor-texto-secundario, #686273);
+}
+
+.tratada-fluxo-seta {
+  display: flex;
+  align-items: center;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--cor-texto-secundario, #686273);
+}
+
+@media (max-width: 640px) {
+  .tratada-fluxo {
+    flex-direction: column;
+  }
+
+  .tratada-fluxo-seta {
+    justify-content: center;
+    transform: rotate(90deg);
+  }
+}
+</style>
