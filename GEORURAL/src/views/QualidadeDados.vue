@@ -29,12 +29,6 @@ function chaveItem(item) {
   return `${item.indicadorSigla}-${item.versaoId}`
 }
 
-function formatarNumero(valor) {
-  return typeof valor === 'number' && Number.isFinite(valor)
-    ? valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 })
-    : '—'
-}
-
 function formatarPercentual(valor) {
   return typeof valor === 'number' && Number.isFinite(valor)
     ? `${valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`

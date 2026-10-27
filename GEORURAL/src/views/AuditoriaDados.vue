@@ -564,7 +564,7 @@ onBeforeUnmount(() => {
         <div class="aud-modal-f">
           <button type="button" class="aud-btn-sec" @click="fecharModal">Fechar</button>
           <button ref="botaoVer" type="button" class="aud-btn" @click="irParaTela(modalTipo)">
-            Ver completo ({{ ELOS[modalTipo].us }}) →
+            Ver tudo
           </button>
         </div>
       </div>
