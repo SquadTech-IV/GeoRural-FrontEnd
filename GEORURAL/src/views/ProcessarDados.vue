@@ -474,12 +474,6 @@ onBeforeUnmount(destruir)
               </p>
             </div>
 
-            <p class="processamento-observacao">
-              O encaminhamento utiliza o arquivo completo.
-              A versão atual do backend não oferece seleção
-              de camadas nem acompanhamento da execução
-              do pipeline.
-            </p>
           </template>
 
           <div v-else class="processamento-vazio">
