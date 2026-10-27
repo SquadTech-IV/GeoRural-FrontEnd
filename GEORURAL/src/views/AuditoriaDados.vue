@@ -555,10 +555,6 @@ onBeforeUnmount(() => {
             <p v-else class="aud-estado-inline">Nenhum arquivo de origem registrado.</p>
           </template>
 
-          <div class="aud-imut">
-            Resumo para auditoria. Para o registro completo, abra a tela de
-            {{ ELOS[modalTipo].rotulo }} ({{ ELOS[modalTipo].us }}).
-          </div>
         </div>
 
         <div class="aud-modal-f">
