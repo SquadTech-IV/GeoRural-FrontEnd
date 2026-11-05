@@ -2,6 +2,7 @@
 @import './css/tabela.css';
 @import './css/tema.css';
 @import './css/dropdowns.css';
+@import './css/toast.css';
 
 #app {
   width: 100%;

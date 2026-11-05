@@ -136,51 +136,21 @@ export function apresentarStatus(valor) {
   const codigo = original.toUpperCase()
 
   const estados = {
-    AGUARDANDO: {
-      texto: 'Aguardando',
-      classe: 'aviso',
-    },
-    PENDENTE: {
-      texto: 'Pendente',
-      classe: 'aviso',
-    },
-    EM_PROCESSAMENTO: {
-      texto: 'Em processamento',
-      classe: 'andamento',
-    },
-    PROCESSANDO: {
-      texto: 'Processando',
-      classe: 'andamento',
-    },
-    PROCESSADO: {
-      texto: 'Processado',
-      classe: 'sucesso',
-    },
-    CONCLUIDO: {
-      texto: 'Concluído',
-      classe: 'sucesso',
-    },
-    SUCESSO: {
-      texto: 'Sucesso',
-      classe: 'sucesso',
-    },
-    ERRO: {
-      texto: 'Erro',
-      classe: 'erro',
-    },
-    FALHA: {
-      texto: 'Falha',
-      classe: 'erro',
-    },
-    FALHOU: {
-      texto: 'Falhou',
-      classe: 'erro',
-    },
+    AGUARDANDO: { texto: 'Aguardando', classe: 'pendente' },
+    PENDENTE: { texto: 'Pendente', classe: 'pendente' },
+    EM_PROCESSAMENTO: { texto: 'Em processamento', classe: 'processando' },
+    PROCESSANDO: { texto: 'Processando', classe: 'processando' },
+    PROCESSADO: { texto: 'Processado', classe: 'sucesso' },
+    CONCLUIDO: { texto: 'Concluído', classe: 'sucesso' },
+    SUCESSO: { texto: 'Sucesso', classe: 'sucesso' },
+    ERRO: { texto: 'Erro', classe: 'erro' },
+    FALHA: { texto: 'Falha', classe: 'erro' },
+    FALHOU: { texto: 'Falhou', classe: 'erro' },
   }
 
   return estados[codigo] ?? {
     texto: original || 'Não informado',
-    classe: 'neutro',
+    classe: 'pendente',
   }
 }
 
@@ -226,6 +196,16 @@ function adaptarDetalhe(dado) {
       tamanho: formatarTamanho(item.tamanhoBytes),
       descricao: item.descricao || '',
     })),
+    // Ajuste os nomes dos campos conforme o que o back devolver.
+    historico: Array.isArray(dado.historico)
+      ? dado.historico.map(etapa => ({
+          etapa: etapa.etapa || etapa.nome || '',
+          situacao: String(etapa.situacao ?? ''),
+          entrada: etapa.entrada ?? 0,
+          saida: etapa.saida ?? 0,
+          descricao: etapa.descricao || '',
+        }))
+      : [],
   }
 }
 
@@ -599,7 +579,7 @@ export function criarConsultaProcessamento() {
 
           if (destruido) return
 
-          ultimaEntrega.value = entrega
+          ultimaEntrega.value = { ...entrega, id: String(entrega.id) }
           sucessos.push(id)
         } catch (erro) {
           if (destruido) return
@@ -640,6 +620,11 @@ export function criarConsultaProcessamento() {
       if (!destruido) {
         enviando.value = false
       }
+    }
+
+    // Recarrega depois do finally: carregarArquivos retorna cedo se enviando ainda for true.
+    if (!destruido) {
+      await carregarArquivos()
     }
   }
 
@@ -705,6 +690,7 @@ export function criarConsultaProcessamento() {
   }
 
   return {
+    arquivos,
     busca,
     fonte,
     status,
