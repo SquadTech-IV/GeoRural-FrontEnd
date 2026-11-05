@@ -8,7 +8,7 @@ import {
   criarVisaoGeral,
   criarCamadas,
   formatarNumero,
-  formatarResultado,
+  detalharResultado,
   requisicaoCancelada,
   obterMensagemErro,
 } from '../services/mapaIndicadoresService'
@@ -157,7 +157,13 @@ onBeforeUnmount(() => {
       <ul v-else class="mapa-api-lista">
         <li v-for="indicador in selecionado.indicadores" :key="indicador.id" class="mapa-api-card">
           <h3>{{ indicador.sigla }} · {{ indicador.nome }}</h3>
-          <strong>{{ formatarResultado(indicador) }}</strong>
+          <dl class="mapa-api-valores">
+            <div v-for="campo in detalharResultado(indicador)" :key="campo.legenda">
+              <dt>{{ campo.legenda }}:</dt>
+              <dd>{{ campo.valor }}</dd>
+            </div>
+          </dl>
+          <p v-if="!detalharResultado(indicador).length">Resultado não informado</p>
           <p>Situação: {{ indicador.situacao || 'Não informada' }}</p>
           <p>Versão da regra: {{ indicador.versaoRegra || 'Não informada' }}</p>
           <p v-if="!camadas.some((camada) => camada.id === indicador.id)">

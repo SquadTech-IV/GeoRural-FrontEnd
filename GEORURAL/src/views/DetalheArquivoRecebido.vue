@@ -223,11 +223,6 @@ onBeforeUnmount(destruir)
             </div>
           </dl>
 
-          <p class="arquivo-detalhe-observacao">
-            Hash, responsável pelo envio, conjunto de destino
-            e histórico de movimentações não estão disponíveis
-            na resposta atual da API.
-          </p>
         </section>
 
         <section

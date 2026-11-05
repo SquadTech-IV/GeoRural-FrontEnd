@@ -48,11 +48,6 @@ const itens = [
     icone: 'quarentena',
   },
   {
-    caminho: '/qualidade',
-    titulo: 'Conferência dos resultados',
-    icone: 'qualidade',
-  },
-  {
     caminho: '/auditoria',
     titulo: 'Linhagem e auditoria',
     icone: 'auditoria',

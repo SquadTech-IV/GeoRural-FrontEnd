@@ -1,8 +1,10 @@
 import api from './api'
 
+// Endpoints dedicados da zona tratada (US09).
 const ROTAS = {
-  conjuntos: '/api/conjuntos',
-  trajetoria: (id) => `/api/trajetoria-conjuntos/${id}/arquivos-trajetoria`,
+  lista: '/api/zona-tratada',
+  transformacoes: (id) => `/api/zona-tratada/execucoes/${id}/transformacoes`,
+  processamento: (id) => `/api/zona-tratada/execucoes/${id}/processamento`,
 }
 
 export function requisicaoZonaTratadaCancelada(erro) {
@@ -133,67 +135,44 @@ function lista(dados) {
 }
 
 export const zonaTratadaService = {
+  // Lista as execuções que passaram pela zona tratada (uma linha por execução).
+  // Cada item já traz execucaoId, contagens (aprovados/tratada) e dados do conjunto.
   listarConjuntos(filtros = {}, { signal } = {}) {
     return executar(async () => {
-      const conjuntos = lista(await consultar(ROTAS.conjuntos, { signal }))
-      const tratados = []
-      for (const conjunto of conjuntos) {
-        validarObjeto(conjunto)
-        const id = validarIdZonaTratada(conjunto.id)
-        const trajetoria = validarObjeto(await consultar(ROTAS.trajetoria(id), { signal }))
-        if (
-          validarIdZonaTratada(trajetoria.conjuntoId) !== id ||
-          !Array.isArray(trajetoria.arquivos)
-        ) {
-          throw new Error('O backend retornou uma trajetória de conjunto inválida.')
-        }
-        const arquivos = trajetoria.arquivos.filter((arquivo) => {
-          validarObjeto(arquivo)
-          if (!Array.isArray(arquivo.passagens))
-            throw new Error('O backend retornou passagens de zona inválidas.')
-          return arquivo.passagens.some(
-            (passagem) => passagem.zona === 'TRATADA' && passagem.quando != null,
-          )
-        })
-        if (!arquivos.length) continue
-        tratados.push({
-          conjuntoId: id,
-          conjuntoNome: trajetoria.conjuntoNome ?? conjunto.nome,
-          fonteNome: conjunto.fonteNome,
-          tipoNome: conjunto.tipoCamada,
-          competencia: conjunto.competencia,
-          situacao: 'TRATADA',
-          arquivos,
-        })
-      }
+      const itens = lista(await consultar(ROTAS.lista, { signal }))
+
       const busca = String(filtros.busca ?? '')
         .trim()
         .toLocaleLowerCase('pt-BR')
-      return tratados.filter(
-        (item) =>
-          !busca ||
-          [item.conjuntoNome, item.fonteNome, item.tipoNome, item.competencia].some((valor) =>
+
+      if (!busca) {
+        return itens
+      }
+
+      return itens.filter((item) =>
+        [item.conjuntoNome, item.fonteNome, item.tipoNome, item.competencia, item.situacao].some(
+          (valor) =>
             String(valor ?? '')
               .toLocaleLowerCase('pt-BR')
               .includes(busca),
-          ),
+        ),
       )
     })
   },
 
-  consultarTransformacoes() {
-    return Promise.reject(
-      new Error(
-        'O backend ainda não disponibiliza uma consulta definitiva de transformações por execução.',
-      ),
-    )
+  // Passos de tratamento de uma execução (lista pronta para o HistoricoTransformacoes).
+  consultarTransformacoes(execucaoId, { signal } = {}) {
+    return executar(async () => {
+      const id = validarIdZonaTratada(execucaoId)
+      return lista(await consultar(ROTAS.transformacoes(id), { signal }))
+    })
   },
 
-  consultarProcessamento() {
-    return Promise.reject(
-      new Error(
-        'O backend ainda não disponibiliza uma consulta definitiva de processamento por execução.',
-      ),
-    )
+  // Informações do processamento de uma execução (objeto para o InformacoesProcessamento).
+  consultarProcessamento(execucaoId, { signal } = {}) {
+    return executar(async () => {
+      const id = validarIdZonaTratada(execucaoId)
+      return validarObjeto(await consultar(ROTAS.processamento(id), { signal }))
+    })
   },
 }
