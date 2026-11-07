@@ -196,6 +196,22 @@ function adaptarDetalhe(dado) {
       tamanho: formatarTamanho(item.tamanhoBytes),
       descricao: item.descricao || '',
     })),
+    municipios: Array.isArray(dado.municipios)
+      ? dado.municipios.map(m => ({
+          nome: m.nome || '',
+          codigoIbge: m.codigoIbge || '',
+          imoveis: m.imoveis ?? 0,
+          areaHa: m.areaHa ?? '',
+        }))
+      : [],
+    imoveis: Array.isArray(dado.imoveis)
+      ? dado.imoveis.map(i => ({
+          codigoCar: i.codigoCar || '',
+          municipio: i.municipio || '',
+          nome: i.nome || '',
+          areaHa: i.areaHa ?? '',
+        }))
+      : [],
     // Ajuste os nomes dos campos conforme o que o back devolver.
     historico: Array.isArray(dado.historico)
       ? dado.historico.map(etapa => ({
