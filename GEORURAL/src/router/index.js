@@ -63,6 +63,11 @@ const router = createRouter({
       }),
     },
     {
+      path: '/operacao',
+      name: 'PainelOperacao',
+      component: () => import('../views/PaineldeOperacao.vue'),
+    },
+    {
       path: '/imoveis',
       name: 'Imoveis',
       component: () => import('../views/ListaImoveis.vue'),
