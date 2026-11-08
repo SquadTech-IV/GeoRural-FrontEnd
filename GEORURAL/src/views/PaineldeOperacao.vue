@@ -2,12 +2,10 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
-import ModalEtapasExecucao from '../components/ModalEtapasExecucaoOperacao.vue'
+import ModalEtapasExecucao from '../components/ModalEtapasDeExecucao.vue'
 import { operacaoService } from '../services/PainelOperacaoService'
 
-
 const PASSO_LIMITE = 50
-
 const periodo = ref('7')
 const situacao = ref('')
 const conjuntoId = ref('')
@@ -223,26 +221,11 @@ onBeforeUnmount(() => {
 
             <tbody>
               <tr v-for="e in lista" :key="e.dagRunId" @click="abrir(e)">
-                <td>
-                  {{ fmtData(e.inicio) }}
-                  <small class="pg-mono">{{ e.dagRunId.slice(0, 26) }}</small>
-                </td>
+                <td>{{ fmtData(e.inicio) }}</td>
 
-                <td>
-                  <strong>{{ e.conjuntoNome || '—' }}</strong>
-                  <small>{{ e.arquivoNome || '—' }}</small>
-                </td>
+                <td><strong>{{ e.conjuntoNome || '—' }}</strong></td>
 
-                <td>
-                  <template v-if="e.automatica">
-                    <span class="pg-selo pg-selo--roxo">automático</span>
-                    <small>{{ e.canalEntrada || 'pipeline' }}</small>
-                  </template>
-                  <template v-else>
-                    <span class="pg-selo pg-selo--neutro">manual</span>
-                    <small>pela tela</small>
-                  </template>
-                </td>
+                <td>{{ e.automatica ? (e.canalEntrada || 'pipeline') : 'pela tela' }}</td>
 
                 <td class="num">{{ fmt(e.recebidas) }}</td>
                 <td class="num">{{ fmt(e.rejeitadas) }}</td>
@@ -252,7 +235,6 @@ onBeforeUnmount(() => {
                   <span class="pg-selo" :class="`pg-selo--${apresentarSituacao(e.situacao).classe}`">
                     {{ apresentarSituacao(e.situacao).texto }}
                   </span>
-                  <small v-if="e.etapaComFalha">em {{ e.etapaComFalha }}</small>
                 </td>
               </tr>
 
