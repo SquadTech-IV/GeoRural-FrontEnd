@@ -48,6 +48,11 @@ const itens = [
     icone: 'quarentena',
   },
   {
+    caminho: '/qualidade',
+    titulo: 'Conferência dos resultados',
+    icone: 'qualidade',
+  },
+  {
     caminho: '/auditoria',
     titulo: 'Linhagem e auditoria',
     icone: 'auditoria',
@@ -178,6 +183,10 @@ function alternarTema() {
             <template v-else-if="item.icone === 'quarentena'">
               <path d="m12 3 10 18H2L12 3Z" />
               <path d="M12 9v5m0 3h.01" />
+            </template>
+
+            <template v-else-if="item.icone === 'painel'">
+              <path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" />
             </template>
 
             <template v-else>

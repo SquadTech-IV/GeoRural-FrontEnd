@@ -1,6 +1,5 @@
 import api from './api'
 
-// Endpoints da US15 (indicadores publicados / zona publicada).
 const ROTAS = {
   lista: '/api/qualidade/indicadores',
   resultados: (versaoId) => `/api/qualidade/indicadores/versoes/${versaoId}`,
@@ -20,15 +19,10 @@ function validarLista(dados) {
 }
 
 export function mensagemErroIndicadores(erro) {
-  if (requisicaoIndicadoresCancelada(erro)) {
-    return ''
-  }
+  if (requisicaoIndicadoresCancelada(erro)) return ''
 
   const status = erro?.response?.status
-
-  if (status === 404) {
-    return 'O serviço de indicadores publicados não foi encontrado.'
-  }
+  if (status === 404) return 'O serviço de indicadores publicados não foi encontrado.'
   if (status === 401 || status === 403) {
     return 'Você não tem permissão para consultar os indicadores publicados.'
   }
@@ -46,12 +40,9 @@ export function mensagemErroIndicadores(erro) {
         ? erro.response.data.message.trim()
         : ''
 
-  if (mensagemServidor) {
-    return mensagemServidor
-  }
-  if (typeof erro?.message === 'string' && erro.message.trim()) {
-    return erro.message.trim()
-  }
+  if (mensagemServidor) return mensagemServidor
+  if (typeof erro?.message === 'string' && erro.message.trim()) return erro.message.trim()
+
   return 'Não foi possível consultar os indicadores publicados.'
 }
 
@@ -69,15 +60,70 @@ async function executar(operacao) {
   }
 }
 
+function calcularDetalheVersao(versaoItem, indicadoresPublicados, resultadosImoveis) {
+  const aprovadas = Number(versaoItem.aprovadas ?? 0)
+  const rejeitadas = Number(versaoItem.rejeitadas ?? 0)
+  const recebidas = Number(versaoItem.recebidas ?? aprovadas + rejeitadas)
+
+  const percentual = recebidas > 0 ? Math.round((aprovadas / recebidas) * 100) : 100
+
+  const indicadoresDaVersao = indicadoresPublicados.filter(
+    (ind) => String(ind.versaoId) === String(versaoItem.id),
+  )
+
+  const blocos = indicadoresDaVersao.map((ind) => {
+    const bom = Number(ind.conformes ?? ind.aprovados ?? 0)
+    const ruim = Number(ind.naoConformes ?? ind.reprovados ?? 0)
+    const total = bom + ruim
+    const pctBom = total > 0 ? Math.round((bom / total) * 100) : 0
+
+    return {
+      titulo: ind.nome || ind.indicador || 'Indicador',
+      vazio: total === 0,
+      total,
+      pctBom,
+      bom: { rotulo: 'Conformes', valor: bom },
+      ruim: { rotulo: 'Não conformes', valor: ruim },
+      comparacao: ind.comparacao ?? null,
+    }
+  })
+
+  const regrasQueFalharam = Array.isArray(versaoItem.regrasQueFalharam)
+    ? versaoItem.regrasQueFalharam
+    : []
+
+  const temBloqueio = regrasQueFalharam.some((r) => r.severidade === 'BLOQUEIA')
+
+  const conclusao = versaoItem.conclusao ?? {
+    classe: temBloqueio ? 'erro' : rejeitadas > 0 ? 'aviso' : 'sucesso',
+    texto: temBloqueio
+      ? 'Bloqueada por regras'
+      : rejeitadas > 0
+        ? 'Atenção na quarentena'
+        : 'Pronta para publicar',
+  }
+
+  return {
+    conclusao,
+    recebidas,
+    entraram: aprovadas,
+    quarentena: rejeitadas,
+    imoveisCalculados: resultadosImoveis.length > 0 ? resultadosImoveis.length : null,
+    percentual,
+    percentualTexto: percentual.toLocaleString('pt-BR'),
+    blocos,
+    regrasQueFalharam,
+    motivos: Array.isArray(versaoItem.motivos) ? versaoItem.motivos : [],
+  }
+}
+
 export const qualidadeIndicadoresService = {
-  // Versões publicadas de cada indicador (uma por indicador + versão do dataset), com a regra usada.
   listar(indicador, { signal } = {}) {
     return executar(async () =>
       validarLista(await obter(ROTAS.lista, { indicador: indicador || 'TODOS' }, signal)),
     )
   },
 
-  // Resultados (um por imóvel) de uma versão publicada.
   resultados(versaoId, indicador, { signal } = {}) {
     return executar(async () =>
       validarLista(
@@ -85,4 +131,17 @@ export const qualidadeIndicadoresService = {
       ),
     )
   },
+
+  carregarDetalhe(versaoItem, { signal } = {}) {
+    return executar(async () => {
+      const [indicadoresPublicados, resultadosImoveis] = await Promise.all([
+        this.listar('TODOS', { signal }),
+        this.resultados(versaoItem.id, 'TODOS', { signal }).catch(() => []),
+      ])
+
+      return calcularDetalheVersao(versaoItem, indicadoresPublicados, resultadosImoveis)
+    })
+  },
 }
+
+export default qualidadeIndicadoresService
