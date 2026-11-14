@@ -1,6 +1,13 @@
 .processamento-layout {
   min-height: 100vh;
   color: var(--cor-texto);
+  font-family: var(--fonte-padrao);
+}
+
+.processamento-layout button,
+.processamento-layout input,
+.processamento-layout select {
+  font-family: inherit;
 }
 
 .processamento-pagina {
@@ -718,4 +725,67 @@ input[type="checkbox"] {
 
 .processamento-historico[open] .historico-seta {
   transform: rotate(180deg);
+}
+
+.processamento-abas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 16px;
+  border-bottom: 1px solid var(--cor-borda);
+}
+
+.processamento-aba {
+  padding: 8px 12px;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  border-radius: 7px 7px 0 0;
+  background: transparent;
+  color: var(--cor-texto-secundario);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.processamento-aba:hover {
+  background: var(--cor-fundo-hover);
+  color: var(--cor-texto);
+}
+
+.processamento-aba--ativa {
+  border-color: var(--cor-borda);
+  background: var(--cor-painel-secundario);
+  color: var(--cor-roxo);
+}
+
+.processamento-aba-conta {
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 20px;
+  background: var(--cor-painel-secundario);
+  font-size: 9px;
+}
+
+.processamento-aba--ativa .processamento-aba-conta {
+  background: var(--cor-menu-fundo);
+}
+
+.historico-tabela .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.detalhe-tabela-codigo {
+  display: block;
+  margin-top: 3px;
+  color: var(--cor-texto-secundario);
+  font-family: var(--fonte-mono);
+  font-size: 9px;
+  overflow-wrap: anywhere;
+}
+
+.painel-cabecalho h2,
+.detalhe-titulo h2,
+.detalhe-secao-titulo h3,
+.detalhe-sem-selecao h2 {
+  font-family: var(--fonte-titulo);
 }
