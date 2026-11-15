@@ -297,9 +297,16 @@
 .graf-dupla {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  align-items: start;
+  align-items: stretch;
   gap: 18px;
   margin-bottom: 18px;
+}
+
+.graf-dupla > * {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  margin-bottom: 0;
 }
 
 .graf-titulo {

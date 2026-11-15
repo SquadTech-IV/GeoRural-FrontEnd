@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
+import GraficoComposicao from '../components/GraficoComposicao.vue'
+import GraficoDistribuicao from '../components/GraficoDistribuicao.vue'
 
 defineOptions({
   name: 'ConsultaIndicadores',
