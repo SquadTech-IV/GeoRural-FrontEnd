@@ -53,7 +53,7 @@ const router = createRouter({
     },
     {
       path: '/resultado/:car',
-      redirect: to => ({
+      redirect: (to) => ({
         name: 'MapaIndicadores',
         params: {
           car: to.params.car,
@@ -103,6 +103,11 @@ const router = createRouter({
       path: '/rastreabilidade',
       name: 'Rastreabilidade',
       component: () => import('../views/RastreabilidadeDados.vue'),
+    },
+    {
+      path: '/api-consulta',
+      name: 'DocumentacaoApi',
+      component: () => import('@/views/DocumentacaoApi.vue'),
     },
   ],
 })

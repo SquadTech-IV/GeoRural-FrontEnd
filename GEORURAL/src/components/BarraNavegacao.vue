@@ -11,9 +11,7 @@ const itens = [
     caminho: '/operacao',
     titulo: 'Painel da operação',
     icone: 'painel',
-
   },
-
   {
     caminho: '/zona-tratada',
     titulo: 'Zona tratada',
@@ -45,6 +43,11 @@ const itens = [
     icone: 'processar',
   },
   {
+    caminho: '/indicadores',
+    titulo: 'Indicadores',
+    icone: 'indicadores',
+  },
+  {
     caminho: '/imoveis',
     titulo: 'Imóveis',
     icone: 'mapa',
@@ -63,6 +66,11 @@ const itens = [
     caminho: '/rastreabilidade',
     titulo: 'Trajetória no datalake',
     icone: 'rastreabilidade',
+  },
+  {
+    caminho: '/api-consulta',
+    titulo: 'API de consulta',
+    icone: 'api',
   },
 ]
 
@@ -96,9 +104,8 @@ function alternarTema() {
 
   try {
     localStorage.setItem('georural-tema', tema.value)
-  } catch {
-    // comentario
-    }
+  } catch {//
+  }
 }
 </script>
 
@@ -157,6 +164,18 @@ function alternarTema() {
             <template v-else-if="item.icone === 'processar'">
               <path d="m9 5 11 7-11 7z" />
               <path d="M4 5v14" />
+            </template>
+
+            <template v-else-if="item.icone === 'indicadores'">
+              <path d="M3 3v18h18" />
+              <path d="M18 17V9" />
+              <path d="M13 17V5" />
+              <path d="M8 17v-3" />
+            </template>
+
+            <template v-else-if="item.icone === 'api'">
+              <polyline points="16 18 22 12 16 6" />
+              <polyline points="8 6 2 12 8 18" />
             </template>
 
             <template v-else-if="item.icone === 'qualidade'">
