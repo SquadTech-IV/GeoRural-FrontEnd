@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
+import ModalDetalheMunicipio from '../components/ModalDetalheMunicipio.vue'
 
 defineOptions({
   name: 'ComparacaoMunicipios',
@@ -88,7 +89,7 @@ async function carregarOpcoes() {
 async function consultarMunicipios() {
   if (!sigla.value) return
   carregando.value = true
-  try {//
+  try {
   } finally {
     carregando.value = false
   }
@@ -102,16 +103,15 @@ function fecharModal() {
   municipioSelecionado.value = null
 }
 
-function verNoMapa() {
-  if (!municipioSelecionado.value) return
-  const ibge = municipioSelecionado.value.ibge
+function verNoMapa(municipio) {
+  if (!municipio) return
   fecharModal()
   router.push({
     path: '/mapa-indicadores',
     query: {
       indicador: sigla.value,
       versaoId: versaoId.value || undefined,
-      ibge,
+      ibge: municipio.ibge,
     },
   })
 }
@@ -399,107 +399,20 @@ onMounted(async () => {
       </section>
     </main>
 
-    <div
-      v-if="municipioSelecionado"
-      class="pg-modal"
-      role="dialog"
-      aria-modal="true"
-      @click.self="fecharModal"
-    >
-      <div class="pg-modal-caixa" style="width: min(38rem, 100%)">
-        <header>
-          <div>
-            <h2>{{ municipioSelecionado.nome }}</h2>
-            <p>
-              Código IBGE <span class="pg-mono">{{ municipioSelecionado.ibge }}</span>
-              <template v-if="municipioSelecionado.areaHa !== null">
-                · {{ fmtNumero(municipioSelecionado.areaHa, 1) }} ha
-              </template>
-            </p>
-          </div>
-          <button type="button" class="pg-botao" @click="fecharModal">Fechar</button>
-        </header>
-
-        <template v-if="municipioSelecionado.temDados">
-          <div class="mun-modal-meta">
-            <div>
-              <span>Posição</span>
-              <strong>
-                {{ municipioSelecionado.posicao }}º de {{ fmtInteiro(resumo.comDados) }}
-              </strong>
-            </div>
-            <div>
-              <span>{{ sigla }}</span>
-              <strong>
-                {{ fmtNumero(municipioSelecionado.valor) }}{{ ehPercentual ? '%' : '' }}
-              </strong>
-            </div>
-            <div>
-              <span>Imóveis</span>
-              <strong>{{ fmtInteiro(municipioSelecionado.imoveis) }}</strong>
-            </div>
-            <div>
-              <span>Conformes</span>
-              <strong>
-                {{ fmtInteiro(municipioSelecionado.conformes) }}
-                ({{ fmtNumero(municipioSelecionado.pctConf, 1) }}%)
-              </strong>
-            </div>
-          </div>
-
-          <div class="mun-modal-secao">
-            <h3>Faixa de classificação</h3>
-            <div class="mun-modal-faixa-box">
-              <i
-                class="mun-fdot mun-fdot--grande"
-                :style="{
-                  background: corDaQualidade(
-                    municipioSelecionado.pos,
-                    faixasInfo.lista.length
-                  ),
-                }"
-              />
-              <div>
-                <strong>
-                  {{ municipioSelecionado.faixaRotulo }}{{ ehPercentual ? '%' : '' }}
-                </strong>
-                <span>
-                  Faixa {{ municipioSelecionado.faixa }} de {{ faixasInfo.lista.length }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div v-if="municipioSelecionado.ha !== null" class="mun-modal-secao">
-            <h3>Área com cobertura</h3>
-            <p>
-              <strong>{{ fmtNumero(municipioSelecionado.ha, 1) }} ha</strong>
-              somados nos imóveis do município.
-            </p>
-          </div>
-        </template>
-
-        <div v-else class="pg-vazio">
-          Este município não possui resultado agregado nesta versão.
-        </div>
-
-        <div class="pg-modal-rodape">
-          <span class="pg-ajuda" style="margin: 0">Resumo municipal.</span>
-          <div class="mun-modal-acoes">
-            <button type="button" class="pg-botao" @click="fecharModal">
-              Fechar
-            </button>
-            <button
-              type="button"
-              class="pg-botao pg-botao--principal"
-              @click="verNoMapa"
-            >
-              Ver no mapa ↗
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <ModalDetalheMunicipio
+      :municipio="municipioSelecionado"
+      :sigla="sigla"
+      :eh-percentual="ehPercentual"
+      :total-com-dados="resumo.comDados"
+      :total-faixas="faixasInfo.lista.length"
+      :cor-faixa="
+        municipioSelecionado
+          ? corDaQualidade(municipioSelecionado.pos, faixasInfo.lista.length)
+          : ''
+      "
+      @fechar="fecharModal"
+      @ver-mapa="verNoMapa"
+    />
   </div>
 </template>
 
