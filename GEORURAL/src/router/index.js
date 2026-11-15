@@ -46,6 +46,11 @@ const router = createRouter({
       component: () => import('../views/QualidadeDados.vue'),
     },
     {
+      path: '/indicadores',
+      name: 'Indicadores',
+      component: () => import('../views/Indicadores.vue'),
+    },
+    {
       path: '/mapa-indicadores/:car?',
       name: 'MapaIndicadores',
       component: () => import('../views/MapaIndicadores.vue'),

@@ -38,6 +38,11 @@ const itens = [
     icone: 'processar',
   },
   {
+    caminho: '/indicadores',
+    titulo: 'Indicadores',
+    icone: 'indicadores',
+  },
+  {
     caminho: '/imoveis',
     titulo: 'Imóveis',
     icone: 'mapa',
@@ -90,8 +95,8 @@ function alternarTema() {
   try {
     localStorage.setItem('georural-tema', tema.value)
   } catch {
-    // comentario
-    }
+    //
+  }
 }
 </script>
 
@@ -150,6 +155,13 @@ function alternarTema() {
             <template v-else-if="item.icone === 'processar'">
               <path d="m9 5 11 7-11 7z" />
               <path d="M4 5v14" />
+            </template>
+
+            <template v-else-if="item.icone === 'indicadores'">
+              <path d="M4 19h16" />
+              <path d="M7 15v-4" />
+              <path d="M12 15V7" />
+              <path d="M17 15v-7" />
             </template>
 
             <template v-else-if="item.icone === 'qualidade'">
