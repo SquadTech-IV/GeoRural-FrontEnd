@@ -11,9 +11,7 @@ const itens = [
     caminho: '/operacao',
     titulo: 'Painel da operação',
     icone: 'painel',
-
   },
-
   {
     caminho: '/zona-tratada',
     titulo: 'Zona tratada',
@@ -60,6 +58,11 @@ const itens = [
     icone: 'auditoria',
   },
   {
+    caminho: '/historico',
+    titulo: 'Histórico de ações',
+    icone: 'historico',
+  },
+  {
     caminho: '/rastreabilidade',
     titulo: 'Trajetória no datalake',
     icone: 'rastreabilidade',
@@ -96,9 +99,8 @@ function alternarTema() {
 
   try {
     localStorage.setItem('georural-tema', tema.value)
-  } catch {
-    // comentario
-    }
+  } catch {//
+  }
 }
 </script>
 
@@ -172,6 +174,11 @@ function alternarTema() {
               <path d="M8 19h3a7 7 0 0 0 7-5" />
             </template>
 
+            <template v-else-if="item.icone === 'historico'">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 3" />
+            </template>
+
             <template v-else-if="item.icone === 'rastreabilidade'">
               <circle cx="5" cy="5" r="2" />
               <circle cx="19" cy="19" r="2" />
@@ -189,6 +196,10 @@ function alternarTema() {
 
             <template v-else-if="item.icone === 'painel'">
               <path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" />
+            </template>
+
+            <template v-else-if="item.icone === 'monitoramento'">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
             </template>
 
             <template v-else>
