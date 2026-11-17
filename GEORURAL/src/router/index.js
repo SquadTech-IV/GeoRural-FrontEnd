@@ -52,8 +52,13 @@ const router = createRouter({
       props: true,
     },
     {
+      path: '/comparar-versoes',
+      name: 'CompararVersoes',
+      component: () => import('../views/CompararVersoes.vue'),
+    },
+    {
       path: '/resultado/:car',
-      redirect: to => ({
+      redirect: (to) => ({
         name: 'MapaIndicadores',
         params: {
           car: to.params.car,

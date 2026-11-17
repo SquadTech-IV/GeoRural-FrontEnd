@@ -11,9 +11,12 @@ const itens = [
     caminho: '/operacao',
     titulo: 'Painel da operação',
     icone: 'painel',
-
   },
-
+  {
+    caminho: '/monitoramento',
+    titulo: 'Saúde da plataforma',
+    icone: 'monitoramento',
+  },
   {
     caminho: '/zona-tratada',
     titulo: 'Zona tratada',
@@ -55,9 +58,19 @@ const itens = [
     icone: 'quarentena',
   },
   {
+    caminho: '/comparar-versoes',
+    titulo: 'Comparar versões',
+    icone: 'comparar',
+  },
+  {
     caminho: '/auditoria',
     titulo: 'Linhagem e auditoria',
     icone: 'auditoria',
+  },
+  {
+    caminho: '/historico',
+    titulo: 'Histórico de ações',
+    icone: 'historico',
   },
   {
     caminho: '/rastreabilidade',
@@ -96,25 +109,16 @@ function alternarTema() {
 
   try {
     localStorage.setItem('georural-tema', tema.value)
-  } catch {
-    // comentario
-    }
+  } catch {//
+  }
 }
 </script>
 
 <template>
   <aside class="sidebar" aria-label="Menu principal">
     <div class="sidebar-cabecalho">
-      <RouterLink
-        to="/"
-        class="sidebar-marca"
-        aria-label="GeoRural — página inicial"
-      >
-        <img
-          src="@/assets/LogoSquadTech.png"
-          alt=""
-          class="sidebar-logo"
-        />
+      <RouterLink to="/" class="sidebar-marca" aria-label="GeoRural — página inicial">
+        <img src="@/assets/LogoSquadTech.png" alt="" class="sidebar-logo" />
 
         <span class="sidebar-nome">GEORURAL</span>
       </RouterLink>
@@ -172,6 +176,11 @@ function alternarTema() {
               <path d="M8 19h3a7 7 0 0 0 7-5" />
             </template>
 
+            <template v-else-if="item.icone === 'historico'">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 3" />
+            </template>
+
             <template v-else-if="item.icone === 'rastreabilidade'">
               <circle cx="5" cy="5" r="2" />
               <circle cx="19" cy="19" r="2" />
@@ -189,6 +198,11 @@ function alternarTema() {
 
             <template v-else-if="item.icone === 'painel'">
               <path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" />
+            </template>
+
+
+            <template v-else-if="item.icone === 'comparar'">
+              <path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
             </template>
 
             <template v-else>
