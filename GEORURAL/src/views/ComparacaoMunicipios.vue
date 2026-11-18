@@ -1,8 +1,18 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ModalDetalheMunicipio from '../components/ModalDetalheMunicipio.vue'
+import {
+  ORDENACOES,
+  QTD_FAIXAS_PADRAO,
+  QUANTIDADES_FAIXAS,
+  comparacaoMunicipiosService,
+  ehPercentual as indicadorEhPercentual,
+  filtrarMunicipios,
+  rotaDoMapa,
+} from '../services/ComparacaoMunicipiosService.js'
 
 defineOptions({
   name: 'ComparacaoMunicipios',
@@ -17,52 +27,6 @@ const RAMPA_CORES = [
   '#a3e635',
   'var(--cor-sucesso, #34d399)',
 ]
-
-const sigla = ref('')
-const versaoId = ref('')
-const ordenacao = ref('PIOR_PRIMEIRO')
-const qtdFaixas = ref(5)
-const busca = ref('')
-
-const indicadores = ref([])
-const versoes = ref([])
-
-const carregando = ref(false)
-const indicadorAtual = ref(null)
-const resumo = ref({
-  totalMunicipios: 0,
-  comDados: 0,
-  semDados: 0,
-  piorValor: null,
-  piorMunicipio: null,
-  mediana: null,
-})
-const faixasInfo = ref({
-  lista: [],
-  min: null,
-  max: null,
-  origem: null,
-  estrategia: 'INTERVALO',
-})
-const linhas = ref([])
-const municipioSelecionado = ref(null)
-
-const unidade = computed(() => indicadorAtual.value?.unidade ?? '')
-const ehPercentual = computed(() => unidade.value === '%')
-
-const linhasFiltradas = computed(() => {
-  const termo = busca.value.trim().toLowerCase()
-  if (!termo) return linhas.value
-  return linhas.value.filter(
-    (l) =>
-      String(l.nome || '').toLowerCase().includes(termo) ||
-      String(l.ibge || '').includes(termo)
-  )
-})
-
-const totalNaFaixa = computed(
-  () => faixasInfo.value.lista.reduce((acc, f) => acc + (f.qtd ?? 0), 0) || 1
-)
 
 function corDaQualidade(pos, total) {
   if (!pos || total <= 1) return RAMPA_CORES[RAMPA_CORES.length - 1]
@@ -83,18 +47,104 @@ function fmtInteiro(v) {
   return Number(v).toLocaleString('pt-BR')
 }
 
-async function carregarOpcoes() {
-}
+const sigla = ref('')
+const versaoId = ref('')
+const ordenacao = ref('PIOR_PRIMEIRO')
+const qtdFaixas = ref(QTD_FAIXAS_PADRAO)
+const busca = ref('')
+
+const indicadores = ref([])
+const versoes = ref([])
+
+const carregando = ref(false)
+const erro = ref('')
+const avisos = ref([])
+const indicadorAtual = ref(null)
+const resumo = ref({
+  totalMunicipios: 0,
+  comDados: 0,
+  semDados: 0,
+  piorValor: null,
+  piorMunicipio: null,
+  mediana: null,
+})
+const faixasInfo = ref({
+  lista: [],
+  min: null,
+  max: null,
+  origem: null,
+  estrategia: 'INTERVALO',
+})
+const linhas = ref([])
+const municipioSelecionado = ref(null)
+
+let sequencia = 0
+
+const ehPercentual = computed(() => indicadorEhPercentual(indicadorAtual.value))
+
+const linhasFiltradas = computed(() => filtrarMunicipios(linhas.value, busca.value))
+
+const totalNaFaixa = computed(
+  () => faixasInfo.value.lista.reduce((acc, f) => acc + (f.qtd ?? 0), 0) || 1
+)
 
 async function consultarMunicipios() {
   if (!sigla.value) return
+
+  const minha = ++sequencia
+
   carregando.value = true
+  erro.value = ''
+
   try {
+    const resultado = await comparacaoMunicipiosService.consultar({
+      sigla: sigla.value,
+      versaoId: versaoId.value,
+      ordenacao: ordenacao.value,
+      qtdFaixas: qtdFaixas.value,
+    })
+
+    if (minha !== sequencia) return
+
+    indicadorAtual.value = resultado.indicador
+    resumo.value = resultado.resumo
+    faixasInfo.value = resultado.faixasInfo
+    linhas.value = resultado.linhas
+    avisos.value = resultado.avisos
+  } catch (e) {
+    if (minha !== sequencia) return
+    erro.value = e.message
+    linhas.value = []
+    avisos.value = []
   } finally {
-    carregando.value = false
+    if (minha === sequencia) carregando.value = false
   }
 }
 
+async function carregarVersoes() {
+  try {
+    versoes.value = await comparacaoMunicipiosService.carregarVersoes(sigla.value)
+  } catch {
+    versoes.value = []
+  }
+}
+async function trocarIndicador() {
+  versaoId.value = ''
+  await carregarVersoes()
+  await consultarMunicipios()
+}
+
+async function carregarOpcoes() {
+  try {
+    indicadores.value = await comparacaoMunicipiosService.carregarIndicadores()
+  } catch (e) {
+    erro.value = e.message
+    return
+  }
+
+  sigla.value = indicadores.value[0]?.sigla ?? ''
+  if (sigla.value) await carregarVersoes()
+}
 function abrirModal(municipio) {
   municipioSelecionado.value = municipio
 }
@@ -106,20 +156,14 @@ function fecharModal() {
 function verNoMapa(municipio) {
   if (!municipio) return
   fecharModal()
-  router.push({
-    path: '/mapa-indicadores',
-    query: {
-      indicador: sigla.value,
-      versaoId: versaoId.value || undefined,
-      ibge: municipio.ibge,
-    },
-  })
+  router.push(rotaDoMapa({ sigla: sigla.value, versaoId: versaoId.value, municipio }))
 }
 
 onMounted(async () => {
   await carregarOpcoes()
   await consultarMunicipios()
 })
+onBeforeUnmount(() => { sequencia++ })
 </script>
 
 <template>
@@ -148,7 +192,7 @@ onMounted(async () => {
 
         <label class="pg-campo">
           <span>Indicador</span>
-          <select v-model="sigla" @change="consultarMunicipios">
+          <select v-model="sigla" @change="trocarIndicador">
             <option value="" disabled>Selecione</option>
             <option
               v-for="ind in indicadores"
@@ -169,7 +213,7 @@ onMounted(async () => {
               :key="v.id"
               :value="v.id"
             >
-              {{ v.rotulo ?? `#${v.id}` }}
+              {{ v.rotulo }}
             </option>
           </select>
         </label>
@@ -177,23 +221,27 @@ onMounted(async () => {
         <label class="pg-campo">
           <span>Ordenação</span>
           <select v-model="ordenacao" @change="consultarMunicipios">
-            <option value="PIOR_PRIMEIRO">Pior primeiro</option>
-            <option value="MELHOR_PRIMEIRO">Melhor primeiro</option>
-            <option value="NOME">Nome (A–Z)</option>
-            <option value="MAIS_IMOVEIS">Mais imóveis</option>
-            <option value="MENOS_CONFORMES">Menos conformes</option>
+            <option v-for="o in ORDENACOES" :key="o.valor" :value="o.valor">
+              {{ o.rotulo }}
+            </option>
           </select>
         </label>
 
         <label class="pg-campo">
           <span>Faixas</span>
           <select v-model.number="qtdFaixas" @change="consultarMunicipios">
-            <option :value="3">3 faixas</option>
-            <option :value="5">5 faixas</option>
-            <option :value="7">7 faixas</option>
+            <option v-for="q in QUANTIDADES_FAIXAS" :key="q" :value="q">
+              {{ q }} faixas
+            </option>
           </select>
         </label>
       </section>
+
+      <p v-if="erro" class="pg-erro" role="alert">{{ erro }}</p>
+
+      <ul v-if="avisos.length" class="mun-avisos" aria-label="Avisos da consulta">
+        <li v-for="aviso in avisos" :key="aviso">{{ aviso }}</li>
+      </ul>
 
       <section class="mun-kpis" aria-label="Resumo do indicador">
         <article class="pg-bloco mun-kpi">
