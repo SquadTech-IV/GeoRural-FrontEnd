@@ -53,7 +53,7 @@ const router = createRouter({
     },
     {
       path: '/resultado/:car',
-      redirect: to => ({
+      redirect: (to) => ({
         name: 'MapaIndicadores',
         params: {
           car: to.params.car,
@@ -98,6 +98,11 @@ const router = createRouter({
           component: () => import('../components/ModalCompararVersoes.vue'),
         },
       ],
+    },
+    {
+    path: '/municipios',
+    name: 'ComparacaoMunicipios',
+      component: () => import('@/views/ComparacaoMunicipios.vue'),
     },
     {
       path: '/rastreabilidade',
