@@ -141,3 +141,7 @@ img {
 #app {
   min-height: 100vh;
 }
+
+body.pagina-login {
+  padding-left: 0;
+}

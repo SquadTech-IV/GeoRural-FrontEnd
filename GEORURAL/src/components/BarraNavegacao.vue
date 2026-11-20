@@ -1,8 +1,12 @@
 <script setup>
-import { ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { computed, ref } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { autenticacaoService } from '../services/autenticacaoService'
+import { possuiPermissao, permissaoRota } from '../services/permissaoService'
 
 const route = useRoute()
+const router = useRouter()
+const saindo = ref(false)
 
 const tema = ref(document.documentElement.dataset.tema || 'light')
 
@@ -28,7 +32,7 @@ const itens = [
     icone: 'upload',
   },
   {
-    caminho: '/',
+    caminho: '/regras',
     titulo: 'Regras',
     icone: 'regras',
   },
@@ -69,10 +73,21 @@ const itens = [
   },
 ]
 
+const itensVisiveis = computed(() => itens.filter(item =>
+  possuiPermissao(autenticacaoService.estado.perfil, permissaoRota(router.resolve(item.caminho).name)),
+))
+
+async function sair() {
+  if (saindo.value) return
+  saindo.value = true
+  await autenticacaoService.sair()
+  await router.replace({ name: 'Login' })
+}
+
 function estaAtivo(caminho) {
-  if (caminho === '/') {
+  if (caminho === '/regras') {
     return (
-      route.path === '/' ||
+      route.path === '/regras' ||
       [
         'RegraNovaVersao',
         'RegraDetalheVersao',
@@ -108,7 +123,7 @@ function alternarTema() {
   <aside class="sidebar" aria-label="Menu principal">
     <div class="sidebar-cabecalho">
       <RouterLink
-        to="/"
+        :to="{ name: 'Imoveis' }"
         class="sidebar-marca"
         aria-label="GeoRural — página inicial"
       >
@@ -125,7 +140,7 @@ function alternarTema() {
     <div class="sidebar-conteudo">
       <nav class="sidebar-links" aria-label="Navegação principal">
         <RouterLink
-          v-for="item in itens"
+          v-for="item in itensVisiveis"
           :key="item.caminho"
           :to="item.caminho"
           class="sidebar-link"
@@ -212,6 +227,13 @@ function alternarTema() {
     </div>
 
     <footer class="sidebar-rodape">
+      <div class="sidebar-usuario">
+        <strong>{{ autenticacaoService.estado.nome }}</strong>
+        <span>{{ autenticacaoService.estado.perfil }}</span>
+      </div>
+      <button type="button" class="sidebar-tema" :disabled="saindo" @click="sair">
+        {{ saindo ? 'Saindo...' : 'Sair da conta' }}
+      </button>
       <button
         type="button"
         class="sidebar-tema"

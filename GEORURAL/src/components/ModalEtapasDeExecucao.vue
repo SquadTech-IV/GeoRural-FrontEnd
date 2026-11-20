@@ -188,7 +188,7 @@ onBeforeUnmount(() => {
               <td>{{ et.mensagem }}</td>
 
               <td>
-                <button v-if="et.situacao === 'FALHOU'" type="button" class="pg-botao"
+                <button v-if="et.situacao === 'FALHOU'" v-autorizado="'operar'" type="button" class="pg-botao"
                   :disabled="reprocessando.has(chaveEtapa(et.nome))" @click="reprocessar(et)">
                   {{ reprocessando.has(chaveEtapa(et.nome)) ? 'Reprocessando...' : 'Reprocessar esta etapa' }}
                 </button>

@@ -115,7 +115,7 @@ onBeforeUnmount(fecharConfirmacao)
         {{ avaliacao.motivo }}
       </p>
 
-      <button type="button" class="publicacao-botao publicacao-botao--principal" :disabled="!avaliacao.permitido"
+      <button v-autorizado="'gerir'" type="button" class="publicacao-botao publicacao-botao--principal" :disabled="!avaliacao.permitido"
         aria-describedby="publicacao-ajuda" @click="abrirConfirmacao">
         {{
           publicando
@@ -133,7 +133,7 @@ onBeforeUnmount(fecharConfirmacao)
   <Teleport to="body">
     <dialog ref="dialogo" class="publicacao-dialogo" aria-labelledby="publicacao-confirmacao-titulo"
       aria-describedby="publicacao-confirmacao-descricao" @cancel="cancelar">
-      <form @submit.prevent="confirmar">
+      <form v-autorizado="'gerir'" @submit.prevent="confirmar">
         <header class="publicacao-dialogo-cabecalho">
           <h2 id="publicacao-confirmacao-titulo">
             Confirmar publicação

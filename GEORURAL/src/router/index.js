@@ -1,9 +1,23 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { watch } from 'vue'
+import { autenticacaoService } from '../services/autenticacaoService'
+import { criarGuardaAutenticacao } from '../services/guardaAutenticacaoService'
+import { caminhoRetornoSeguro } from '../services/permissaoService'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
 
   routes: [
+    {
+      path: '/',
+      name: 'Login',
+      alias: '/login',
+      component: () => import('../views/Login.vue'),
+      meta: {
+        ocultarNavegacao: true,
+        publica: true,
+      },
+    },
     {
       path: '/quarentena',
       name: 'QuarentenaDados',
@@ -78,7 +92,7 @@ const router = createRouter({
       component: () => import('../views/AuditoriaDados.vue'),
     },
     {
-      path: '/',
+      path: '/regras',
       name: 'Regras',
       component: () => import('../views/Regras.vue'),
       children: [
@@ -100,16 +114,29 @@ const router = createRouter({
       ],
     },
     {
-    path: '/municipios',
-    name: 'ComparacaoMunicipios',
-      component: () => import('@/views/ComparacaoMunicipios.vue'),
+      path: '/municipios',
+      name: 'ComparacaoMunicipios',
+      component: () => import('../views/ComparacaoMunicipios.vue'),
     },
     {
       path: '/rastreabilidade',
       name: 'Rastreabilidade',
       component: () => import('../views/RastreabilidadeDados.vue'),
     },
+    {
+      path: '/sem-acesso',
+      name: 'SemAcesso',
+      component: () => import('../views/SemAcesso.vue'),
+    },
+    { path: '/:pathMatch(.*)*', redirect: { name: 'Imoveis' } },
   ],
+})
+
+router.beforeEach(criarGuardaAutenticacao(autenticacaoService))
+watch(() => autenticacaoService.estado.autenticado, autenticado => {
+  if (!autenticado && !router.currentRoute.value.meta.publica) {
+    void router.replace({ name: 'Login', query: { retorno: caminhoRetornoSeguro(router.currentRoute.value.fullPath) } })
+  }
 })
 
 export default router
