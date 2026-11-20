@@ -109,6 +109,11 @@ const router = createRouter({
       name: 'Rastreabilidade',
       component: () => import('../views/RastreabilidadeDados.vue'),
     },
+    {
+      path: '/monitoramento',
+      name: 'MonitoramentoPlataforma',
+      component: () => import('@/views/MonitoramentoPlataforma.vue'),
+    },
   ],
 })
 

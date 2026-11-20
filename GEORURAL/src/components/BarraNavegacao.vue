@@ -72,6 +72,11 @@ const itens = [
     titulo: 'Trajetória no datalake',
     icone: 'rastreabilidade',
   },
+  {
+    caminho: '/monitoramento',
+    titulo: 'Saúde da plataforma',
+    icone: 'monitoramento',
+  },
 ]
 
 function estaAtivo(caminho) {
@@ -104,24 +109,17 @@ function alternarTema() {
 
   try {
     localStorage.setItem('georural-tema', tema.value)
-  } catch {//
-  }
+  } catch {
+    // comentario
+  } 
 }
 </script>
 
 <template>
   <aside class="sidebar" aria-label="Menu principal">
     <div class="sidebar-cabecalho">
-      <RouterLink
-        to="/"
-        class="sidebar-marca"
-        aria-label="GeoRural — página inicial"
-      >
-        <img
-          src="@/assets/LogoSquadTech.png"
-          alt=""
-          class="sidebar-logo"
-        />
+      <RouterLink to="/" class="sidebar-marca" aria-label="GeoRural — página inicial">
+        <img src="@/assets/LogoSquadTech.png" alt="" class="sidebar-logo" />
 
         <span class="sidebar-nome">GEORURAL</span>
       </RouterLink>
@@ -129,26 +127,11 @@ function alternarTema() {
 
     <div class="sidebar-conteudo">
       <nav class="sidebar-links" aria-label="Navegação principal">
-        <RouterLink
-          v-for="item in itens"
-          :key="item.caminho"
-          :to="item.caminho"
-          class="sidebar-link"
-          :class="{
-            'sidebar-link--ativo': estaAtivo(item.caminho),
-          }"
-          :aria-current="estaAtivo(item.caminho) ? 'page' : undefined"
-        >
-          <svg
-            class="sidebar-icone"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
+        <RouterLink v-for="item in itens" :key="item.caminho" :to="item.caminho" class="sidebar-link" :class="{
+          'sidebar-link--ativo': estaAtivo(item.caminho),
+        }" :aria-current="estaAtivo(item.caminho) ? 'page' : undefined">
+          <svg class="sidebar-icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <template v-if="item.icone === 'upload'">
               <path d="M12 16V4" />
               <path d="m7 9 5-5 5 5" />
@@ -205,11 +188,16 @@ function alternarTema() {
               <path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" />
             </template>
 
+            <template v-else-if="item.icone === 'monitoramento'">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+            </template>
+
             <template v-else>
               <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z" />
               <path d="M9 3v15M15 6v15" />
             </template>
           </svg>
+
 
           <span>{{ item.titulo }}</span>
         </RouterLink>
@@ -217,42 +205,23 @@ function alternarTema() {
     </div>
 
     <footer class="sidebar-rodape">
-      <button
-        type="button"
-        class="sidebar-tema"
-        :aria-label="
-          tema === 'light'
+      <button type="button" class="sidebar-tema" :aria-label="tema === 'light'
+          ? 'Ativar tema escuro'
+          : 'Ativar tema claro'
+        " :title="tema === 'light'
             ? 'Ativar tema escuro'
             : 'Ativar tema claro'
-        "
-        :title="
-          tema === 'light'
-            ? 'Ativar tema escuro'
-            : 'Ativar tema claro'
-        "
-        @click="alternarTema"
-      >
+          " @click="alternarTema">
         <span class="sidebar-tema-icone">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <path
-              v-if="tema === 'light'"
-              d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"
-            />
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
+            stroke-linejoin="round" aria-hidden="true">
+            <path v-if="tema === 'light'" d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" />
 
             <template v-else>
               <circle cx="12" cy="12" r="4" />
 
               <path
-                d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"
-              />
+                d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42" />
             </template>
           </svg>
         </span>
