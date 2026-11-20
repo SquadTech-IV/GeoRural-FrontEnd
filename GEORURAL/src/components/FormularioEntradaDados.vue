@@ -1,3 +1,4 @@
+
 <script setup>
 import { computed, ref, watch } from 'vue'
 import ConsultaApiIngestao from './ConsultaApiIngestao.vue'
@@ -43,7 +44,7 @@ const fonteId = ref('')
 const conjuntoId = ref('')
 const formato = ref('')
 const abrangencia = ref('')
-const arquivo = ref(null)
+const arquivos = ref([])
 const inputArquivo = ref(null)
 const arrastando = ref(false)
 const itensApi = ref([])
@@ -115,21 +116,17 @@ const formatoSelecionado = computed(() =>
   formatos.find(item => item.valor === formato.value),
 )
 
-const tamanhoArquivo = computed(() => {
-  const bytes = arquivo.value?.size
+const quantidadeArquivos = computed(() =>
+  arquivos.value.length,
+)
 
-  if (bytes == null) return ''
-  if (bytes < 1024) return `${bytes} B`
+const tamanhoTotalArquivos = computed(() => {
+  const total = arquivos.value.reduce(
+    (soma, arquivo) => soma + arquivo.size,
+    0,
+  )
 
-  const divisor = bytes < 1024 * 1024
-    ? 1024
-    : 1024 * 1024
-
-  const unidade = divisor === 1024 ? 'KB' : 'MB'
-
-  return `${(bytes / divisor).toLocaleString('pt-BR', {
-    maximumFractionDigits: 1,
-  })} ${unidade}`
+  return formatarTamanho(total)
 })
 
 const podeContinuar = computed(() => {
@@ -145,12 +142,32 @@ const podeContinuar = computed(() => {
     return itensApi.value.length > 0
   }
 
-  // Abrangência é opcional.
-  return Boolean(formato.value && arquivo.value)
+  return Boolean(formato.value && arquivos.value.length)
 })
 
-function limparArquivo() {
-  arquivo.value = null
+function formatarTamanho(bytes) {
+  if (bytes == null) return ''
+  if (bytes < 1024) return `${bytes} B`
+
+  const divisor = bytes < 1024 * 1024
+    ? 1024
+    : bytes < 1024 * 1024 * 1024
+      ? 1024 * 1024
+      : 1024 * 1024 * 1024
+
+  const unidade = divisor === 1024
+    ? 'KB'
+    : divisor === 1024 * 1024
+      ? 'MB'
+      : 'GB'
+
+  return `${(bytes / divisor).toLocaleString('pt-BR', {
+    maximumFractionDigits: 1,
+  })} ${unidade}`
+}
+
+function limparArquivos() {
+  arquivos.value = []
 
   if (inputArquivo.value) {
     inputArquivo.value.value = ''
@@ -166,12 +183,12 @@ function limparSelecaoApi() {
 
 watch(fonteId, () => {
   conjuntoId.value = ''
-  limparArquivo()
+  limparArquivos()
   limparSelecaoApi()
 })
 
 watch(conjuntoId, () => {
-  limparArquivo()
+  limparArquivos()
   limparSelecaoApi()
 })
 
@@ -181,11 +198,11 @@ watch(conjuntoSelecionado, conjunto => {
 
 watch(metodo, () => {
   arrastando.value = false
-  limparArquivo()
+  limparArquivos()
   limparSelecaoApi()
 })
 
-watch(formato, limparArquivo)
+watch(formato, limparArquivos)
 
 watch(fontesDisponiveis, fontes => {
   const existe = fontes.some(fonte =>
@@ -213,7 +230,7 @@ function abrirSeletor() {
   if (!formatoSelecionado.value) {
     emit(
       'erro',
-      'Selecione o formato antes de escolher o arquivo.',
+      'Selecione o formato antes de escolher os arquivos.',
     )
     return
   }
@@ -221,10 +238,7 @@ function abrirSeletor() {
   inputArquivo.value?.click()
 }
 
-function aceitarArquivo(selecionado) {
-  if (bloqueado.value || metodo.value !== 'upload') return
-  if (!selecionado) return
-
+function validarArquivo(selecionado) {
   const extensoes =
     formatoSelecionado.value?.extensoes.split(',') ?? []
 
@@ -233,35 +247,92 @@ function aceitarArquivo(selecionado) {
   )
 
   if (!formatoValido) {
-    limparArquivo()
-
     emit(
       'erro',
-      'O arquivo não corresponde ao formato selecionado.',
+      `O arquivo "${selecionado.name}" não corresponde ao formato selecionado.`,
     )
-    return
+    return false
   }
 
   if (!selecionado.size) {
-    limparArquivo()
-
     emit(
       'erro',
-      'Selecione um arquivo que não esteja vazio.',
+      `O arquivo "${selecionado.name}" está vazio.`,
+    )
+    return false
+  }
+
+  return true
+}
+
+function aceitarArquivos(selecionados) {
+  if (bloqueado.value || metodo.value !== 'upload') return
+  if (!selecionados?.length) return
+
+  if (!formatoSelecionado.value) {
+    emit(
+      'erro',
+      'Selecione o formato antes de escolher os arquivos.',
     )
     return
   }
 
-  arquivo.value = selecionado
+  const novosArquivos = Array.from(selecionados)
+  const arquivosValidos = []
+
+  for (const selecionado of novosArquivos) {
+    if (!validarArquivo(selecionado)) continue
+
+    const jaExiste = arquivos.value.some(arquivo =>
+      arquivo.name === selecionado.name &&
+      arquivo.size === selecionado.size &&
+      arquivo.lastModified === selecionado.lastModified,
+    )
+
+    const jaFoiAdicionado = arquivosValidos.some(arquivo =>
+      arquivo.name === selecionado.name &&
+      arquivo.size === selecionado.size &&
+      arquivo.lastModified === selecionado.lastModified,
+    )
+
+    if (!jaExiste && !jaFoiAdicionado) {
+      arquivosValidos.push(selecionado)
+    }
+  }
+
+  if (arquivosValidos.length) {
+    arquivos.value = [
+      ...arquivos.value,
+      ...arquivosValidos,
+    ]
+  }
+
+  if (
+    novosArquivos.length > 0 &&
+    arquivosValidos.length === 0 &&
+    novosArquivos.every(selecionado =>
+      arquivos.value.some(arquivo =>
+        arquivo.name === selecionado.name &&
+        arquivo.size === selecionado.size &&
+        arquivo.lastModified === selecionado.lastModified,
+      ),
+    )
+  ) {
+    emit('erro', 'Os arquivos selecionados já foram adicionados.')
+  }
+
+  if (inputArquivo.value) {
+    inputArquivo.value.value = ''
+  }
 }
 
 function selecionarArquivo(evento) {
-  aceitarArquivo(evento.target.files?.[0])
+  aceitarArquivos(evento.target.files)
 }
 
 function receberArquivo(evento) {
   arrastando.value = false
-  aceitarArquivo(evento.dataTransfer?.files?.[0])
+  aceitarArquivos(evento.dataTransfer?.files)
 }
 
 function marcarArraste() {
@@ -270,9 +341,17 @@ function marcarArraste() {
   }
 }
 
-function removerArquivo() {
+function removerArquivo(indice) {
+  if (bloqueado.value) return
+
+  arquivos.value = arquivos.value.filter(
+    (_, index) => index !== indice,
+  )
+}
+
+function removerTodosArquivos() {
   if (!bloqueado.value) {
-    limparArquivo()
+    limparArquivos()
   }
 }
 
@@ -292,11 +371,12 @@ function configurar() {
     metodo: metodo.value,
     fonteId: fonteSelecionada.value.id,
     conjuntoId: conjuntoSelecionado.value.id,
+
     ...(metodo.value === 'upload'
       ? {
           formato: formato.value,
           abrangencia: abrangencia.value.trim(),
-          arquivo: arquivo.value,
+          arquivos: [...arquivos.value],
         }
       : {}),
   })
@@ -416,7 +496,7 @@ function configurar() {
           <div class="entrada-grade">
             <div class="entrada-campo">
               <label for="entrada-formato">
-                Formato do arquivo
+                Formato dos arquivos
               </label>
 
               <select
@@ -466,7 +546,7 @@ function configurar() {
 
           <div class="entrada-campo">
             <label for="entrada-arquivo">
-              Arquivo
+              Arquivos
             </label>
 
             <input
@@ -474,6 +554,7 @@ function configurar() {
               ref="inputArquivo"
               class="entrada-somente-leitor"
               type="file"
+              multiple
               tabindex="-1"
               :disabled="metodo !== 'upload'"
               :accept="formatoSelecionado?.extensoes"
@@ -485,7 +566,7 @@ function configurar() {
               class="entrada-drop"
               :class="{
                 'entrada-drop--arrastando': arrastando,
-                'entrada-drop--selecionado': arquivo,
+                'entrada-drop--selecionado': arquivos.length,
               }"
               :disabled="metodo !== 'upload'"
               aria-describedby="entrada-arquivo-ajuda"
@@ -511,17 +592,17 @@ function configurar() {
 
               <strong>
                 {{
-                  arquivo
-                    ? arquivo.name
-                    : 'Arraste um arquivo ou clique para selecionar'
+                  arquivos.length
+                    ? `${quantidadeArquivos} arquivo(s) selecionado(s)`
+                    : 'Arraste arquivos ou clique para selecionar'
                 }}
               </strong>
 
               <span>
                 {{
-                  arquivo
-                    ? `${tamanhoArquivo} · Clique para substituir`
-                    : 'Selecione o arquivo que deseja importar.'
+                  arquivos.length
+                    ? `${tamanhoTotalArquivos} no total · Clique para adicionar mais`
+                    : 'Você pode selecionar vários arquivos de uma só vez.'
                 }}
               </span>
             </button>
@@ -530,18 +611,53 @@ function configurar() {
               id="entrada-arquivo-ajuda"
               class="entrada-ajuda"
             >
-              Para Shapefile, utilize um ZIP com os arquivos
-              associados.
+              Para Shapefile, utilize arquivos ZIP com os arquivos
+              associados. Os arquivos devem corresponder ao formato selecionado.
             </p>
 
-            <button
-              v-if="arquivo"
-              type="button"
-              class="entrada-remover"
-              @click="removerArquivo"
+            <div
+              v-if="arquivos.length"
+              class="entrada-lista-arquivos"
             >
-              Remover arquivo
-            </button>
+              <div
+                class="entrada-lista-arquivos-cabecalho"
+              >
+                <strong>Arquivos selecionados</strong>
+
+                <button
+                  type="button"
+                  class="entrada-remover"
+                  @click="removerTodosArquivos"
+                >
+                  Limpar todos
+                </button>
+              </div>
+
+              <ul>
+                <li
+                  v-for="(item, indice) in arquivos"
+                  :key="`${item.name}-${item.lastModified}-${indice}`"
+                  class="entrada-arquivo-item"
+                >
+                  <div class="entrada-arquivo-informacoes">
+                    <strong>{{ item.name }}</strong>
+
+                    <span>
+                      {{ formatarTamanho(item.size) }}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="entrada-remover"
+                    :aria-label="`Remover ${item.name}`"
+                    @click="removerArquivo(indice)"
+                  >
+                    Remover
+                  </button>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
 
@@ -565,7 +681,7 @@ function configurar() {
                 ? 'Aguarde...'
                 : metodo === 'api'
                   ? 'Importar selecionados'
-                  : 'Enviar arquivo'
+                  : 'Enviar arquivos'
             }}
           </button>
         </footer>
