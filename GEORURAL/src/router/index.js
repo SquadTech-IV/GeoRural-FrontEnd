@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { watch } from 'vue'
+
 import { autenticacaoService } from '../services/autenticacaoService'
 import { criarGuardaAutenticacao } from '../services/guardaAutenticacaoService'
 import { caminhoRetornoSeguro } from '../services/permissaoService'
@@ -124,19 +125,40 @@ const router = createRouter({
       component: () => import('../views/RastreabilidadeDados.vue'),
     },
     {
+      path: '/monitoramento',
+      name: 'MonitoramentoPlataforma',
+      component: () => import('../views/MonitoramentoPlataforma.vue'),
+    },
+    {
       path: '/sem-acesso',
       name: 'SemAcesso',
       component: () => import('../views/SemAcesso.vue'),
     },
-    { path: '/:pathMatch(.*)*', redirect: { name: 'Imoveis' } },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: { name: 'Imoveis' },
+    },
   ],
 })
 
-router.beforeEach(criarGuardaAutenticacao(autenticacaoService))
-watch(() => autenticacaoService.estado.autenticado, autenticado => {
-  if (!autenticado && !router.currentRoute.value.meta.publica) {
-    void router.replace({ name: 'Login', query: { retorno: caminhoRetornoSeguro(router.currentRoute.value.fullPath) } })
-  }
-})
+router.beforeEach(
+  criarGuardaAutenticacao(autenticacaoService),
+)
+
+watch(
+  () => autenticacaoService.estado.autenticado,
+  (autenticado) => {
+    const rotaAtual = router.currentRoute.value
+
+    if (!autenticado && !rotaAtual.meta.publica) {
+      void router.replace({
+        name: 'Login',
+        query: {
+          retorno: caminhoRetornoSeguro(rotaAtual.fullPath),
+        },
+      })
+    }
+  },
+)
 
 export default router
