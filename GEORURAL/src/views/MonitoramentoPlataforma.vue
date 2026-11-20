@@ -1,12 +1,13 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
+import { monitoramentoService, prepararResumoMonitoramento, LIMITE_RESPOSTA_PADRAO } from '../services/monitoramentoService'
 
 defineOptions({
   name: 'MonitoramentoPlataforma',
 })
 
-const LIMITE_SEG = 3
+const LIMITE_SEG = ref(LIMITE_RESPOSTA_PADRAO)
 
 const EST = {
   NO_AR: { rot: 'No ar', cls: 'mon-estado--ok' },
@@ -25,36 +26,26 @@ const componentes = ref([])
 const recursos = ref([])
 const rotas = ref([])
 const erros = ref([])
+const falhas = ref([])
+const errosParciais = ref(false)
+let consulta = null
+let desmontado = false
 
 let timer = null
 
-const rotasOrdenadas = computed(() =>
-  [...rotas.value].sort((a, b) => (b.max ?? 0) - (a.max ?? 0))
-)
-
-const qtdRotasLentas = computed(
-  () => rotasOrdenadas.value.filter((r) => (r.max ?? 0) > LIMITE_SEG).length
-)
-
-const errosFiltrados = computed(() => {
-  const termo = buscaErro.value.trim().toLowerCase()
-  if (!termo) return erros.value
-  return erros.value.filter((e) =>
-    `${e.msg ?? ''} ${e.rota ?? ''} ${e.status ?? ''} ${e.origem ?? ''}`
-      .toLowerCase()
-      .includes(termo)
-  )
-})
-
-const contagemMensagensErro = computed(() => {
-  const mapa = {}
-  for (const e of erros.value) {
-    if (e.msg) {
-      mapa[e.msg] = (mapa[e.msg] || 0) + 1
-    }
-  }
-  return mapa
-})
+const resumo = computed(() => prepararResumoMonitoramento({
+  rotas: rotas.value, erros: erros.value, recursos: recursos.value,
+  limiteSegundos: LIMITE_SEG.value, busca: buscaErro.value,
+}))
+const rotasOrdenadas = computed(() => resumo.value.rotasOrdenadas)
+const qtdRotasLentas = computed(() => resumo.value.qtdRotasLentas)
+const errosFiltrados = computed(() => resumo.value.errosFiltrados)
+const recursosApresentados = computed(() => resumo.value.recursos)
+const coresRecursos = {
+  critico: 'var(--cor-erro, #f87171)',
+  atencao: '#fbbf24',
+  normal: 'var(--cor-sucesso, #34d399)',
+}
 
 function fmtNumero(v, casas = 2) {
   if (v === null || v === undefined) return '—'
@@ -67,18 +58,6 @@ function fmtNumero(v, casas = 2) {
 function fmtInteiro(v) {
   if (v === null || v === undefined) return '—'
   return Number(v).toLocaleString('pt-BR')
-}
-
-function percentualRecurso(rec) {
-  if (!rec || !rec.max) return 0
-  return Math.min(100, Math.max(0, (rec.v / rec.max) * 100))
-}
-
-function corRecurso(rec) {
-  const pct = percentualRecurso(rec)
-  if (pct > 85) return 'var(--cor-erro, #f87171)'
-  if (pct > 65) return '#fbbf24'
-  return 'var(--cor-sucesso, #34d399)'
 }
 
 function partirDestaque(texto, termo) {
@@ -95,17 +74,26 @@ function partirDestaque(texto, termo) {
 }
 
 async function consultarMonitoramento() {
+  consulta?.abort()
+  const atual = new AbortController()
+  consulta = atual
   carregando.value = true
+  falhas.value = []
   try {
-    ultimaLeitura.value = new Date().toLocaleTimeString('pt-BR')
+    const dados = await monitoramentoService.consultar({ minutos: janelaMinutos.value, signal: atual.signal })
+    if (desmontado || atual.signal.aborted) return
+    componentes.value = dados.componentes
+    recursos.value = dados.recursos
+    rotas.value = dados.rotas
+    LIMITE_SEG.value = dados.limiteSegundos
+    erros.value = dados.erros
+    errosParciais.value = dados.errosParciais
+    falhas.value = dados.falhas
+    ultimaLeitura.value = dados.lidoEm?.toLocaleTimeString('pt-BR') ?? ''
+  } catch (erro) {
+    if (erro.code !== 'ERR_CANCELED') throw erro
   } finally {
-    carregando.value = false
-  }
-}
-
-async function consultarErros() {
-  try {//
-  } catch {//
+    if (consulta === atual && !desmontado) carregando.value = false
   }
 }
 
@@ -116,7 +104,7 @@ function alternarLive() {
     timer = null
   }
   if (live.value) {
-    timer = setInterval(consultarMonitoramento, 10000)
+    timer = setInterval(() => { if (!carregando.value) consultarMonitoramento() }, 10000)
     consultarMonitoramento()
   }
 }
@@ -126,6 +114,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  desmontado = true
+  consulta?.abort()
   if (timer) {
     clearInterval(timer)
     timer = null
@@ -147,6 +137,9 @@ onBeforeUnmount(() => {
       </header>
 
       <section class="pg-filtros" aria-label="Controles de monitoramento">
+        <button type="button" class="mon-live" :disabled="carregando" @click="consultarMonitoramento">
+          {{ carregando ? 'Consultando...' : 'Atualizar' }}
+        </button>
         <button
           type="button"
           class="mon-live"
@@ -158,7 +151,7 @@ onBeforeUnmount(() => {
         </button>
 
         <label class="pg-campo">
-          <span>Janela</span>
+          <span>Período dos erros</span>
           <select v-model.number="janelaMinutos" @change="consultarMonitoramento">
             <option :value="15">Últimos 15 min</option>
             <option :value="60">Última hora</option>
@@ -170,6 +163,10 @@ onBeforeUnmount(() => {
           Última leitura {{ ultimaLeitura }}{{ live ? ' · automático' : '' }}
         </span>
       </section>
+
+      <div v-if="falhas.length" role="alert" class="pg-bloco">
+        <p v-for="falha in falhas" :key="falha">{{ falha }}</p>
+      </div>
 
       <section class="mon-comps" aria-label="Estado dos componentes">
         <article
@@ -190,7 +187,8 @@ onBeforeUnmount(() => {
             <span v-else class="mon-comp-vazio">—</span>
           </strong>
           <span class="mon-comp-rodape">
-            <template v-if="comp.estado === 'NAO_CONFIGURADO'">
+            <template v-if="comp.detalhe">{{ comp.detalhe }}</template>
+            <template v-else-if="comp.estado === 'NAO_CONFIGURADO'">
               não configurado neste ambiente
             </template>
             <template v-else-if="comp.estado === 'DEGRADADO'">
@@ -218,7 +216,7 @@ onBeforeUnmount(() => {
         </div>
 
         <div v-if="recursos.length" class="mon-recursos">
-          <div v-for="rec in recursos" :key="rec.k" class="mon-recurso-item">
+          <div v-for="rec in recursosApresentados" :key="rec.k" class="mon-recurso-item">
             <div class="mon-recurso-topo">
               <span class="mon-recurso-nome">{{ rec.k }}</span>
               <strong class="mon-recurso-valor">
@@ -226,11 +224,11 @@ onBeforeUnmount(() => {
                 <small>{{ rec.un === '%' ? '%' : ` ${rec.un}` }}</small>
               </strong>
             </div>
-            <div class="mon-recurso-trilho">
+            <div v-if="rec.exibirBarra" class="mon-recurso-trilho">
               <i
                 :style="{
-                  width: `${percentualRecurso(rec)}%`,
-                  background: corRecurso(rec),
+                  width: `${rec.percentual}%`,
+                  background: coresRecursos[rec.nivel],
                 }"
               />
             </div>
@@ -247,6 +245,7 @@ onBeforeUnmount(() => {
             <p class="mon-bloco-sub">
               Ordenado pelo pior caso · limite de <strong>{{ LIMITE_SEG }}s</strong> para a API pública
             </p>
+            <p class="mon-bloco-sub">Média acumulada desde o início da aplicação; máximo dos últimos minutos.</p>
           </div>
 
           <span
@@ -278,30 +277,30 @@ onBeforeUnmount(() => {
                 <tr
                   v-for="r in rotasOrdenadas"
                   :key="r.rota"
-                  :class="{ 'mon-linha-lenta': (r.max ?? 0) > LIMITE_SEG }"
+                  :class="{ 'mon-linha-lenta': r.acimaDoLimite }"
                 >
                   <td>
                     <span class="pg-mono mon-rota-texto">{{ r.rota }}</span>
                     <span
-                      v-if="(r.max ?? 0) > LIMITE_SEG"
+                      v-if="r.acimaDoLimite"
                       class="mon-limite-tag"
                     >
-                      · {{ (r.max / LIMITE_SEG).toFixed(1) }}× o limite
+                      · {{ r.fatorLimite.toFixed(1) }}× o limite
                     </span>
                   </td>
                   <td class="num">{{ fmtInteiro(r.n) }}</td>
                   <td class="num">{{ fmtNumero(r.med) }}s</td>
                   <td
                     class="num"
-                    :class="{ 'mon-texto-erro': (r.max ?? 0) > LIMITE_SEG }"
+                    :class="{ 'mon-texto-erro': r.acimaDoLimite }"
                   >
                     <strong>{{ fmtNumero(r.max) }}s</strong>
                   </td>
                   <td
                     class="num"
                     :class="{
-                      'mon-texto-aviso': (r.err ?? 0) > 0,
-                      'mon-texto-neutro': !(r.err ?? 0),
+                      'mon-texto-aviso': r.possuiErros,
+                      'mon-texto-neutro': !r.possuiErros,
                     }"
                   >
                     {{ fmtInteiro(r.err) }}
@@ -330,9 +329,10 @@ onBeforeUnmount(() => {
             v-model="buscaErro"
             type="search"
             placeholder="Buscar na mensagem, na rota ou no código…"
-            @input="consultarErros"
           />
         </div>
+
+        <p v-if="errosParciais" class="mon-bloco-sub">Exibindo até os 500 erros mais recentes do período.</p>
 
         <div v-if="carregando" class="pg-vazio">Carregando erros...</div>
 
@@ -345,7 +345,7 @@ onBeforeUnmount(() => {
             <span class="mon-erro-hora">{{ erro.h }}</span>
             <span
               class="mon-status-badge"
-              :class="erro.status >= 500 ? 'mon-status-badge--e5' : 'mon-status-badge--e4'"
+              :class="erro.erroServidor ? 'mon-status-badge--e5' : 'mon-status-badge--e4'"
             >
               {{ erro.status }}
             </span>
@@ -365,10 +365,10 @@ onBeforeUnmount(() => {
 
               <div class="mon-erro-origem">
                 <span class="pg-mono">{{ erro.rota }}</span> · {{ erro.origem }}
-                <template v-if="(contagemMensagensErro[erro.msg] ?? 0) > 1">
+                <template v-if="erro.repeticoes > 1">
                   ·
                   <strong class="mon-texto-aviso">
-                    {{ contagemMensagensErro[erro.msg] }}× na janela
+                    {{ erro.repeticoes }}× na janela
                   </strong>
                 </template>
               </div>
