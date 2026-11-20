@@ -1,6 +1,6 @@
 import api from './api'
 import { normalizarGeoJson } from './mapaRenderizacaoService'
-import { prepararCamadasIndicadores } from './camadasIndicadoresService'
+import { prepararCamadasIndicadores, obterEstiloIndicador } from './camadasIndicadoresService'
 
 const numeros = new Intl.NumberFormat('pt-BR', {
   maximumFractionDigits: 2,
@@ -35,7 +35,7 @@ export function normalizarImovel(dado) {
   const siglas = new Set()
 
   const indicadores = dado.indicadores.map((indicador) => {
-    const sigla = indicador?.sigla?.trim()
+    const sigla = indicador?.sigla?.trim().toUpperCase()
 
     if (!sigla || siglas.has(sigla.toUpperCase())) {
       throw new Error(
@@ -49,7 +49,7 @@ export function normalizarImovel(dado) {
       ...indicador,
       id: sigla,
       sigla,
-      nome: indicador.nome || sigla,
+      nome: indicador.nome || obterEstiloIndicador(sigla).nome,
       geojson: colecao(indicador.features),
     }
   })
@@ -144,6 +144,7 @@ export function formatarResultado(indicador) {
 
 export function detalharResultado(indicador) {
   const campos = []
+  const coberturaVegetal = indicador.sigla?.trim().toUpperCase() === 'ICV'
 
   if (indicador.valorPercentual != null) {
     campos.push({ legenda: 'Percentual', valor: formatarNumero(indicador.valorPercentual) + '%' })
@@ -152,7 +153,7 @@ export function detalharResultado(indicador) {
   if (indicador.valorHectares != null) {
     const deficitReserva = indicador.sigla?.toUpperCase() === 'IRL' && Number(indicador.valorHectares) < 0
     campos.push({
-      legenda: deficitReserva ? 'Déficit de Reserva Legal' : 'Área',
+      legenda: deficitReserva ? 'Déficit de Reserva Legal' : coberturaVegetal ? 'Área de vegetação nativa' : 'Área',
       valor: formatarNumero(deficitReserva ? Math.abs(Number(indicador.valorHectares)) : indicador.valorHectares, 'ha'),
     })
   }
@@ -160,9 +161,9 @@ export function detalharResultado(indicador) {
   if (indicador.valorAbsoluto != null) {
     const numero = Number(indicador.valorAbsoluto)
     campos.push({
-      legenda: 'Valor absoluto',
+      legenda: coberturaVegetal ? 'Saldo de vegetação nativa' : 'Valor absoluto',
       valor: indicador.valorAbsoluto !== '' && Number.isFinite(numero)
-        ? numero.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
+        ? numero.toLocaleString('pt-BR', { maximumFractionDigits: 3 }) + (coberturaVegetal ? ' ha' : '')
         : 'Não informado',
     })
   }
