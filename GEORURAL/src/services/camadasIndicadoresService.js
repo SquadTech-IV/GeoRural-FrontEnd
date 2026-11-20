@@ -31,6 +31,13 @@ const estilosIndicadores = {
   },
 }
 
+export function obterEstiloIndicador(sigla) {
+  return estilosIndicadores[String(sigla ?? '').trim().toUpperCase()] ?? {
+    nome: sigla,
+    cor: '#8520bd',
+  }
+}
+
 function possuiCoordenadas(coordenadas) {
   if (!Array.isArray(coordenadas) || !coordenadas.length) {
     return false
@@ -104,10 +111,7 @@ export function prepararCamadasIndicadores(indicadores) {
       continue
     }
 
-    const estilo = estilosIndicadores[sigla] ?? {
-      nome: sigla,
-      cor: '#8520bd',
-    }
+    const estilo = obterEstiloIndicador(sigla)
 
     camadas.push({
       id,
