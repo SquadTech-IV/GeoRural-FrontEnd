@@ -11,9 +11,7 @@ const itens = [
     caminho: '/operacao',
     titulo: 'Painel da operação',
     icone: 'painel',
-
   },
-
   {
     caminho: '/zona-tratada',
     titulo: 'Zona tratada',
@@ -43,6 +41,11 @@ const itens = [
     caminho: '/processar',
     titulo: 'Processar dados',
     icone: 'processar',
+  },
+  {
+    caminho: '/municipios',
+    titulo: 'Municípios',
+    icone: 'municipios',
   },
   {
     caminho: '/imoveis',
@@ -103,7 +106,7 @@ function alternarTema() {
     localStorage.setItem('georural-tema', tema.value)
   } catch {
     // comentario
-  }
+  } 
 }
 </script>
 
@@ -139,6 +142,13 @@ function alternarTema() {
             <template v-else-if="item.icone === 'processar'">
               <path d="m9 5 11 7-11 7z" />
               <path d="M4 5v14" />
+            </template>
+
+            <template v-else-if="item.icone === 'municipios'">
+              <path d="M3 21h18" />
+              <path d="M5 21V7l8-4v18" />
+              <path d="M19 21V11l-6-4" />
+              <path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01" />
             </template>
 
             <template v-else-if="item.icone === 'qualidade'">

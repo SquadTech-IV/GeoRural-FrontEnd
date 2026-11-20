@@ -100,6 +100,11 @@ const router = createRouter({
       ],
     },
     {
+    path: '/municipios',
+    name: 'ComparacaoMunicipios',
+      component: () => import('@/views/ComparacaoMunicipios.vue'),
+    },
+    {
       path: '/rastreabilidade',
       name: 'Rastreabilidade',
       component: () => import('../views/RastreabilidadeDados.vue'),
