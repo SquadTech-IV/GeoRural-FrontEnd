@@ -35,6 +35,7 @@ export function possuiPermissao(perfil, capacidade = 'consultar') {
 }
 
 export function permissaoRota(nome) {
+  if (nome === 'GestaoUsuarios') return 'administrar'
   if (['QuarentenaDados', 'AuditoriaDados'].includes(nome)) return 'qualidade'
   if (nome === 'Ingestao') return 'operar'
   if (nome === 'RegraNovaVersao') return 'gerir'
@@ -46,6 +47,7 @@ export function perfisRequisicao(metodo, caminho) {
   const verbo = String(metodo).toUpperCase()
   const rota = String(caminho).split('?')[0].replace(/\/$/, '')
   if (
+    /^\/api\/usuarios(?:\/|$)/.test(rota) ||
     /^\/api\/teste(?:\/|$)/.test(rota) ||
     (verbo === 'POST' && rota === '/api/pipeline/limite-territorial/recarregar')
   )
