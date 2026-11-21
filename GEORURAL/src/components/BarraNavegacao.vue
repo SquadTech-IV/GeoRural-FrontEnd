@@ -1,10 +1,25 @@
 <script setup>
-import { ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
+import { computed, ref } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import logo from '@/assets/LogoSquadTech.png'
+import { autenticacaoService } from '../services/autenticacaoService'
+import {
+  possuiPermissao,
+  permissaoRota,
+} from '../services/permissaoService'
 
 const route = useRoute()
+const router = useRouter()
 
-const tema = ref(document.documentElement.dataset.tema || 'light')
+const saindo = ref(false)
+const erroSaida = ref('')
+const tema = ref(document.documentElement.dataset.tema || 'dark')
+
+const descricaoTema = computed(() =>
+  tema.value === 'light'
+    ? 'Ativar tema escuro'
+    : 'Ativar tema claro',
+)
 
 const itens = [
   {
@@ -28,7 +43,7 @@ const itens = [
     icone: 'upload',
   },
   {
-    caminho: '/',
+    caminho: '/regras',
     titulo: 'Regras',
     icone: 'regras',
   },
@@ -79,10 +94,42 @@ const itens = [
   },
 ]
 
+const itensVisiveis = computed(() =>
+  itens.filter((item) => {
+    const rota = router.resolve(item.caminho)
+
+    // Não exibe links sem uma rota nomeada correspondente.
+    if (!rota.name) return false
+
+    return possuiPermissao(
+      autenticacaoService.estado.perfil,
+      permissaoRota(rota.name),
+    )
+  }),
+)
+
+async function sair() {
+  if (saindo.value) return
+
+  saindo.value = true
+  erroSaida.value = ''
+
+  try {
+    await autenticacaoService.sair()
+    await router.replace({ name: 'Login' })
+  } catch {
+    erroSaida.value =
+      'Não foi possível concluir a saída. Tente novamente.'
+  } finally {
+    saindo.value = false
+  }
+}
+
 function estaAtivo(caminho) {
-  if (caminho === '/') {
+  if (caminho === '/regras') {
     return (
-      route.path === '/' ||
+      route.path === '/regras' ||
+      route.path.startsWith('/regras/') ||
       [
         'RegraNovaVersao',
         'RegraDetalheVersao',
@@ -94,13 +141,17 @@ function estaAtivo(caminho) {
   if (caminho === '/imoveis') {
     return (
       route.path === '/imoveis' ||
+      route.path.startsWith('/imoveis/') ||
       route.path.startsWith('/resultado/') ||
       route.path === '/mapa-indicadores' ||
       route.path.startsWith('/mapa-indicadores/')
     )
   }
 
-  return route.path === caminho || route.path.startsWith(`${caminho}/`)
+  return (
+    route.path === caminho ||
+    route.path.startsWith(`${caminho}/`)
+  )
 }
 
 function alternarTema() {
@@ -110,28 +161,60 @@ function alternarTema() {
   try {
     localStorage.setItem('georural-tema', tema.value)
   } catch {
-    // comentario
-  } 
+    // O tema continua funcionando sem persistência.
+  }
 }
 </script>
 
 <template>
-  <aside class="sidebar" aria-label="Menu principal">
+  <aside
+    v-if="route.name !== 'Login' && !route.meta.ocultarNavegacao"
+    class="sidebar"
+    aria-label="Menu principal"
+  >
     <div class="sidebar-cabecalho">
-      <RouterLink to="/" class="sidebar-marca" aria-label="GeoRural — página inicial">
-        <img src="@/assets/LogoSquadTech.png" alt="" class="sidebar-logo" />
+      <RouterLink
+        to="/"
+        class="sidebar-marca"
+        aria-label="GeoRural — página inicial"
+      >
+        <img
+          :src="logo"
+          alt=""
+          class="sidebar-logo"
+        />
 
         <span class="sidebar-nome">GEORURAL</span>
       </RouterLink>
     </div>
 
     <div class="sidebar-conteudo">
-      <nav class="sidebar-links" aria-label="Navegação principal">
-        <RouterLink v-for="item in itens" :key="item.caminho" :to="item.caminho" class="sidebar-link" :class="{
-          'sidebar-link--ativo': estaAtivo(item.caminho),
-        }" :aria-current="estaAtivo(item.caminho) ? 'page' : undefined">
-          <svg class="sidebar-icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <nav
+        class="sidebar-links"
+        aria-label="Navegação principal"
+      >
+        <RouterLink
+          v-for="item in itensVisiveis"
+          :key="item.caminho"
+          :to="item.caminho"
+          class="sidebar-link"
+          :class="{
+            'sidebar-link--ativo': estaAtivo(item.caminho),
+          }"
+          :aria-current="
+            estaAtivo(item.caminho) ? 'page' : undefined
+          "
+        >
+          <svg
+            class="sidebar-icone"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
             <template v-if="item.icone === 'upload'">
               <path d="M12 16V4" />
               <path d="m7 9 5-5 5 5" />
@@ -185,7 +268,9 @@ function alternarTema() {
             </template>
 
             <template v-else-if="item.icone === 'painel'">
-              <path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" />
+              <path
+                d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z"
+              />
             </template>
 
             <template v-else-if="item.icone === 'monitoramento'">
@@ -198,40 +283,56 @@ function alternarTema() {
             </template>
           </svg>
 
-
           <span>{{ item.titulo }}</span>
         </RouterLink>
       </nav>
     </div>
 
     <footer class="sidebar-rodape">
-      <button type="button" class="sidebar-tema" :aria-label="tema === 'light'
-          ? 'Ativar tema escuro'
-          : 'Ativar tema claro'
-        " :title="tema === 'light'
-            ? 'Ativar tema escuro'
-            : 'Ativar tema claro'
-          " @click="alternarTema">
+      <div class="sidebar-usuario">
+        <strong>{{ autenticacaoService.estado.nome }}</strong>
+        <span>{{ autenticacaoService.estado.perfil }}</span>
+      </div>
+
+      <button
+        type="button"
+        class="sidebar-tema"
+        :disabled="saindo"
+        :aria-busy="saindo"
+        @click="sair"
+      >
+        {{ saindo ? 'Saindo...' : 'Sair da conta' }}
+      </button>
+
+      <p
+        v-if="erroSaida"
+        role="alert"
+        class="sidebar-erro"
+      >
+        {{ erroSaida }}
+      </p>
+
+      <button
+        type="button"
+        class="sidebar-tema"
+        :aria-label="descricaoTema"
+        :title="descricaoTema"
+        @click="alternarTema"
+      >
         <span class="sidebar-tema-icone">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"
-            stroke-linejoin="round" aria-hidden="true">
-            <path v-if="tema === 'light'" d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" />
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path
+              v-if="tema === 'light'"
+              d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"
+            />
 
             <template v-else>
-              <circle cx="12" cy="12" r="4" />
-
-              <path
-                d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42" />
-            </template>
-          </svg>
-        </span>
-
-        <span class="sidebar-tema-texto">
-          {{ tema === 'light' ? 'Modo escuro' : 'Modo claro' }}
-        </span>
-      </button>
-    </footer>
-  </aside>
-</template>
-
-<style scoped src="../assets/css/navegacao.css"></style>
+              <circle cx="12

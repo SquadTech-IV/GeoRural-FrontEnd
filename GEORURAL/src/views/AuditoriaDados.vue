@@ -39,7 +39,7 @@ const ELOS = {
     titulo: 'Regra de cálculo aplicada',
     us: 'US14',
     rotulo: 'Regras e Métodos',
-    rota: '/',
+    rota: '/regras',
     glyph: 'ƒ',
   },
   execucao: {
