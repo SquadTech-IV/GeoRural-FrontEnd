@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+
 import logo from '@/assets/LogoSquadTech.png'
 import { autenticacaoService } from '../services/autenticacaoService'
 import {
@@ -13,9 +14,31 @@ const router = useRouter()
 
 const saindo = ref(false)
 const erroSaida = ref('')
-const tema = ref(document.documentElement.dataset.tema || 'dark')
 
-const descricaoTema = computed(() =>
+function carregarTema() {
+  const temaAtual = document.documentElement.dataset.tema
+
+  if (temaAtual === 'light' || temaAtual === 'dark') {
+    return temaAtual
+  }
+
+  try {
+    const salvo = localStorage.getItem('georural-tema')
+
+    if (salvo === 'light' || salvo === 'dark') {
+      return salvo
+    }
+  } catch {
+    // comentario
+  }
+
+  return 'dark'
+}
+
+const tema = ref(carregarTema())
+document.documentElement.dataset.tema = tema.value
+
+const tituloTema = computed(() =>
   tema.value === 'light'
     ? 'Ativar tema escuro'
     : 'Ativar tema claro',
@@ -92,14 +115,16 @@ const itens = [
     titulo: 'Saúde da plataforma',
     icone: 'monitoramento',
   },
+  {
+    caminho: '/usuarios',
+    titulo: 'Gestão de usuários',
+    icone: 'usuarios',
+  },
 ]
 
 const itensVisiveis = computed(() =>
   itens.filter((item) => {
     const rota = router.resolve(item.caminho)
-
-    // Não exibe links sem uma rota nomeada correspondente.
-    if (!rota.name) return false
 
     return possuiPermissao(
       autenticacaoService.estado.perfil,
@@ -108,36 +133,7 @@ const itensVisiveis = computed(() =>
   }),
 )
 
-async function sair() {
-  if (saindo.value) return
-
-  saindo.value = true
-  erroSaida.value = ''
-
-  try {
-    await autenticacaoService.sair()
-    await router.replace({ name: 'Login' })
-  } catch {
-    erroSaida.value =
-      'Não foi possível concluir a saída. Tente novamente.'
-  } finally {
-    saindo.value = false
-  }
-}
-
 function estaAtivo(caminho) {
-  if (caminho === '/regras') {
-    return (
-      route.path === '/regras' ||
-      route.path.startsWith('/regras/') ||
-      [
-        'RegraNovaVersao',
-        'RegraDetalheVersao',
-        'RegraCompararVersoes',
-      ].includes(route.name)
-    )
-  }
-
   if (caminho === '/imoveis') {
     return (
       route.path === '/imoveis' ||
@@ -161,22 +157,39 @@ function alternarTema() {
   try {
     localStorage.setItem('georural-tema', tema.value)
   } catch {
-    // O tema continua funcionando sem persistência.
+    // A alteração permanece aplicada durante esta sessão.
+  }
+}
+
+async function sair() {
+  if (saindo.value) return
+
+  saindo.value = true
+  erroSaida.value = ''
+
+  try {
+    await autenticacaoService.sair()
+    await router.replace({ name: 'Login' })
+  } catch {
+    erroSaida.value =
+      'Não foi possível concluir a saída. Tente novamente.'
+  } finally {
+    saindo.value = false
   }
 }
 </script>
 
 <template>
   <aside
-    v-if="route.name !== 'Login' && !route.meta.ocultarNavegacao"
+    v-if="!route.meta.ocultarNavegacao"
     class="sidebar"
     aria-label="Menu principal"
   >
     <div class="sidebar-cabecalho">
       <RouterLink
-        to="/"
+        :to="{ name: 'Imoveis' }"
         class="sidebar-marca"
-        aria-label="GeoRural — página inicial"
+        aria-label="GeoRural — Imóveis"
       >
         <img
           :src="logo"
@@ -189,10 +202,7 @@ function alternarTema() {
     </div>
 
     <div class="sidebar-conteudo">
-      <nav
-        class="sidebar-links"
-        aria-label="Navegação principal"
-      >
+      <nav class="sidebar-links" aria-label="Navegação principal">
         <RouterLink
           v-for="item in itensVisiveis"
           :key="item.caminho"
@@ -201,9 +211,7 @@ function alternarTema() {
           :class="{
             'sidebar-link--ativo': estaAtivo(item.caminho),
           }"
-          :aria-current="
-            estaAtivo(item.caminho) ? 'page' : undefined
-          "
+          :aria-current="estaAtivo(item.caminho) ? 'page' : undefined"
         >
           <svg
             class="sidebar-icone"
@@ -277,6 +285,13 @@ function alternarTema() {
               <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
             </template>
 
+            <template v-else-if="item.icone === 'usuarios'">
+              <circle cx="9" cy="8" r="3" />
+              <path d="M3 21v-2a6 6 0 0 1 12 0v2" />
+              <path d="M16 5a3 3 0 0 1 0 6" />
+              <path d="M21 21v-2a6 6 0 0 0-4-5.65" />
+            </template>
+
             <template v-else>
               <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z" />
               <path d="M9 3v15M15 6v15" />
@@ -298,7 +313,6 @@ function alternarTema() {
         type="button"
         class="sidebar-tema"
         :disabled="saindo"
-        :aria-busy="saindo"
         @click="sair"
       >
         {{ saindo ? 'Saindo...' : 'Sair da conta' }}
@@ -306,8 +320,8 @@ function alternarTema() {
 
       <p
         v-if="erroSaida"
-        role="alert"
         class="sidebar-erro"
+        role="alert"
       >
         {{ erroSaida }}
       </p>
@@ -315,8 +329,8 @@ function alternarTema() {
       <button
         type="button"
         class="sidebar-tema"
-        :aria-label="descricaoTema"
-        :title="descricaoTema"
+        :aria-label="tituloTema"
+        :title="tituloTema"
         @click="alternarTema"
       >
         <span class="sidebar-tema-icone">
@@ -335,4 +349,47 @@ function alternarTema() {
             />
 
             <template v-else>
-              <circle cx="12
+              <circle cx="12" cy="12" r="4" />
+              <path
+                d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"
+              />
+            </template>
+          </svg>
+        </span>
+
+        <span class="sidebar-tema-texto">
+          {{ tema === 'light' ? 'Modo escuro' : 'Modo claro' }}
+        </span>
+      </button>
+    </footer>
+  </aside>
+</template>
+
+<style scoped src="../assets/css/navegacao.css"></style>
+
+<style scoped>
+.sidebar-usuario {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+}
+
+.sidebar-usuario strong {
+  color: var(--cor-texto);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.sidebar-usuario span {
+  color: var(--cor-texto-secundario);
+  font-size: 13px;
+}
+
+.sidebar-erro {
+  margin: 8px 12px;
+  color: var(--cor-erro);
+  font-size: 13px;
+  line-height: 1.5;
+}
+</style>
