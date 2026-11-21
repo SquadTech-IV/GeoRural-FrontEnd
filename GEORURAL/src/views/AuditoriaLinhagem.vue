@@ -1,124 +1,40 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { onMounted, onBeforeUnmount, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ModalDetalheAuditoria from '../components/ModalDetalheAuditoria.vue'
-
-defineOptions({
-  name: 'AuditoriaLinhagem',
-})
-
+import {
+  OPERACOES_AUDITORIA as OPERACOES,
+  ENTIDADES_AUDITORIA as ENTIDADES,
+} from '../services/historicoAcoesService'
+import { criarControleHistorico } from '../services/historicoAcoesControleService'
+defineOptions({ name: 'AuditoriaLinhagem' })
 const route = useRoute()
-
-const OPERACOES = {
-  INSERT: 'Criou',
-  UPDATE: 'Alterou',
-  DELETE: 'Apagou',
-  LOGIN: 'Entrou',
-  LOGOUT: 'Saiu',
-  EXPORT: 'Exportou',
-  DOWNLOAD: 'Baixou',
-  API_ACCESS: 'Chamou a API',
-}
-
-const ENTIDADES = [
-  'VERSAO',
-  'REGRA_CALCULO',
-  'PARAMETRO_REGRA_CALCULO',
-  'ARQUIVO_BRUTO',
-  'CONJUNTO_DADOS',
-  'EXECUCAO_PIPELINE',
-  'USUARIO',
-  'FONTE_DO_DADO',
-]
-
-const dias = ref(7)
-const operacao = ref('')
-const entidade = ref('')
-const responsavel = ref('')
-const busca = ref('')
-
-const carregando = ref(false)
-const eventos = ref([])
-const eventoSelecionado = ref(null)
-
-const responsaveisDisponiveis = computed(() => {
-  const mapa = new Map()
-  for (const e of eventos.value) {
-    if (e.usuario?.nome && !mapa.has(e.usuario.nome)) {
-      mapa.set(e.usuario.nome, e.usuario)
-    }
-  }
-  return Array.from(mapa.values())
-})
-
-const eventosFiltrados = computed(() => {
-  const termo = busca.value.trim().toLowerCase()
-  return eventos.value.filter((e) => {
-    if (operacao.value && e.operacao !== operacao.value) return false
-    if (entidade.value && e.entidade !== entidade.value) return false
-    if (responsavel.value && e.usuario?.nome !== responsavel.value) return false
-    if (!termo) return true
-
-    const texto = `${e.usuario?.nome ?? ''} ${e.operacao} ${e.entidade} ${
-      e.resumo ?? ''
-    } ${e.usuario?.ip ?? ''} ${JSON.stringify(e.antigos ?? {})} ${JSON.stringify(
-      e.novos ?? {}
-    )}`
-    return texto.toLowerCase().includes(termo)
-  })
-})
-
-const resumo = computed(() => {
-  const lista = eventosFiltrados.value
-  const mudancas = lista.filter((e) =>
-    ['INSERT', 'UPDATE', 'DELETE'].includes(e.operacao)
-  ).length
-  const responsaveisUnicos = new Set(
-    lista.map((e) => e.usuario?.nome).filter(Boolean)
-  ).size
-  const peloAirflow = lista.filter((e) => e.usuario?.automatico).length
-  const exclusoes = lista.filter((e) => e.operacao === 'DELETE').length
-
-  return {
-    total: lista.length,
-    mudancas,
-    responsaveisUnicos,
-    peloAirflow,
-    exclusoes,
-  }
-})
-
-const gruposPorDia = computed(() => {
-  const grupos = []
-  const mapa = new Map()
-
-  for (const e of eventosFiltrados.value) {
-    const d = e.quando instanceof Date ? e.quando : new Date(e.quando)
-    const chave = Number.isNaN(d.getTime())
-      ? 'sem-data'
-      : d.toISOString().slice(0, 10)
-
-    if (!mapa.has(chave)) {
-      const novoGrupo = {
-        chave,
-        dataRef: d,
-        itens: [],
-      }
-      mapa.set(chave, novoGrupo)
-      grupos.push(novoGrupo)
-    }
-    mapa.get(chave).itens.push(e)
-  }
-
-  return grupos
-})
-
-const eventoMaisAntigo = computed(() => {
-  if (!eventosFiltrados.value.length) return null
-  return eventosFiltrados.value[eventosFiltrados.value.length - 1]
-})
-
+const controle = criarControleHistorico()
+const {
+  dias,
+  operacao,
+  entidade,
+  responsavel,
+  busca,
+  eventoSelecionado,
+  carregando,
+  erro,
+  pagina,
+  total,
+  totalPaginas,
+  arquivoBrutoId,
+  consultarAuditoria,
+  mudarPagina,
+  eventosFiltrados,
+  resumo,
+  gruposPorDia,
+  eventoMaisAntigo,
+  responsaveisDisponiveis,
+  abrirModal,
+  fecharModal,
+} = controle
+watch(() => route.query.arquivoBrutoId, controle.selecionarArquivo, { immediate: true })
 function fmtHora(valor) {
   if (!valor) return '—'
   const d = valor instanceof Date ? valor : new Date(valor)
@@ -151,28 +67,8 @@ function fmtInteiro(v) {
   return Number(v).toLocaleString('pt-BR')
 }
 
-async function consultarAuditoria() {
-  carregando.value = true
-  try {//
-  } finally {
-    carregando.value = false
-  }
-}
-
-function abrirModal(evento) {
-  eventoSelecionado.value = evento
-}
-
-function fecharModal() {
-  eventoSelecionado.value = null
-}
-
-onMounted(async () => {
-  if (route.query.arquivoBrutoId) {
-    busca.value = String(route.query.arquivoBrutoId)
-  }
-  await consultarAuditoria()
-})
+onMounted(consultarAuditoria)
+onBeforeUnmount(controle.destruir)
 </script>
 
 <template>
@@ -183,26 +79,22 @@ onMounted(async () => {
       <header class="pg-cabecalho">
         <h1>Quem fez o quê, e quando</h1>
         <p>
-          Tudo que aconteceu na plataforma, na ordem em que aconteceu — envio de
-          arquivo, mudança de regra, execução, publicação, download e acesso à API.
-          Cada linha guarda o responsável, o IP e o estado antes e depois.
+          Tudo que aconteceu na plataforma, na ordem em que aconteceu — envio de arquivo, mudança de
+          regra, execução, publicação, download e acesso à API. Cada linha guarda o responsável, o
+          IP e o estado antes e depois.
         </p>
       </header>
 
       <section class="pg-filtros" aria-label="Filtros da auditoria">
         <label class="pg-campo aud-campo-busca">
           <span>Buscar</span>
-          <input
-            v-model="busca"
-            type="search"
-            placeholder="Buscar por responsável, entidade ou conteúdo…"
-          />
+          <input v-model="busca" type="search" placeholder="Buscar no conteúdo desta página…" />
         </label>
 
         <label class="pg-campo">
           <span>Período</span>
-          <select v-model.number="dias" @change="consultarAuditoria">
-            <option :value="1">Últimas 24h</option>
+          <select v-model.number="dias">
+            <option :value="1">Hoje</option>
             <option :value="7">Últimos 7 dias</option>
             <option :value="30">Últimos 30 dias</option>
             <option :value="0">Todo o período</option>
@@ -220,7 +112,7 @@ onMounted(async () => {
         </label>
 
         <label class="pg-campo">
-          <span>Entidade</span>
+          <span>Entidade nesta página</span>
           <select v-model="entidade">
             <option value="">Qualquer entidade</option>
             <option v-for="ent in ENTIDADES" :key="ent" :value="ent">
@@ -230,37 +122,53 @@ onMounted(async () => {
         </label>
 
         <label class="pg-campo">
-          <span>Responsável</span>
-          <select v-model="responsavel">
-            <option value="">Qualquer responsável</option>
-            <option
-              v-for="u in responsaveisDisponiveis"
-              :key="u.nome"
-              :value="u.nome"
-            >
+          <span>Identificador do responsável</span>
+          <input
+            v-model="responsavel"
+            type="text"
+            inputmode="numeric"
+            list="auditoria-responsaveis"
+            placeholder="Todos os responsáveis"
+            aria-label="Identificador do usuário responsável"
+          />
+          <datalist id="auditoria-responsaveis">
+            <option v-for="u in responsaveisDisponiveis" :key="u.id" :value="u.id">
               {{ u.nome }}{{ u.automatico ? ' (automático)' : '' }}
             </option>
-          </select>
+          </datalist>
         </label>
+        <button type="button" class="pg-botao" :disabled="carregando" @click="consultarAuditoria">
+          Atualizar
+        </button>
       </section>
 
-      <section class="aud-kpis" aria-label="Resumo da auditoria">
+      <p class="aud-alcance">
+        Busca, entidade e resumo consideram os registros da página carregada.
+      </p>
+      <p v-if="arquivoBrutoId" class="aud-alcance">
+        Arquivo {{ arquivoBrutoId }} nesta página.
+        <button type="button" class="pg-botao" @click="arquivoBrutoId = ''">
+          Remover filtro do arquivo
+        </button>
+      </p>
+
+      <section
+        v-if="!erro && !carregando"
+        class="aud-kpis"
+        aria-label="Resumo da auditoria nesta página"
+      >
         <article class="pg-bloco aud-kpi">
           <span class="aud-kpi-k">Ações</span>
           <strong class="aud-kpi-v">{{ fmtInteiro(resumo.total) }}</strong>
           <span class="aud-kpi-m">
-            {{
-              dias
-                ? `nos últimos ${dias} dia(s)`
-                : 'desde o início da plataforma'
-            }}
+            {{ dias ? 'nesta página do período selecionado' : 'nesta página' }}
           </span>
         </article>
 
         <article class="pg-bloco aud-kpi">
           <span class="aud-kpi-k">Mudanças de estado</span>
           <strong class="aud-kpi-v">{{ fmtInteiro(resumo.mudancas) }}</strong>
-          <span class="aud-kpi-m">INSERT, UPDATE e DELETE</span>
+          <span class="aud-kpi-m">INSERT, UPDATE e DELETE nesta página</span>
         </article>
 
         <article class="pg-bloco aud-kpi">
@@ -268,51 +176,45 @@ onMounted(async () => {
           <strong class="aud-kpi-v">
             {{ fmtInteiro(resumo.responsaveisUnicos) }}
           </strong>
-          <span class="aud-kpi-m">pessoas e integrações</span>
+          <span class="aud-kpi-m">pessoas e integrações nesta página</span>
         </article>
 
         <article class="pg-bloco aud-kpi">
-          <span class="aud-kpi-k">Pelo Airflow</span>
+          <span class="aud-kpi-k">Autor AIRFLOW</span>
           <strong class="aud-kpi-v">{{ fmtInteiro(resumo.peloAirflow) }}</strong>
-          <span class="aud-kpi-m">sem disparo manual</span>
+          <span class="aud-kpi-m">responsável registrado como AIRFLOW</span>
         </article>
 
-        <article
-          class="pg-bloco aud-kpi"
-          :class="{ 'aud-kpi--alerta': resumo.exclusoes > 0 }"
-        >
+        <article class="pg-bloco aud-kpi" :class="{ 'aud-kpi--alerta': resumo.exclusoes > 0 }">
           <span class="aud-kpi-k">Exclusões</span>
           <strong class="aud-kpi-v">{{ fmtInteiro(resumo.exclusoes) }}</strong>
-          <span class="aud-kpi-m">sempre guardam o estado anterior</span>
+          <span class="aud-kpi-m">registros DELETE nesta página</span>
         </article>
       </section>
 
-      <p
-        v-if="!dias && eventosFiltrados.length && eventoMaisAntigo"
-        class="aud-alcance"
-      >
+      <p v-if="!dias && eventosFiltrados.length && eventoMaisAntigo" class="aud-alcance">
         Mostrando <strong>{{ fmtInteiro(eventosFiltrados.length) }}</strong>
         ação(ões), a mais antiga de
-        <strong>{{ fmtDataCompleta(eventoMaisAntigo.quando) }}</strong>.
+        <strong>{{ fmtDataCompleta(eventoMaisAntigo.quando) }}</strong
+        >.
       </p>
 
       <div v-if="carregando" class="pg-bloco">
         <p class="pg-vazio">Carregando trilha de auditoria...</p>
       </div>
 
+      <div v-else-if="erro" class="pg-bloco" role="alert">
+        <p>{{ erro }}</p>
+        <button type="button" class="pg-botao" @click="consultarAuditoria">Tentar novamente</button>
+      </div>
+
       <template v-else-if="gruposPorDia.length">
-        <section
-          v-for="grupo in gruposPorDia"
-          :key="grupo.chave"
-          class="aud-dia"
-        >
+        <section v-for="grupo in gruposPorDia" :key="grupo.chave" class="aud-dia">
           <div class="aud-dia-topo">
             <span class="aud-dia-titulo">
               {{ fmtDiaCabecalho(grupo.dataRef) }}
             </span>
-            <span class="aud-dia-contagem">
-              {{ fmtInteiro(grupo.itens.length) }} ação(ões)
-            </span>
+            <span class="aud-dia-contagem"> {{ fmtInteiro(grupo.itens.length) }} ação(ões) </span>
             <span class="aud-dia-linha" />
           </div>
 
@@ -321,7 +223,11 @@ onMounted(async () => {
             :key="ev.id"
             class="aud-ev"
             :class="{ 'aud-ev--marco': ev.marco }"
+            role="button"
+            tabindex="0"
             @click="abrirModal(ev)"
+            @keydown.enter="abrirModal(ev)"
+            @keydown.space.prevent="abrirModal(ev)"
           >
             <span class="aud-hora">{{ fmtHora(ev.quando) }}</span>
 
@@ -333,9 +239,7 @@ onMounted(async () => {
               <div class="aud-resumo">{{ ev.resumo }}</div>
               <div class="aud-sub">
                 {{ ev.entidade
-                }}<template
-                  v-if="ev.registroId !== null && ev.registroId !== undefined"
-                >
+                }}<template v-if="ev.registroId !== null && ev.registroId !== undefined">
                   · id {{ ev.registroId }}
                 </template>
               </div>
@@ -344,7 +248,7 @@ onMounted(async () => {
             <div class="aud-quem">
               <div class="aud-quem-nome">
                 {{ ev.usuario?.nome }}
-                <span v-if="ev.usuario?.automatico" class="aud-auto">auto</span>
+                <span v-if="ev.usuario?.automatico" class="aud-auto">AIRFLOW</span>
               </div>
               <div class="pg-mono aud-quem-ip">{{ ev.usuario?.ip }}</div>
             </div>
@@ -353,17 +257,33 @@ onMounted(async () => {
       </template>
 
       <div v-else class="pg-bloco">
-        <p class="pg-vazio">
-          Nenhuma ação encontrada com esses filtros. A trilha é apenas de leitura:
-          se não há registo, a ação não ocorreu nesta janela.
-        </p>
+        <p class="pg-vazio">Nenhum registro encontrado nesta página com os filtros selecionados.</p>
       </div>
+      <nav v-if="!erro" class="aud-paginacao" aria-label="Páginas do histórico">
+        <span
+          >{{ fmtInteiro(total) }} registro(s) no filtro · Página
+          {{ totalPaginas ? pagina + 1 : 0 }} de {{ totalPaginas }}</span
+        >
+        <button
+          type="button"
+          class="pg-botao"
+          :disabled="carregando || pagina === 0"
+          @click="mudarPagina(pagina - 1)"
+        >
+          Anterior
+        </button>
+        <button
+          type="button"
+          class="pg-botao"
+          :disabled="carregando || pagina + 1 >= totalPaginas"
+          @click="mudarPagina(pagina + 1)"
+        >
+          Próxima
+        </button>
+      </nav>
     </main>
 
-    <ModalDetalheAuditoria
-      :evento="eventoSelecionado"
-      @fechar="fecharModal"
-    />
+    <ModalDetalheAuditoria :evento="eventoSelecionado" @fechar="fecharModal" />
   </div>
 </template>
 

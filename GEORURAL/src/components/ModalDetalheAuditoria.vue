@@ -1,5 +1,6 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { prepararDetalheAuditoria } from '../services/historicoAcoesService'
 
 defineOptions({
   name: 'ModalDetalheAuditoria',
@@ -14,30 +15,54 @@ const props = defineProps({
 
 const emit = defineEmits(['fechar'])
 
-const OPERACOES = {
-  INSERT: { rot: 'Criou', lados: ['novos'] },
-  UPDATE: { rot: 'Alterou', lados: ['antigos', 'novos'] },
-  DELETE: { rot: 'Apagou', lados: ['antigos'] },
-  LOGIN: { rot: 'Entrou', lados: [] },
-  LOGOUT: { rot: 'Saiu', lados: [] },
-  EXPORT: { rot: 'Exportou', lados: ['novos'] },
-  DOWNLOAD: { rot: 'Baixou', lados: [] },
-  API_ACCESS: { rot: 'Chamou a API', lados: [] },
+const operacaoInfo = computed(() => prepararDetalheAuditoria(props.evento))
+const chaves = computed(() => operacaoInfo.value.chaves)
+const caixa = ref(null)
+let anterior = null
+let overflow = ''
+function restaurar() {
+  if (anterior) {
+    document.body.style.overflow = overflow
+    anterior.focus?.()
+    anterior = null
+  }
 }
-
-const operacaoInfo = computed(
-  () => OPERACOES[props.evento?.operacao] ?? { rot: props.evento?.operacao ?? '', lados: [] }
+watch(
+  () => props.evento,
+  async (evento) => {
+    if (!evento) {
+      restaurar()
+      return
+    }
+    if (!anterior) {
+      anterior = document.activeElement
+      overflow = document.body.style.overflow
+    }
+    document.body.style.overflow = 'hidden'
+    await nextTick()
+    if (props.evento) caixa.value?.querySelector('button')?.focus()
+  },
+  { immediate: true },
 )
-
-const chaves = computed(() => {
-  if (!props.evento) return []
-  return [
-    ...new Set([
-      ...Object.keys(props.evento.antigos ?? {}),
-      ...Object.keys(props.evento.novos ?? {}),
-    ]),
-  ]
-})
+onBeforeUnmount(restaurar)
+function tratarTeclado(evento) {
+  if (evento.key === 'Escape') {
+    evento.preventDefault()
+    emit('fechar')
+    return
+  }
+  if (evento.key !== 'Tab') return
+  const botoes = [...caixa.value.querySelectorAll('button')].filter((botao) => !botao.disabled)
+  const primeiro = botoes[0],
+    ultimo = botoes.at(-1)
+  if (evento.shiftKey && document.activeElement === primeiro) {
+    evento.preventDefault()
+    ultimo?.focus()
+  } else if (!evento.shiftKey && document.activeElement === ultimo) {
+    evento.preventDefault()
+    primeiro?.focus()
+  }
+}
 
 function fmtDataHora(valor) {
   if (!valor) return '—'
@@ -48,8 +73,7 @@ function fmtDataHora(valor) {
 
 function ehDiferente(chave) {
   return (
-    JSON.stringify(props.evento?.antigos?.[chave]) !==
-    JSON.stringify(props.evento?.novos?.[chave])
+    JSON.stringify(props.evento?.antigos?.[chave]) !== JSON.stringify(props.evento?.novos?.[chave])
   )
 }
 </script>
@@ -60,12 +84,14 @@ function ehDiferente(chave) {
     class="pg-modal"
     role="dialog"
     aria-modal="true"
+    aria-labelledby="auditoria-detalhe-titulo"
+    @keydown="tratarTeclado"
     @click.self="emit('fechar')"
   >
-    <div class="pg-modal-caixa" style="width: min(44rem, 100%)">
+    <div ref="caixa" class="pg-modal-caixa" style="width: min(44rem, 100%)">
       <header>
         <div>
-          <h2>
+          <h2 id="auditoria-detalhe-titulo">
             {{ operacaoInfo.rot }} · {{ evento.entidade }}
             <span
               v-if="evento.registroId !== null && evento.registroId !== undefined"
@@ -75,8 +101,8 @@ function ehDiferente(chave) {
             </span>
           </h2>
           <p>
-            <span class="pg-mono">aud_id {{ evento.id }}</span> ·
-            {{ evento.usuario?.nome }} · {{ fmtDataHora(evento.quando) }} ·
+            <span class="pg-mono">aud_id {{ evento.id }}</span> · {{ evento.usuario?.nome }} ·
+            {{ fmtDataHora(evento.quando) }} ·
             <span class="pg-mono">{{ evento.usuario?.ip }}</span>
           </p>
         </div>
@@ -103,20 +129,15 @@ function ehDiferente(chave) {
       </div>
 
       <div v-if="!operacaoInfo.lados.length" class="aud-semlado">
-        <strong>Esta operação não muda estado.</strong>
-        <span class="pg-mono">{{ evento.operacao }}</span> é um evento: regista que
-        algo aconteceu, com quem e quando. Por isso
-        <span class="pg-mono">aud_dados_antigos</span> e
-        <span class="pg-mono">aud_dados_novos</span> ficam nulos — não há «antes» nem
-        «depois» para comparar.
+        <strong>Sem dados anteriores ou posteriores registrados para esta ação.</strong>
       </div>
 
       <div v-else-if="operacaoInfo.lados.length === 1" class="aud-modal-secao">
         <h3>
           {{
             operacaoInfo.lados[0] === 'novos'
-              ? 'Estado criado'
-              : 'Estado que existia antes de apagar'
+              ? 'Dados posteriores registrados'
+              : 'Dados anteriores registrados'
           }}
         </h3>
 
@@ -138,12 +159,10 @@ function ehDiferente(chave) {
         <div class="aud-semlado" style="margin-top: 12px">
           <template v-if="operacaoInfo.lados[0] === 'novos'">
             <strong>Sem «antes».</strong>
-            <span class="pg-mono">{{ evento.operacao }}</span> cria o registo, pelo
-            que <span class="pg-mono">aud_dados_antigos</span> é nulo por definição.
+            Não foram registrados dados anteriores para esta ação.
           </template>
           <template v-else>
-            <strong>Sem «depois».</strong> O registo deixou de existir — a trilha
-            guarda o estado anterior completo para preservação da evidência.
+            <strong>Sem «depois».</strong> Não foram registrados dados posteriores para esta ação.
           </template>
         </div>
       </div>
@@ -159,41 +178,15 @@ function ehDiferente(chave) {
           <template v-for="chave in chaves" :key="chave">
             <div class="aud-dk">{{ chave }}</div>
 
-            <div
-              class="aud-dv aud-dv--a"
-              :class="{ 'aud-dv--dif': ehDiferente(chave) }"
-            >
-              <span
-                v-if="evento.antigos?.[chave] === undefined"
-                class="aud-nd"
-              >
-                não existia
-              </span>
-              <span
-                v-else-if="evento.antigos?.[chave] === null"
-                class="aud-nd"
-              >
-                nulo
-              </span>
+            <div class="aud-dv aud-dv--a" :class="{ 'aud-dv--dif': ehDiferente(chave) }">
+              <span v-if="evento.antigos?.[chave] === undefined" class="aud-nd"> não existia </span>
+              <span v-else-if="evento.antigos?.[chave] === null" class="aud-nd"> nulo </span>
               <template v-else>{{ JSON.stringify(evento.antigos[chave]) }}</template>
             </div>
 
-            <div
-              class="aud-dv aud-dv--b"
-              :class="{ 'aud-dv--dif': ehDiferente(chave) }"
-            >
-              <span
-                v-if="evento.novos?.[chave] === undefined"
-                class="aud-nd"
-              >
-                não existia
-              </span>
-              <span
-                v-else-if="evento.novos?.[chave] === null"
-                class="aud-nd"
-              >
-                nulo
-              </span>
+            <div class="aud-dv aud-dv--b" :class="{ 'aud-dv--dif': ehDiferente(chave) }">
+              <span v-if="evento.novos?.[chave] === undefined" class="aud-nd"> não existia </span>
+              <span v-else-if="evento.novos?.[chave] === null" class="aud-nd"> nulo </span>
               <template v-else>{{ JSON.stringify(evento.novos[chave]) }}</template>
             </div>
           </template>
@@ -203,10 +196,8 @@ function ehDiferente(chave) {
       <div v-if="evento.usuario?.automatico" class="aud-consq">
         <span class="aud-ci">A</span>
         <div>
-          <strong>Ação automática.</strong>
-          Executada pela conta de serviço do Airflow nas etapas automáticas do
-          pipeline, deixando a versão em <span class="pg-mono">RASCUNHO</span> para
-          revisão e publicação manual.
+          <strong>Responsável registrado como AIRFLOW.</strong>
+          A trilha não informa um identificador de usuário para este evento.
         </div>
       </div>
 
@@ -217,8 +208,7 @@ function ehDiferente(chave) {
         <span class="aud-ci">!</span>
         <div>
           <strong>Registo de reprovação.</strong>
-          A versão permanece em <span class="pg-mono">RASCUNHO</span> e este evento
-          assinala a reprovação na revisão da qualidade.
+          Os dados registrados assinalam uma reprovação na revisão da qualidade.
         </div>
       </div>
 
@@ -238,12 +228,8 @@ function ehDiferente(chave) {
       </div>
 
       <div class="pg-modal-rodape">
-        <span class="pg-ajuda" style="margin: 0">
-          Registo imutável da trilha de auditoria.
-        </span>
-        <button type="button" class="pg-botao" @click="emit('fechar')">
-          Fechar
-        </button>
+        <span class="pg-ajuda" style="margin: 0"> Registo imutável da trilha de auditoria. </span>
+        <button type="button" class="pg-botao" @click="emit('fechar')">Fechar</button>
       </div>
     </div>
   </div>

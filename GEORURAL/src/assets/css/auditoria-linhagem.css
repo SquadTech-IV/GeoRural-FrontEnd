@@ -6,6 +6,10 @@
   color: var(--cor-texto);
 }
 
+.aud-paginacao { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 12px; margin-top: 24px; font-size: 13px; }
+.aud-paginacao > span { margin-right: auto; }
+.aud-ev:focus-visible { outline: 2px solid var(--cor-roxo); outline-offset: 3px; }
+
 .pg-cabecalho {
   margin-bottom: 22px;
 }
