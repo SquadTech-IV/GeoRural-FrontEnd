@@ -49,19 +49,18 @@ export function prepararVersoesPublicadas(versoes) {
     return []
   }
 
-  return versoes
-    .filter(versao =>
-      versao &&
-      typeof versao === 'object' &&
-      !Array.isArray(versao),
-    )
-    .map((versao, indice) => ({
-      chave: `${versao.id ?? 'versao'}-${indice}`,
-      numero: textoOuPadrao(versao.numero),
-      competencia: textoOuPadrao(versao.competencia),
-      dataPublicacao: formatarDataPublicacao(
-        versao.dataPublicacao,
-      ),
-      situacao: apresentarSituacao(versao.situacao),
-    }))
+  return versoes.flatMap((versao, indice) => {
+    if (!versao || typeof versao !== 'object' || Array.isArray(versao)) return []
+
+    return [
+      {
+        chave: `${versao.id ?? 'versao'}-${indice}`,
+        original: versao,
+        numero: textoOuPadrao(versao.numero),
+        competencia: textoOuPadrao(versao.competencia),
+        dataPublicacao: formatarDataPublicacao(versao.dataPublicacao),
+        situacao: apresentarSituacao(versao.situacao),
+      },
+    ]
+  })
 }

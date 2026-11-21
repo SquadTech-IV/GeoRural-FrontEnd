@@ -1,9 +1,11 @@
 <script setup>
-import { onBeforeUnmount, onMounted } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
+import ExportarVersao from '../components/ExportarVersao.vue'
+import ListaVersoesPublicadas from '../components/ListaVersoesPublicadas.vue'
 import { criarControleQualidade } from '../services/qualidadeControleService'
 
 const router = useRouter()
@@ -11,6 +13,7 @@ const controle = criarControleQualidade()
 
 const {
   fila,
+  versoesPublicadas,
   versaoSelecionada: versao,
   detalhe,
   justificativa,
@@ -30,6 +33,20 @@ const {
   fmt,
   fmtData,
 } = controle
+
+const versaoPublicadaId = ref(null)
+const tituloVersaoPublicada = ref(null)
+const versaoPublicada = computed(() =>
+  versoesPublicadas.value.find((item) => item.id === versaoPublicadaId.value),
+)
+
+async function abrirVersaoPublicada(item) {
+  versaoPublicadaId.value = versaoPublicadaId.value === item.id ? null : item.id
+  if (!versaoPublicadaId.value) return
+
+  await nextTick()
+  tituloVersaoPublicada.value?.focus()
+}
 
 function irParaQuarentena() {
   const destino = obterRotaQuarentena()
@@ -486,6 +503,41 @@ onBeforeUnmount(() => destruir())
           </section>
         </template>
       </template>
+      <ListaVersoesPublicadas :versoes="versoesPublicadas" :carregando="carregandoFila">
+        <template #versao="{ versao: item }">
+          #{{ item.numero ?? item.id }} · {{ item.conjuntoNome }}
+        </template>
+        <template #acoes="{ versao: item }">
+          <button
+            type="button"
+            class="qualidade-botao"
+            :class="{ 'qualidade-botao--principal': item.id === versaoPublicadaId }"
+            aria-controls="qualidade-versao-publicada"
+            :aria-expanded="item.id === versaoPublicadaId"
+            :aria-label="`${item.id === versaoPublicadaId ? 'Ocultar' : 'Ver'} detalhes da versão #${item.numero ?? item.id} · ${item.conjuntoNome}`"
+            @click="abrirVersaoPublicada(item)"
+          >
+            {{ item.id === versaoPublicadaId ? 'Ocultar detalhes' : 'Ver detalhes' }}
+          </button>
+        </template>
+      </ListaVersoesPublicadas>
+
+      <section
+        v-show="versaoPublicada"
+        id="qualidade-versao-publicada"
+        class="qualidade-card"
+        aria-labelledby="qualidade-versao-publicada-titulo"
+      >
+        <header v-if="versaoPublicada" class="qualidade-resumo-cabecalho">
+          <div>
+            <h2 id="qualidade-versao-publicada-titulo" ref="tituloVersaoPublicada" tabindex="-1">
+              Versão #{{ versaoPublicada.numero ?? versaoPublicada.id }} · {{ versaoPublicada.conjuntoNome }}
+            </h2>
+            <p>Publicada em {{ fmtData(versaoPublicada.dataPublicacao) }}</p>
+          </div>
+          <ExportarVersao :key="versaoPublicada.id" :versao="versaoPublicada" />
+        </header>
+      </section>
     </main>
 
     <ToastMensagem

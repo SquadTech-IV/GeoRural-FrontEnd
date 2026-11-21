@@ -2,10 +2,12 @@
 import { RouterView } from 'vue-router'
 import { autenticacaoService } from './services/autenticacaoService'
 import ToastMensagem from './components/ToastMensagem.vue'
+import ModalExportacaoVersao from './components/ModalExportacaoVersao.vue'
 </script>
 
 <template>
   <RouterView />
+  <ModalExportacaoVersao />
   <ToastMensagem
     v-if="autenticacaoService.estado.aviso"
     :mensagem="autenticacaoService.estado.aviso"

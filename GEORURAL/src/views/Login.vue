@@ -39,8 +39,7 @@ onUnmounted(() => {
 })
 
 function entrar() {
-  // Integre aqui sua API de autenticação.
-  // A opção "lembrar" está disponível para essa integração.
+
   mensagem.value =
     'Tela demonstrativa. Conecte sua API de autenticação para realizar o login.'
 }

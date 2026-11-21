@@ -112,6 +112,7 @@ onBeforeUnmount(cancelarTemporizador)
       >
         <strong>{{ tituloExibido }}</strong>
         <p>{{ mensagem }}</p>
+        <slot name="acao" />
       </div>
 
       <button

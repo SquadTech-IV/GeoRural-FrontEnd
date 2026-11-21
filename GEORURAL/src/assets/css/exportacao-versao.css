@@ -1,0 +1,161 @@
+.exportacao-acao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.85rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: var(--cor-painel-secundario);
+  color: var(--cor-texto);
+  font: inherit;
+  cursor: pointer;
+}
+
+.exportacao-acao--principal {
+  background: var(--cor-roxo);
+  color: #000;
+  font-weight: 650;
+}
+
+.exportacao-acao:hover {
+  filter: brightness(1.12);
+}
+
+.exportacao-acao:focus-visible,
+.exportacao-menu li button:focus-visible {
+  outline: 2px solid var(--cor-roxo);
+  outline-offset: 3px;
+}
+
+.exportacao-menu {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.exportacao-menu summary {
+  list-style: none;
+}
+
+.exportacao-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.exportacao-menu[open] {
+  z-index: 2;
+}
+
+.exportacao-menu ul {
+  position: absolute;
+  inset-inline-end: 0;
+  z-index: 1;
+  width: min(14rem, calc(100vw - 3rem));
+  margin: 0.4rem 0 0;
+  padding: 0.25rem;
+  list-style: none;
+  border: 1px solid var(--cor-borda);
+  border-radius: 0.5rem;
+  background: var(--cor-painel);
+}
+
+.exportacao-menu li + li {
+  border-top: 1px solid var(--cor-borda-suave);
+}
+
+.exportacao-menu li button {
+  display: grid;
+  gap: 0.2rem;
+  width: 100%;
+  padding: 0.65rem;
+  border: 0;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: var(--cor-texto);
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+}
+
+.exportacao-menu li button:hover,
+.exportacao-menu li button:focus-visible {
+  background: var(--cor-fundo-hover);
+  color: var(--cor-texto-envio);
+}
+
+.exportacao-menu li span,
+.exportacao-dialogo p,
+.exportacao-dialogo dt {
+  color: var(--cor-texto-secundario);
+}
+
+.exportacao-dialogo {
+  position: fixed;
+  inset: 0;
+  width: min(29rem, calc(100% - 2rem));
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  padding: clamp(1rem, 4vw, 1.5rem);
+  overflow: auto;
+  border: 1px solid var(--cor-borda);
+  border-radius: 0.75rem;
+  background: var(--cor-painel);
+  color: var(--cor-texto);
+  overflow-wrap: anywhere;
+}
+
+.exportacao-dialogo::backdrop {
+  background: rgb(0 0 0 / 72%);
+}
+
+.exportacao-dialogo header,
+.exportacao-dialogo footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.exportacao-dialogo h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.exportacao-dialogo dl {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0;
+  padding-block: 0.9rem;
+  border-block: 1px solid var(--cor-borda);
+}
+
+.exportacao-dialogo dd {
+  margin: 0;
+}
+
+.exportacao-dialogo progress {
+  width: 100%;
+  height: 0.7rem;
+  accent-color: var(--cor-roxo);
+}
+
+.exportacao-dialogo [role='alert'] {
+  color: var(--cor-erro);
+}
+
+.exportacao-dialogo footer {
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+.exportacao-toast-acao {
+  margin-top: 0.65rem;
+}
+
+@media (max-width: 600px) {
+  .exportacao-menu ul {
+    inset-inline: 0 auto;
+  }
+}

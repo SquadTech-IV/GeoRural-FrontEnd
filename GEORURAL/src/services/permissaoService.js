@@ -78,9 +78,10 @@ export function perfisRequisicao(metodo, caminho) {
     return QUALIDADE
   if (
     verbo === 'GET' &&
-    /^\/api\/(?:v1\/(?:catalogo|indicadores|execucoes)|indicadores|imoveis|mapa|arquivos|inventario|perfis|datalake|conjuntos|fontes|versoes|trajetoria-conjuntos|zona-tratada|ingestao|pipeline)(?:\/|$)/.test(
-      rota,
-    )
+    (/^\/api\/v1\/versoes\/[1-9]\d*\/resultados\/download$/.test(rota) ||
+      /^\/api\/(?:v1\/(?:catalogo|indicadores|execucoes)|indicadores|imoveis|mapa|arquivos|inventario|perfis|datalake|conjuntos|fontes|versoes|trajetoria-conjuntos|zona-tratada|ingestao|pipeline)(?:\/|$)/.test(
+        rota,
+      ))
   )
     return PERFIS
   return []

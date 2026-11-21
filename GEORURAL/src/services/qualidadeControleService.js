@@ -359,6 +359,7 @@ export function criarControleQualidade() {
 
   return {
     fila,
+    versoesPublicadas,
     versaoSelecionada,
     detalhe,
     justificativa,

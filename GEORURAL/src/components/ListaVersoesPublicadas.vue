@@ -109,6 +109,7 @@ const versoesExibidas = computed(() =>
             <th scope="col">Competência</th>
             <th scope="col">Publicada em</th>
             <th scope="col">Situação no retorno</th>
+            <th v-if="$slots.acoes" scope="col">Ações</th>
           </tr>
         </thead>
 
@@ -118,7 +119,9 @@ const versoesExibidas = computed(() =>
             :key="versao.chave"
           >
             <th scope="row">
-              {{ versao.numero }}
+              <slot name="versao" :versao="versao.original">
+                {{ versao.numero }}
+              </slot>
             </th>
 
             <td>{{ versao.competencia }}</td>
@@ -136,6 +139,9 @@ const versoesExibidas = computed(() =>
               >
                 {{ versao.situacao.texto }}
               </span>
+            </td>
+            <td v-if="$slots.acoes">
+              <slot name="acoes" :versao="versao.original" />
             </td>
           </tr>
         </tbody>
