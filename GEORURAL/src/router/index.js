@@ -98,6 +98,11 @@ const router = createRouter({
       component: () => import('../views/AuditoriaDados.vue'),
     },
     {
+      path: '/historico',
+      name: 'AuditoriaLinhagem',
+      component: () => import('../views/AuditoriaLinhagem.vue'),
+    },
+    {
       path: '/regras',
       name: 'Regras',
       component: () => import('../views/Regras.vue'),

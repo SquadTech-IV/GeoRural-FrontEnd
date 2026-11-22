@@ -29,13 +29,14 @@ function carregarTema() {
       return salvo
     }
   } catch {
-    // comentario
+    // Usa o tema padrão quando o armazenamento não está disponível.
   }
 
   return 'dark'
 }
 
 const tema = ref(carregarTema())
+
 document.documentElement.dataset.tema = tema.value
 
 const tituloTema = computed(() =>
@@ -104,6 +105,11 @@ const itens = [
     caminho: '/auditoria',
     titulo: 'Linhagem e auditoria',
     icone: 'auditoria',
+  },
+  {
+    caminho: '/historico',
+    titulo: 'Histórico de ações',
+    icone: 'historico',
   },
   {
     caminho: '/rastreabilidade',
@@ -202,7 +208,10 @@ async function sair() {
     </div>
 
     <div class="sidebar-conteudo">
-      <nav class="sidebar-links" aria-label="Navegação principal">
+      <nav
+        class="sidebar-links"
+        aria-label="Navegação principal"
+      >
         <RouterLink
           v-for="item in itensVisiveis"
           :key="item.caminho"
@@ -211,7 +220,9 @@ async function sair() {
           :class="{
             'sidebar-link--ativo': estaAtivo(item.caminho),
           }"
-          :aria-current="estaAtivo(item.caminho) ? 'page' : undefined"
+          :aria-current="
+            estaAtivo(item.caminho) ? 'page' : undefined
+          "
         >
           <svg
             class="sidebar-icone"
@@ -260,14 +271,23 @@ async function sair() {
               <path d="M8 19h3a7 7 0 0 0 7-5" />
             </template>
 
+            <template v-else-if="item.icone === 'historico'">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 7v5l3 3" />
+            </template>
+
             <template v-else-if="item.icone === 'rastreabilidade'">
               <circle cx="5" cy="5" r="2" />
               <circle cx="19" cy="19" r="2" />
-              <path d="M7 5h8a4 4 0 0 1 0 8H9a4 4 0 0 0 0 8h8" />
+              <path
+                d="M7 5h8a4 4 0 0 1 0 8H9a4 4 0 0 0 0 8h8"
+              />
             </template>
 
             <template v-else-if="item.icone === 'arquivos'">
-              <path d="M14 3H6v18h12V9zM14 3v6h4M8 13h8M8 17h5" />
+              <path
+                d="M14 3H6v18h12V9zM14 3v6h4M8 13h8M8 17h5"
+              />
             </template>
 
             <template v-else-if="item.icone === 'quarentena'">
@@ -305,8 +325,13 @@ async function sair() {
 
     <footer class="sidebar-rodape">
       <div class="sidebar-usuario">
-        <strong>{{ autenticacaoService.estado.nome }}</strong>
-        <span>{{ autenticacaoService.estado.perfil }}</span>
+        <strong>
+          {{ autenticacaoService.estado.nome }}
+        </strong>
+
+        <span>
+          {{ autenticacaoService.estado.perfil }}
+        </span>
       </div>
 
       <button
@@ -350,6 +375,7 @@ async function sair() {
 
             <template v-else>
               <circle cx="12" cy="12" r="4" />
+
               <path
                 d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"
               />
