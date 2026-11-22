@@ -10,10 +10,7 @@ import {
   aplicarVisibilidadeImovel,
 } from '../services/visualizacaoMapaService'
 import { criarControleTerreno } from '../services/terrenoMapaService'
-import {
-  basesMapa,
-  criarControleBase,
-} from '../services/baseMapaService'
+import { basesMapa, criarControleBase } from '../services/baseMapaService'
 
 defineOptions({
   name: 'MapaGeografico',
@@ -28,14 +25,13 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  resumosIndicadores: {
+    type: Array,
+    default: () => [],
+  },
 })
 
-const emit = defineEmits([
-  'carregado',
-  'erro',
-  'modo-alterado',
-  'terreno-alterado',
-])
+const emit = defineEmits(['carregado', 'erro', 'modo-alterado', 'terreno-alterado'])
 
 const container = ref(null)
 const carregando = ref(true)
@@ -57,10 +53,7 @@ let desmontado = false
 function informarErro(erro) {
   carregando.value = false
 
-  mensagemErro.value =
-    erro instanceof Error
-      ? erro.message
-      : 'Não foi possível carregar o mapa.'
+  mensagemErro.value = erro instanceof Error ? erro.message : 'Não foi possível carregar o mapa.'
 
   emit('erro', erro)
 }
@@ -77,17 +70,11 @@ function aplicarVisualizacao(novoModo) {
       modo: novoModo,
     })
 
-    legendaIndicadores.value = controleCamadas.atualizar(
-      visualizacao.indicadores,
-    )
+    legendaIndicadores.value = controleCamadas.atualizar(visualizacao.indicadores)
 
-    aplicarVisibilidadeImovel(
-      instancia.mapa,
-      visualizacao.mostrarImovel,
-    )
+    aplicarVisibilidadeImovel(instancia.mapa, visualizacao.mostrarImovel)
 
-    mostrarImovelLegenda.value =
-      visualizacao.mostrarImovel && visualizacao.possuiImovel
+    mostrarImovelLegenda.value = visualizacao.mostrarImovel && visualizacao.possuiImovel
 
     mensagemModo.value = visualizacao.mensagem
     mensagemErro.value = ''
@@ -110,11 +97,7 @@ function alterarModo(novoModo) {
 }
 
 function alterarTerreno(ativo) {
-  if (
-    !pronto.value ||
-    carregando.value ||
-    !controleTerreno
-  ) {
+  if (!pronto.value || carregando.value || !controleTerreno) {
     return
   }
 
@@ -131,11 +114,7 @@ function alterarTerreno(ativo) {
 }
 
 function alterarBase(evento) {
-  if (
-    !pronto.value ||
-    carregando.value ||
-    !controleBase
-  ) {
+  if (!pronto.value || carregando.value || !controleBase) {
     return
   }
 
@@ -275,17 +254,9 @@ function obterMapa() {
   return instancia?.mapa ?? null
 }
 
-watch(
-  () => props.geojson,
-  atualizarDados,
-  { deep: true },
-)
+watch(() => props.geojson, atualizarDados, { deep: true })
 
-watch(
-  () => props.indicadores,
-  atualizarIndicadores,
-  { deep: true },
-)
+watch(() => props.indicadores, atualizarIndicadores, { deep: true })
 
 onMounted(iniciarMapa)
 
@@ -309,29 +280,35 @@ defineExpose({
     aria-label="Mapa do imóvel e dos indicadores"
     :aria-busy="carregando"
   >
-    <div
-      ref="container"
-      class="mapa-geografico-container"
-    ></div>
+    <div ref="container" class="mapa-geografico-container"></div>
 
-    <div
-      v-if="carregando"
-      class="mapa-geografico-carregando"
-      role="status"
-    >
-      <span
-        class="mapa-geografico-spinner"
-        aria-hidden="true"
-      ></span>
+    <div v-if="carregando" class="mapa-geografico-carregando" role="status">
+      <span class="mapa-geografico-spinner" aria-hidden="true"></span>
 
       <span>Carregando mapa...</span>
     </div>
 
     <div class="mapa-geografico-painel-controles">
+      <section
+        v-for="resumo in modo === 'soimovel' ? [] : resumosIndicadores"
+        :key="resumo.id"
+        class="mapa-geografico-resultado"
+        :style="{ borderLeftColor: resumo.cor }"
+        :aria-label="resumo.titulo"
+      >
+        <h3>{{ resumo.titulo }}</h3>
+        <p class="mapa-geografico-resultado-situacao">{{ resumo.situacao }}</p>
+        <dl>
+          <div v-for="campo in resumo.valores" :key="campo.legenda">
+            <dt>{{ campo.legenda }}</dt>
+            <dd>{{ campo.valor }}</dd>
+          </div>
+        </dl>
+        <p v-if="!resumo.valores.length">Percentual e área não disponíveis.</p>
+        <p v-if="resumo.mensagem">{{ resumo.mensagem }}</p>
+      </section>
       <div class="mapa-geografico-base">
-        <label for="mapa-base-selecionada">
-          Base do mapa
-        </label>
+        <label for="mapa-base-selecionada"> Base do mapa </label>
 
         <select
           id="mapa-base-selecionada"
@@ -339,21 +316,13 @@ defineExpose({
           :disabled="!pronto || carregando"
           @change="alterarBase"
         >
-          <option
-            v-for="base in basesMapa"
-            :key="base.id"
-            :value="base.id"
-          >
+          <option v-for="base in basesMapa" :key="base.id" :value="base.id">
             {{ base.nome }}
           </option>
         </select>
       </div>
 
-      <div
-        class="mapa-geografico-terreno"
-        role="group"
-        aria-label="Visualização do terreno"
-      >
+      <div class="mapa-geografico-terreno" role="group" aria-label="Visualização do terreno">
         <button
           type="button"
           :aria-pressed="!terrenoAtivo"
@@ -386,11 +355,7 @@ defineExpose({
         </button>
       </div>
 
-      <div
-        class="mapa-geografico-modos"
-        role="group"
-        aria-label="Modo de visualização das camadas"
-      >
+      <div class="mapa-geografico-modos" role="group" aria-label="Modo de visualização das camadas">
         <button
           v-for="opcao in modosVisualizacao"
           :key="opcao.id"
@@ -406,11 +371,9 @@ defineExpose({
         </button>
       </div>
 
-      <ControlesCamera
-        v-if="pronto"
-        :mapa="obterMapa()"
-        @erro="informarErro"
-      />
+      <ControlesCamera v-if="pronto" :mapa="obterMapa()" @erro="informarErro" />
+
+
 
       <div
         v-if="pronto && !carregando"
@@ -429,10 +392,7 @@ defineExpose({
           <span>Limite do imóvel</span>
         </div>
 
-        <div
-          v-for="indicador in legendaIndicadores"
-          :key="indicador.id"
-        >
+        <div v-for="indicador in legendaIndicadores" :key="indicador.id">
           <span
             class="mapa-geografico-legenda-cor"
             :style="{ backgroundColor: indicador.cor }"
@@ -443,45 +403,26 @@ defineExpose({
         </div>
 
         <p
-          v-if="
-            !mostrarImovelLegenda &&
-            !legendaIndicadores.length
-          "
+          v-if="!mostrarImovelLegenda && !legendaIndicadores.length"
           class="mapa-geografico-legenda-vazia"
         >
           Nenhuma camada disponível.
         </p>
 
-        <p
-          v-if="terrenoAtivo"
-          class="mapa-geografico-terreno-info"
-        >
+        <p v-if="terrenoAtivo" class="mapa-geografico-terreno-info">
           Elevação DEM · escala vertical 1×
         </p>
       </div>
     </div>
 
-    <p
-      v-if="mensagemModo && !mensagemErro"
-      class="mapa-geografico-aviso-modo"
-      role="status"
-    >
+    <p v-if="mensagemModo && !mensagemErro" class="mapa-geografico-aviso-modo" role="status">
       {{ mensagemModo }}
     </p>
 
-    <div
-      v-if="mensagemErro"
-      class="mapa-geografico-erro"
-      role="alert"
-    >
+    <div v-if="mensagemErro" class="mapa-geografico-erro" role="alert">
       <p>{{ mensagemErro }}</p>
 
-      <button
-        type="button"
-        @click="iniciarMapa"
-      >
-        Tentar novamente
-      </button>
+      <button type="button" @click="iniciarMapa">Tentar novamente</button>
     </div>
   </section>
 </template>

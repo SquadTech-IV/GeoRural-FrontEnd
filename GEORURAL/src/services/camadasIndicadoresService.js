@@ -18,7 +18,7 @@ const estilosIndicadores = {
     cor: '#0ea5e9',
   },
   ISAP: {
-    nome: 'Áreas protegidas',
+    nome: 'Sobreposição a áreas protegidas',
     cor: '#b45309',
   },
   IDESMAT: {
