@@ -1,9 +1,18 @@
 <script setup>
 import { RouterView } from 'vue-router'
+import { autenticacaoService } from './services/autenticacaoService'
+import ToastMensagem from './components/ToastMensagem.vue'
 </script>
 
 <template>
   <RouterView />
+  <ToastMensagem
+    v-if="autenticacaoService.estado.aviso"
+    :mensagem="autenticacaoService.estado.aviso"
+    tipo="erro"
+    :duracao="0"
+    @fechar="autenticacaoService.fecharAviso"
+  />
 </template>
 
 <style scoped>

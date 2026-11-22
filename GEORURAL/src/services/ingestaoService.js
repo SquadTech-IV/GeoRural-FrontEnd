@@ -1,3 +1,4 @@
+
 import api from './api'
 
 export function validarConjuntoIngestao(valor) {
@@ -51,7 +52,7 @@ export function mensagemErroIngestao(erro, envio = false) {
   }
 
   if (status === 413) {
-    return 'O arquivo excede o tamanho permitido pelo servidor.'
+    return 'Os arquivos excedem o tamanho permitido pelo servidor.'
   }
 
   const dados = erro?.response?.data
@@ -100,7 +101,9 @@ export const ingestaoService = {
       )
 
       if (!Array.isArray(data)) {
-        throw new Error('A API retornou uma lista de fontes inválida.')
+        throw new Error(
+          'A API retornou uma lista de fontes inválida.',
+        )
       }
 
       return data
@@ -125,38 +128,59 @@ export const ingestaoService = {
           typeof item.jaRecebido !== 'boolean',
         )
       ) {
-        throw new Error('A API retornou itens disponíveis inválidos.')
+        throw new Error(
+          'A API retornou itens disponíveis inválidos.',
+        )
       }
 
       const ids = data.map(item => item.identificador)
 
       if (new Set(ids).size !== ids.length) {
-        throw new Error('A API retornou identificadores repetidos.')
+        throw new Error(
+          'A API retornou identificadores repetidos.',
+        )
       }
 
       return data
     })
   },
 
-  enviarUpload(conjuntoId, arquivo) {
+  enviarUpload(conjuntoId, arquivosRecebidos) {
     return executar(async () => {
       const id = validarConjuntoIngestao(conjuntoId)
 
-      if (!(arquivo instanceof File) || arquivo.size === 0) {
-        throw new Error('Selecione um arquivo que não esteja vazio.')
+      const arquivos = Array.isArray(arquivosRecebidos)
+        ? arquivosRecebidos
+        : [arquivosRecebidos]
+
+      if (!arquivos.length || arquivos.some(arquivo =>
+        !(arquivo instanceof File) || arquivo.size === 0,
+      )) {
+        throw new Error(
+          'Selecione pelo menos um arquivo válido e não vazio.',
+        )
       }
 
-      if (
-        !/\.(zip|shp|gpkg|geojson|json|csv|tif|tiff)$/i.test(
-          arquivo.name,
+      const formatosPermitidos =
+        /\.(zip|shp|gpkg|geojson|json|csv|tif|tiff)$/i
+
+      const invalidos = arquivos.filter(arquivo =>
+        !formatosPermitidos.test(arquivo.name),
+      )
+
+      if (invalidos.length) {
+        throw new Error(
+          `Formato não aceito: ${invalidos.map(arquivo => arquivo.name).join(', ')}.`,
         )
-      ) {
-        throw new Error('O formato selecionado não é aceito pelo backend.')
       }
 
       const corpo = new FormData()
+
       corpo.append('conjuntoId', id)
-      corpo.append('files', arquivo)
+
+      arquivos.forEach(arquivo => {
+        corpo.append('files', arquivo)
+      })
 
       const { data } = await api.post(
         '/api/ingestao/upload',
@@ -166,7 +190,7 @@ export const ingestaoService = {
 
       if (
         !Array.isArray(data) ||
-        data.length !== 1 ||
+        data.length !== arquivos.length ||
         data.some(item =>
           !item ||
           typeof item.aceito !== 'boolean' ||
@@ -194,7 +218,9 @@ export const ingestaoService = {
           typeof item !== 'string' || !item.trim(),
         )
       ) {
-        throw new Error('Selecione pelo menos um item válido para importar.')
+        throw new Error(
+          'Selecione pelo menos um item válido para importar.',
+        )
       }
 
       const ids = [
@@ -215,7 +241,9 @@ export const ingestaoService = {
           data.importados,
           data.jaRecebidos,
           data.falhas,
-        ].every(item => Number.isSafeInteger(item) && item >= 0) ||
+        ].every(item =>
+          Number.isSafeInteger(item) && item >= 0,
+        ) ||
         data.total !== ids.length ||
         data.total !== data.itens.length ||
         data.importados + data.jaRecebidos + data.falhas !== data.total ||
@@ -245,7 +273,9 @@ export const ingestaoService = {
       )
 
       if (!Array.isArray(data)) {
-        throw new Error('A API retornou uma lista de ingestões inválida.')
+        throw new Error(
+          'A API retornou uma lista de ingestões inválida.',
+        )
       }
 
       return data

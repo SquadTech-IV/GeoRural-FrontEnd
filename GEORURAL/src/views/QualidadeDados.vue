@@ -1,608 +1,501 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
+import { criarControleQualidade } from '../services/qualidadeControleService'
 
-import {
-  qualidadeIndicadoresService,
-  requisicaoIndicadoresCancelada,
-} from '../services/qualidadeIndicadoresService'
+const router = useRouter()
+const controle = criarControleQualidade()
 
-defineOptions({ name: 'QualidadeDadosPagina' })
+const {
+  fila,
+  versaoSelecionada: versao,
+  detalhe,
+  justificativa,
+  carregandoFila,
+  carregandoDetalhe,
+  enviando,
+  erroFila,
+  erroDetalhe,
+  notificacoes,
+  fecharNotificacao,
+  carregarFila,
+  escolherVersao,
+  publicar,
+  devolver,
+  obterRotaQuarentena,
+  destruir,
+  fmt,
+  fmtData,
+} = controle
 
-const filtro = ref('TODOS')
-const lista = ref([])
-const selecionado = ref(null)
-const resultados = ref([])
-
-const carregando = ref(false)
-const consultado = ref(false)
-const carregandoDetalhe = ref(false)
-const mensagem = ref('')
-
-let consultaLista = null
-let consultaDetalhe = null
-let destruido = false
-
-function chaveItem(item) {
-  return `${item.indicadorSigla}-${item.versaoId}`
+function irParaQuarentena() {
+  const destino = obterRotaQuarentena()
+  if (destino) router.push(destino)
 }
 
-function formatarPercentual(valor) {
-  return typeof valor === 'number' && Number.isFinite(valor)
-    ? `${valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`
-    : '—'
-}
-
-function formatarHectares(valor) {
-  return typeof valor === 'number' && Number.isFinite(valor)
-    ? `${valor.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} ha`
-    : '—'
-}
-
-function formatarData(valor) {
-  if (!valor) return 'Não informada'
-  const data = new Date(valor)
-  if (Number.isNaN(data.getTime())) return String(valor)
-  return data.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })
-}
-
-function parametro(p) {
-  const unidade = p?.unidade ? ` ${p.unidade}` : ''
-  return `${p?.nome ?? 'parâmetro'}: ${p?.valor ?? '—'}${unidade}`
-}
-
-function situacaoTexto(situacao) {
-  const s = String(situacao ?? '').toUpperCase()
-  if (s === 'VIGENTE') return 'Vigente'
-  if (s === 'ANTERIOR') return 'Anterior'
-  return situacao || 'Não informada'
-}
-
-function situacaoClasse(situacao) {
-  const s = String(situacao ?? '').toUpperCase()
-  if (s === 'VIGENTE') return 'vigente'
-  if (s === 'ANTERIOR') return 'anterior'
-  return 'neutro'
-}
-
-async function carregarLista() {
-  if (destruido) return
-  consultaLista?.abort()
-  const atual = new AbortController()
-  consultaLista = atual
-
-  carregando.value = true
-  mensagem.value = ''
-
-  try {
-    const dados = await qualidadeIndicadoresService.listar(filtro.value, { signal: atual.signal })
-    if (destruido || atual.signal.aborted || consultaLista !== atual) return
-
-    lista.value = dados
-    consultado.value = true
-
-    const aindaExiste = selecionado.value
-      && dados.some((item) => chaveItem(item) === chaveItem(selecionado.value))
-    if (aindaExiste) {
-      const atualizado = dados.find((item) => chaveItem(item) === chaveItem(selecionado.value))
-      selecionar(atualizado)
-    } else if (dados.length) {
-      selecionar(dados[0])
-    } else {
-      selecionado.value = null
-      resultados.value = []
-    }
-  } catch (erro) {
-    if (destruido || atual.signal.aborted || requisicaoIndicadoresCancelada(erro)) return
-    mensagem.value = erro.message
-  } finally {
-    if (!destruido && consultaLista === atual) {
-      carregando.value = false
-      consultaLista = null
-    }
-  }
-}
-
-async function carregarDetalhe(item) {
-  if (destruido || !item) return
-  consultaDetalhe?.abort()
-  const atual = new AbortController()
-  consultaDetalhe = atual
-
-  carregandoDetalhe.value = true
-  resultados.value = []
-
-  try {
-    const dados = await qualidadeIndicadoresService.resultados(
-      item.versaoId,
-      item.indicadorSigla,
-      { signal: atual.signal },
-    )
-    if (destruido || atual.signal.aborted || consultaDetalhe !== atual) return
-    resultados.value = dados
-  } catch (erro) {
-    if (destruido || atual.signal.aborted || requisicaoIndicadoresCancelada(erro)) return
-    mensagem.value = erro.message
-  } finally {
-    if (!destruido && consultaDetalhe === atual) {
-      carregandoDetalhe.value = false
-      consultaDetalhe = null
-    }
-  }
-}
-
-function selecionar(item) {
-  selecionado.value = item
-  carregarDetalhe(item)
-}
-
-function setFiltro(valor) {
-  filtro.value = valor
-  carregarLista()
-}
-
-function fecharMensagem() {
-  mensagem.value = ''
-}
-
-function destruir() {
-  destruido = true
-  consultaLista?.abort()
-  consultaDetalhe?.abort()
-}
-
-onMounted(carregarLista)
-onBeforeUnmount(destruir)
+onMounted(() => carregarFila(false))
+onBeforeUnmount(() => destruir())
 </script>
 
 <template>
-  <div class="pub-layout">
+  <div>
     <BarraNavegacao />
 
-    <main class="pub-pagina">
-      <header class="pub-cabecalho">
-        <h1>Indicadores publicados</h1>
+    <main class="qualidade-pagina">
+      <header class="qualidade-cabecalho">
+        <h1>Conferência dos resultados</h1>
+
         <p>
-          Os indicadores calculados (IRL e IAE) e as versões geradas a cada processamento.
-          Quando a regra muda e o dado é reprocessado, uma nova versão é publicada e a anterior
-          continua listada.
+          Aqui ficam as versões que o pipeline terminou de gerar e que estão
+          esperando a sua decisão. Nada vira dado público antes de você publicar,
+          tenha o processamento sido disparado por você ou pelo Airflow.
         </p>
       </header>
 
-      <section class="pub-card pub-filtros" :aria-busy="carregando">
-        <div class="pub-campo">
-          <label for="pub-indicador">Indicador</label>
-          <select id="pub-indicador" :value="filtro" @change="setFiltro($event.target.value)">
-            <option value="TODOS">Todos os indicadores</option>
-            <option value="IAE">IAE — Área embargada</option>
-            <option value="IRL">IRL — Reserva legal</option>
-          </select>
-        </div>
+      <p v-if="erroFila" class="qualidade-erro" role="alert">
+        {{ erroFila }}
+      </p>
 
-        <button type="button" class="pub-botao" :disabled="carregando" @click="carregarLista">
-          {{ carregando ? 'Consultando...' : 'Atualizar' }}
-        </button>
-      </section>
+      <section class="qualidade-card" :aria-busy="carregandoFila">
+        <header class="qualidade-secao-cabecalho">
+          <h2>Esperando sua decisão</h2>
+          <span>{{ fila.length }} versão(ões)</span>
+        </header>
 
-      <div class="pub-split">
-        <div class="pub-listcard">
-          <div class="pub-lhead">Versões publicadas</div>
+        <p
+          v-if="carregandoFila && !fila.length"
+          class="qualidade-vazio-fila"
+        >
+          Carregando versões...
+        </p>
 
-          <p v-if="carregando" class="pub-estado" role="status">Consultando indicadores...</p>
-
-          <template v-else-if="consultado">
-            <p v-if="!lista.length" class="pub-estado">
-              Nenhum indicador publicado ainda. Processe um imóvel/RL/embargo para gerar os indicadores.
-            </p>
-
+        <ul v-else-if="fila.length" class="qualidade-fila">
+          <li v-for="v in fila" :key="v.id">
             <button
-              v-for="item in lista"
-              v-else
-              :key="chaveItem(item)"
               type="button"
-              class="pub-item"
-              :class="{ 'pub-item--ativo': selecionado && chaveItem(selecionado) === chaveItem(item) }"
-              @click="selecionar(item)"
+              class="qualidade-fila-item"
+              :class="{
+                'qualidade-fila-item--ativo': v.id === versao?.id,
+              }"
+              @click="escolherVersao(v.id)"
             >
-              <span class="pub-item-grow">
-                <span class="pub-item-nome">{{ item.indicadorSigla }} · {{ item.indicadorNome }}</span>
-                <span class="pub-item-meta">
-                  versão v{{ item.versaoNumero }}
-                  <template v-if="item.regraVersao"> · regra {{ item.regraVersao }}</template>
-                  · {{ item.totalImoveis }} imóvel(is)
+              <span class="qualidade-fila-corpo">
+                <span class="qualidade-fila-titulo">
+                  Versão #{{ v.numero }} · {{ v.conjunto }}
+
+                  <span
+                    v-if="v.automatica"
+                    class="qualidade-origem qualidade-origem--automatico"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"
+                      />
+                    </svg>
+                    automático
+                  </span>
+
+                  <span
+                    v-else
+                    class="qualidade-origem qualidade-origem--manual"
+                  >
+                    manual
+                  </span>
+                </span>
+
+                <span class="qualidade-fila-meta">
+                  {{ v.arquivo }} · gerada em {{ fmtData(v.geradaEm) }} ·
+                  {{ v.quem }}
                 </span>
               </span>
-              <span class="pub-chip" :class="`pub-chip--${situacaoClasse(item.versaoSituacao)}`">
-                {{ situacaoTexto(item.versaoSituacao) }}
+
+              <dl class="qualidade-fila-numeros">
+                <div>
+                  <dt>Feições</dt>
+                  <dd>{{ fmt(v.aprovadas) }}</dd>
+                </div>
+
+                <div>
+                  <dt>Quarentena</dt>
+                  <dd>{{ fmt(v.rejeitadas) }}</dd>
+                </div>
+              </dl>
+
+              <span
+                class="qualidade-selo"
+                :class="`qualidade-selo--${v.conclusao.classe}`"
+              >
+                {{ v.conclusao.texto }}
               </span>
             </button>
-          </template>
-        </div>
+          </li>
+        </ul>
 
-        <div class="pub-detail">
-          <p v-if="!selecionado" class="pub-detail-vazio">
-            Selecione uma versão à esquerda para ver a regra usada e os resultados por imóvel.
-          </p>
+        <p v-else class="qualidade-vazio-fila">
+          Nada esperando decisão. Quando o pipeline terminar uma versão,
+          ela aparece aqui.
+        </p>
+      </section>
 
-          <template v-else>
-            <header class="pub-detail-head">
-              <h2>{{ selecionado.indicadorSigla }} · {{ selecionado.indicadorNome }}</h2>
-              <p>
-                Versão v{{ selecionado.versaoNumero }} ·
-                {{ situacaoTexto(selecionado.versaoSituacao) }} ·
-                calculado em {{ formatarData(selecionado.dataCalculo) }}
-              </p>
+      <template v-if="versao">
+        <p v-if="erroDetalhe" class="qualidade-erro" role="alert">
+          {{ erroDetalhe }}
+        </p>
+
+        <p v-if="carregandoDetalhe" class="qualidade-vazio-fila">
+          Carregando a conferência da versão...
+        </p>
+
+        <template v-else-if="detalhe">
+          <section class="qualidade-card">
+            <header class="qualidade-resumo-cabecalho">
+              <div>
+                <h2>
+                  Versão #{{ versao.numero }} — {{ versao.conjunto }}
+                </h2>
+                <p>
+                  {{ versao.arquivo }} · gerada em
+                  {{ fmtData(versao.geradaEm) }}
+                </p>
+              </div>
+
+              <span
+                class="qualidade-selo"
+                :class="`qualidade-selo--${detalhe.conclusao.classe}`"
+              >
+                {{ detalhe.conclusao.texto }}
+              </span>
             </header>
 
-            <section class="pub-regra">
-              <p class="pub-sectitle">
-                Regra de cálculo{{ selecionado.regraVersao ? ` (${selecionado.regraVersao})` : '' }}
-              </p>
-              <ul v-if="selecionado.regraParametros && selecionado.regraParametros.length" class="pub-params">
-                <li v-for="(p, i) in selecionado.regraParametros" :key="i">{{ parametro(p) }}</li>
-              </ul>
-              <p v-else class="pub-estado-inline">Regra não informada para esta versão.</p>
-            </section>
-
-            <section>
-              <p class="pub-sectitle">Resultados por imóvel ({{ resultados.length }})</p>
-
-              <p v-if="carregandoDetalhe" class="pub-estado-inline" role="status">Consultando resultados...</p>
-
-              <p v-else-if="!resultados.length" class="pub-estado-inline">
-                Nenhum resultado para esta versão.
-              </p>
-
-              <div v-else class="pub-tabela-container" role="region" aria-label="Resultados por imóvel" tabindex="0">
-                <table class="pub-tabela">
-                  <thead>
-                    <tr>
-                      <th scope="col">CAR</th>
-                      <th scope="col">Município</th>
-                      <th scope="col">Valor (%)</th>
-                      <th scope="col">Valor (ha)</th>
-                      <th scope="col">Situação</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="r in resultados" :key="r.resultadoId">
-                      <th scope="row">{{ r.codigoCar || '—' }}</th>
-                      <td>{{ r.municipio || '—' }}</td>
-                      <td>{{ formatarPercentual(r.valorPercentual) }}</td>
-                      <td>{{ formatarHectares(r.valorHectares) }}</td>
-                      <td>{{ r.situacao || '—' }}</td>
-                    </tr>
-                  </tbody>
-                </table>
+            <dl class="qualidade-indicadores">
+              <div class="qualidade-indicador">
+                <dt>Feições recebidas</dt>
+                <dd>{{ fmt(detalhe.recebidas) }}</dd>
               </div>
-            </section>
-          </template>
-        </div>
-      </div>
+
+              <div class="qualidade-indicador qualidade-indicador--sucesso">
+                <dt>Entraram na versão</dt>
+                <dd>{{ fmt(detalhe.entraram) }}</dd>
+              </div>
+
+              <div
+                class="qualidade-indicador"
+                :class="
+                  detalhe.quarentena
+                    ? 'qualidade-indicador--aviso'
+                    : 'qualidade-indicador--sucesso'
+                "
+              >
+                <dt>Foram para a quarentena</dt>
+                <dd>{{ fmt(detalhe.quarentena) }}</dd>
+              </div>
+
+              <div class="qualidade-indicador">
+                <dt>Imóveis calculados</dt>
+                <dd>
+                  {{
+                    detalhe.imoveisCalculados === null
+                      ? '—'
+                      : fmt(detalhe.imoveisCalculados)
+                  }}
+                </dd>
+              </div>
+            </dl>
+
+            <div class="qualidade-aprovacao">
+              <div class="qualidade-aprovacao-cabecalho">
+                <h3>Percentual de aprovação</h3>
+                <strong>{{ detalhe.percentualTexto }}%</strong>
+              </div>
+
+              <progress
+                class="qualidade-progresso"
+                :value="detalhe.percentual"
+                max="100"
+              ></progress>
+
+              <p v-if="detalhe.quarentena" class="qualidade-ajuda">
+                As {{ fmt(detalhe.quarentena) }} feições recusadas estão
+                na quarentena com o motivo gravado.
+
+                <button
+                  type="button"
+                  class="qualidade-link"
+                  @click="irParaQuarentena"
+                >
+                  Ver na quarentena
+                </button>
+              </p>
+
+              <p v-else class="qualidade-ajuda">
+                Nenhuma feição foi recusada nesta rodada.
+              </p>
+            </div>
+
+            <div class="qualidade-rodada">
+              De onde veio esta versão:
+              <strong>
+                {{
+                  versao.automatica
+                    ? 'processamento automático'
+                    : 'processamento manual'
+                }}
+              </strong>
+              · {{ versao.quem }}
+
+              <template v-if="versao.dagRunId">
+                <br />
+                Identificador da execução no Airflow:
+                <code>{{ versao.dagRunId }}</code>
+              </template>
+
+              <br />
+              As seis etapas desta rodada estão em Linhagem e auditoria,
+              presas por esse mesmo identificador.
+            </div>
+          </section>
+
+          <section
+            v-if="detalhe.blocos.length"
+            class="qualidade-card"
+          >
+            <header class="qualidade-secao-cabecalho">
+              <h2>Indicadores desta versão</h2>
+              <span class="qualidade-selo qualidade-selo--neutro">
+                ainda não valem
+              </span>
+            </header>
+
+            <p class="qualidade-ajuda">
+              Estes números já foram calculados no processamento e estão
+              guardados como não vigentes. Publicar é o que faz eles
+              passarem a valer no mapa, nas consultas e na tela de imóveis.
+            </p>
+
+            <div class="qualidade-blocos">
+              <template v-for="b in detalhe.blocos" :key="b.titulo">
+                <article
+                  v-if="b.vazio"
+                  class="qualidade-bloco qualidade-bloco--vazio"
+                >
+                  <p style="margin: 0">
+                    <strong>{{ b.titulo }}</strong><br />
+                    Não foi recalculado nesta versão — continua valendo
+                    o resultado da versão anterior.
+                  </p>
+                </article>
+
+                <article v-else class="qualidade-bloco">
+                  <h3>{{ b.titulo }}</h3>
+
+                  <p class="qualidade-bloco-total">
+                    {{ fmt(b.total) }} imóveis calculados
+                  </p>
+
+                  <div class="qualidade-barra">
+                    <i
+                      class="qualidade-barra-bom"
+                      :style="{ width: `${b.pctBom}%` }"
+                    ></i>
+
+                    <i
+                      class="qualidade-barra-ruim"
+                      :style="{ width: `${100 - b.pctBom}%` }"
+                    ></i>
+                  </div>
+
+                  <dl class="qualidade-legenda">
+                    <div>
+                      <dt>
+                        <span
+                          class="qualidade-ponto qualidade-ponto--bom"
+                        ></span>
+                        {{ b.bom.rotulo }}
+                      </dt>
+                      <dd>{{ fmt(b.bom.valor) }}</dd>
+                    </div>
+
+                    <div>
+                      <dt>
+                        <span
+                          class="qualidade-ponto qualidade-ponto--ruim"
+                        ></span>
+                        {{ b.ruim.rotulo }}
+                      </dt>
+                      <dd>{{ fmt(b.ruim.valor) }}</dd>
+                    </div>
+                  </dl>
+
+                  <p
+                    v-if="b.comparacao"
+                    class="qualidade-comparacao"
+                  >
+                    Contra a versão #{{ b.comparacao.versaoAnterior }},
+                    que está valendo hoje:
+
+                    <span
+                      class="qualidade-delta"
+                      :class="
+                        b.comparacao.melhor
+                          ? 'qualidade-delta--melhor'
+                          : 'qualidade-delta--pior'
+                      "
+                    >
+                      {{ b.comparacao.frase }}
+                    </span>
+                  </p>
+
+                  <p v-else class="qualidade-comparacao">
+                    Primeira versão deste conjunto: não há com o que comparar.
+                  </p>
+                </article>
+              </template>
+            </div>
+          </section>
+
+          <section class="qualidade-card">
+            <header class="qualidade-secao-cabecalho">
+              <h2>Regras violadas</h2>
+              <span>
+                {{ detalhe.regrasQueFalharam.length }} regra(s)
+              </span>
+            </header>
+
+            <div
+              v-if="detalhe.regrasQueFalharam.length"
+              class="qualidade-tabela-container"
+            >
+              <table class="qualidade-tabela">
+                <thead>
+                  <tr>
+                    <th>Regra</th>
+                    <th>Tipo</th>
+                    <th>Severidade</th>
+                    <th class="num">Ocorrências</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  <tr
+                    v-for="r in detalhe.regrasQueFalharam"
+                    :key="r.nomeRegra"
+                  >
+                    <th scope="row">{{ r.nomeRegra }}</th>
+                    <td>{{ r.tipo }}</td>
+
+                    <td>
+                      <span
+                        class="qualidade-severidade"
+                        :class="
+                          r.severidade === 'BLOQUEIA'
+                            ? 'qualidade-severidade--bloqueia'
+                            : 'qualidade-severidade--avisa'
+                        "
+                      >
+                        {{ r.severidade }}
+                      </span>
+                    </td>
+
+                    <td class="num">
+                      {{ fmt(r.registrosAfetados) }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <p v-else class="qualidade-lista-vazia">
+              Nenhuma regra foi violada nesta versão.
+            </p>
+          </section>
+
+          <section class="qualidade-card">
+            <h2>Pontos de atenção</h2>
+
+            <ul
+              v-if="detalhe.motivos.length"
+              class="qualidade-motivos"
+            >
+              <li v-for="m in detalhe.motivos" :key="m">
+                {{ m }}
+              </li>
+            </ul>
+
+            <p v-else class="qualidade-lista-vazia">
+              Nada a ressalvar.
+            </p>
+          </section>
+
+          <section class="qualidade-card">
+            <h2>Publicar a versão #{{ versao.numero }}</h2>
+
+            <p class="qualidade-ajuda">
+              Publicar é o que faz esta versão virar o dado vigente:
+              ela passa a valer no mapa, nos indicadores e nas consultas.
+              A versão que estava valendo antes não é apagada, só deixa
+              de ser a vigente.
+            </p>
+
+            <div class="qualidade-decisao" style="margin-top: 14px">
+              <label for="justificativa">
+                Justificativa ou motivo da decisão
+              </label>
+
+              <textarea
+                id="justificativa"
+                v-model="justificativa"
+                :disabled="enviando"
+                placeholder="Informe a justificativa para publicar ou o motivo para devolver a versão."
+              ></textarea>
+
+              <div class="qualidade-decisao-acoes">
+                <button
+                  type="button"
+                  class="qualidade-botao qualidade-botao--recusar"
+                  :disabled="enviando"
+                  @click="devolver"
+                >
+                  {{ enviando ? 'Enviando...' : 'Devolver para correção' }}
+                </button>
+
+                <button
+                  type="button"
+                  class="qualidade-botao qualidade-botao--principal"
+                  :disabled="enviando"
+                  @click="publicar"
+                >
+                  {{
+                    enviando
+                      ? 'Enviando...'
+                      : `Publicar versão #${versao.numero}`
+                  }}
+                </button>
+              </div>
+            </div>
+          </section>
+        </template>
+      </template>
     </main>
 
     <ToastMensagem
-      v-if="mensagem"
-      :mensagem="mensagem"
-      tipo="erro"
-      :duracao="0"
-      @fechar="fecharMensagem"
+      v-if="notificacoes.length"
+      :mensagem="notificacoes[0].mensagem"
+      :tipo="notificacoes[0].tipo"
+      :duracao="notificacoes[0].tipo === 'sucesso' ? 6000 : 0"
+      @fechar="fecharNotificacao(notificacoes[0].id)"
     />
   </div>
 </template>
 
-<style scoped>
-.pub-layout {
-  min-width: 0;
-  min-height: 100vh;
-}
-
-.pub-pagina {
-  box-sizing: border-box;
-  width: 100%;
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 30px 28px 60px;
-  color: var(--cor-texto, #24202d);
-}
-
-.pub-cabecalho {
-  margin-bottom: 20px;
-}
-
-.pub-cabecalho h1 {
-  margin: 0 0 8px;
-  font-size: 26px;
-  font-weight: 700;
-}
-
-.pub-cabecalho p {
-  margin: 0;
-  max-width: 760px;
-  color: var(--cor-texto-secundario, #686273);
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.pub-card,
-.pub-listcard,
-.pub-detail {
-  border: 1px solid var(--cor-borda, #ded8e7);
-  border-radius: 14px;
-  background: var(--cor-painel, #fff);
-}
-
-.pub-filtros {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  padding: 16px 18px;
-  margin-bottom: 16px;
-}
-
-.pub-campo {
-  flex: 1;
-  min-width: 0;
-}
-
-.pub-campo label {
-  display: block;
-  margin-bottom: 7px;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.pub-campo select {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 40px;
-  padding: 9px 11px;
-  border: 1px solid var(--cor-borda, #ded8e7);
-  border-radius: 8px;
-  background: var(--cor-painel, #fff);
-  color: var(--cor-texto, #24202d);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.pub-botao {
-  min-height: 40px;
-  padding: 9px 14px;
-  border: 1px solid var(--cor-borda, #ded8e7);
-  border-radius: 8px;
-  background: var(--cor-painel, #fff);
-  color: var(--cor-roxo, #8520bd);
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.pub-botao:hover:not(:disabled) {
-  border-color: var(--cor-roxo, #8520bd);
-  background: var(--cor-menu-hover, #f6f0fb);
-}
-
-.pub-botao:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.pub-split {
-  display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 16px;
-  align-items: start;
-}
-
-.pub-listcard {
-  overflow: hidden;
-}
-
-.pub-lhead {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--cor-borda, #ded8e7);
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--cor-texto-secundario, #686273);
-}
-
-.pub-item {
-  display: flex;
-  gap: 11px;
-  align-items: center;
-  width: 100%;
-  text-align: left;
-  padding: 13px 15px;
-  border: none;
-  border-top: 1px solid var(--cor-borda, #ded8e7);
-  background: var(--cor-painel, #fff);
-  font: inherit;
-  cursor: pointer;
-}
-
-.pub-item:first-of-type {
-  border-top: none;
-}
-
-.pub-item:hover {
-  background: var(--cor-menu-hover, #f6f0fb);
-}
-
-.pub-item--ativo {
-  background: var(--cor-menu-hover, #f6f0fb);
-  box-shadow: inset 3px 0 0 var(--cor-roxo, #8520bd);
-}
-
-.pub-item-grow {
-  flex: 1;
-  min-width: 0;
-}
-
-.pub-item-nome {
-  display: block;
-  font-size: 12.5px;
-  font-weight: 700;
-}
-
-.pub-item-meta {
-  display: block;
-  margin-top: 3px;
-  font-size: 11px;
-  color: var(--cor-texto-secundario, #686273);
-  font-weight: 600;
-}
-
-.pub-chip {
-  flex: none;
-  font-size: 10px;
-  font-weight: 800;
-  padding: 3px 9px;
-  border-radius: 999px;
-  white-space: nowrap;
-}
-
-.pub-chip--vigente {
-  background: rgba(133, 32, 189, 0.12);
-  color: var(--cor-roxo, #8520bd);
-}
-
-.pub-chip--anterior {
-  background: var(--cor-painel-secundario, #f0edf5);
-  color: var(--cor-texto-secundario, #686273);
-}
-
-.pub-chip--neutro {
-  background: var(--cor-painel-secundario, #f0edf5);
-  color: var(--cor-texto-secundario, #686273);
-}
-
-.pub-detail {
-  padding: 22px 24px;
-}
-
-.pub-detail-vazio {
-  margin: 0;
-  padding: 40px 16px;
-  text-align: center;
-  color: var(--cor-texto-secundario, #686273);
-  font-size: 13px;
-}
-
-.pub-detail-head {
-  border-bottom: 1px solid var(--cor-borda, #ded8e7);
-  padding-bottom: 14px;
-  margin-bottom: 16px;
-}
-
-.pub-detail-head h2 {
-  margin: 0 0 4px;
-  font-size: 17px;
-  font-weight: 800;
-}
-
-.pub-detail-head p {
-  margin: 0;
-  font-size: 12px;
-  color: var(--cor-texto-secundario, #686273);
-  font-weight: 600;
-}
-
-.pub-regra {
-  margin-bottom: 20px;
-}
-
-.pub-sectitle {
-  margin: 0 0 10px;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--cor-texto-secundario, #686273);
-  font-weight: 800;
-}
-
-.pub-params {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.pub-params li {
-  background: var(--cor-painel-secundario, #f0edf5);
-  border: 1px solid var(--cor-borda, #ded8e7);
-  border-radius: 999px;
-  padding: 5px 11px;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.pub-estado,
-.pub-estado-inline {
-  margin: 0;
-  color: var(--cor-texto-secundario, #686273);
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.pub-estado {
-  padding: 28px 14px;
-  text-align: center;
-}
-
-.pub-tabela-container {
-  overflow-x: auto;
-  border: 1px solid var(--cor-borda, #ded8e7);
-  border-radius: 10px;
-}
-
-.pub-tabela {
-  width: 100%;
-  min-width: 560px;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.pub-tabela th,
-.pub-tabela td {
-  padding: 11px 13px;
-  text-align: left;
-  vertical-align: top;
-  overflow-wrap: anywhere;
-}
-
-.pub-tabela thead {
-  background: var(--cor-painel-secundario, #f0edf5);
-  color: var(--cor-texto-secundario, #686273);
-}
-
-.pub-tabela tbody th,
-.pub-tabela tbody td {
-  border-top: 1px solid var(--cor-borda, #ded8e7);
-  font-weight: 600;
-}
-
-@media (max-width: 820px) {
-  .pub-split {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 640px) {
-  .pub-pagina {
-    padding: 24px 16px 48px;
-  }
-
-  .pub-filtros {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-</style>
+<style scoped src="../assets/css/qualidade-dados.css"></style>

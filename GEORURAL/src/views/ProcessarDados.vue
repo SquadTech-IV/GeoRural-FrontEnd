@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
@@ -78,6 +78,14 @@ function limparFiltros() {
   status.value = ''
 }
 
+const abaAtiva = ref('camadas')
+
+watch(arquivoAtivoId, () => {
+  abaAtiva.value = 'camadas'
+})
+
+const fmt = (n) => Number(n ?? 0).toLocaleString('pt-BR')
+
 onMounted(carregarArquivos)
 onBeforeUnmount(destruir)
 </script>
@@ -89,15 +97,10 @@ onBeforeUnmount(destruir)
     <main class="processamento-pagina">
       <header class="processamento-cabecalho">
         <div>
-          <span class="processamento-eyebrow">
-            DATA LAKE / OPERAÇÕES
-          </span>
-
           <h1>Processar dados</h1>
-
           <p>
             Consulte os arquivos cadastrados e encaminhe os originais
-            para processamento.
+            para processamsento.
           </p>
         </div>
 
@@ -277,7 +280,7 @@ onBeforeUnmount(destruir)
               {{ quantidadeArquivosSelecionados }} arquivo(s) selecionado(s).
             </p>
 
-            <button type="button" class="botao-principal"
+            <button v-autorizado="'operar'" type="button" class="botao-principal"
               :disabled="!quantidadeArquivosSelecionados || enviando || carregando"
               @click="processarArquivosSelecionados">
               {{ enviando ? 'Processando...' : 'Processar selecionados' }}
@@ -349,7 +352,24 @@ onBeforeUnmount(destruir)
               </div>
             </div>
 
-            <div class="detalhe-secao">
+            <nav class="processamento-abas" aria-label="Seções do arquivo">
+              <button type="button" class="processamento-aba"
+                :class="{ 'processamento-aba--ativa': abaAtiva === 'camadas' }" @click="abaAtiva = 'camadas'">
+                Camadas<span class="processamento-aba-conta">{{ arquivoAtivo.itens.length }}</span>
+              </button>
+
+              <button type="button" class="processamento-aba"
+                :class="{ 'processamento-aba--ativa': abaAtiva === 'municipios' }" @click="abaAtiva = 'municipios'">
+                Municípios<span class="processamento-aba-conta">{{ arquivoAtivo.municipios.length }}</span>
+              </button>
+
+              <button type="button" class="processamento-aba"
+                :class="{ 'processamento-aba--ativa': abaAtiva === 'imoveis' }" @click="abaAtiva = 'imoveis'">
+                Imóveis<span class="processamento-aba-conta">{{ arquivoAtivo.imoveis.length }}</span>
+              </button>
+            </nav>
+
+            <div v-if="abaAtiva === 'camadas'" class="detalhe-secao">
               <div class="detalhe-secao-titulo">
                 <div>
                   <h3>Conteúdo do arquivo</h3>
@@ -377,6 +397,64 @@ onBeforeUnmount(destruir)
               </ul>
             </div>
 
+            <div v-else-if="abaAtiva === 'municipios'" class="detalhe-secao">
+              <p v-if="!arquivoAtivo.municipios.length" class="detalhe-sem-selecao">
+                Os municípios aparecem aqui depois de processar o arquivo.
+              </p>
+
+              <div v-else class="historico-tabela-wrapper">
+                <table class="historico-tabela">
+                  <thead>
+                    <tr>
+                      <th>Município</th>
+                      <th class="num">Imóveis</th>
+                      <th class="num">Área (ha)</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    <tr v-for="m in arquivoAtivo.municipios" :key="m.codigoIbge || m.nome">
+                      <td>
+                        <strong>{{ m.nome }}</strong>
+                        <span class="detalhe-tabela-codigo">IBGE {{ m.codigoIbge }}</span>
+                      </td>
+                      <td class="num">{{ fmt(m.imoveis) }}</td>
+                      <td class="num">{{ m.areaHa }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div v-else class="detalhe-secao">
+              <p v-if="!arquivoAtivo.imoveis.length" class="detalhe-sem-selecao">
+                Os imóveis aparecem aqui depois de processar uma camada de imóvel rural.
+              </p>
+
+              <div v-else class="historico-tabela-wrapper">
+                <table class="historico-tabela">
+                  <thead>
+                    <tr>
+                      <th>Imóvel</th>
+                      <th>Nome</th>
+                      <th class="num">Área (ha)</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    <tr v-for="i in arquivoAtivo.imoveis" :key="i.codigoCar">
+                      <td>
+                        <strong>{{ i.municipio }}</strong>
+                        <span class="detalhe-tabela-codigo">{{ i.codigoCar }}</span>
+                      </td>
+                      <td>{{ i.nome || 'Sem nome no arquivo' }}</td>
+                      <td class="num">{{ i.areaHa }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <div v-if="ultimaEntrega && ultimaEntrega.id === arquivoAtivo.id" class="processamento-confirmacao"
               role="status">
               <strong>Envio confirmado</strong>
@@ -390,7 +468,7 @@ onBeforeUnmount(destruir)
                 {{ baixando ? 'Gerando...' : 'Baixar original' }}
               </button>
 
-              <button type="button" class="botao-principal" :disabled="enviando || arquivoAtivoProcessado"
+              <button v-autorizado="'operar'" type="button" class="botao-principal" :disabled="enviando || arquivoAtivoProcessado"
                 @click="processarArquivoAtivo">
                 {{
                   enviando
