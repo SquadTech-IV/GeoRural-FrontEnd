@@ -1,64 +1,39 @@
 <script setup>
-import { computed } from 'vue'
-
-const props = defineProps({
+defineProps({
   total: { type: Number, required: true },
-  bons: { type: Number, required: true },
-  ruins: { type: Number, required: true },
-  rotuloBom: { type: String, required: true },
-  rotuloRuim: { type: String, required: true },
+  imoveis: { type: Number, required: true },
+  series: { type: Array, required: true },
 })
-
-const fmt = (v) => Number(v ?? 0).toLocaleString('pt-BR')
-const fmtPct = (v) => Number(v ?? 0).toFixed(1).replace('.', ',')
-
-const pctBons = computed(() => (props.bons / (props.total || 1)) * 100)
-const pctRuins = computed(() => (props.ruins / (props.total || 1)) * 100)
+const fmt = (v) => Number(v).toLocaleString('pt-BR')
+const fmtPct = (v) => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: 2 })
 </script>
-
 <template>
   <section class="pg-bloco" style="margin: 0">
     <p class="graf-titulo">Composição por situação</p>
-    <p class="graf-sub">{{ fmt(total) }} imóveis na consulta atual</p>
-
-    <div class="graf-barra">
+    <p class="graf-sub">
+      {{ fmt(total) }} resultados em {{ fmt(imoveis) }} imóveis na consulta atual
+    </p>
+    <div v-if="series.length" class="graf-barra" aria-label="Distribuição por situação">
       <i
-        class="graf-fatia--bom"
-        :style="{ width: `${pctBons}%` }"
-        :title="`${rotuloBom}: ${bons}`"
-      ></i>
-      <i
-        class="graf-fatia--ruim"
-        :style="{ width: `${pctRuins}%` }"
-        :title="`${rotuloRuim}: ${ruins}`"
-      ></i>
+        v-for="serie in series"
+        :key="serie.situacao ?? 'sem-situacao'"
+        :style="{ width: serie.percentual + '%', backgroundColor: serie.cor }"
+        :title="serie.rotulo + ': ' + serie.quantidade + ' (' + fmtPct(serie.percentual) + '%)'"
+      />
     </div>
-
+    <p v-else class="pg-vazio">Nenhum resultado para compor o gráfico.</p>
     <dl class="graf-legenda">
-      <div>
+      <div v-for="serie in series" :key="serie.situacao ?? 'sem-situacao'">
         <dt>
-          <span class="graf-ponto graf-ponto--bom"></span>
-          {{ rotuloBom }}
+          <span class="graf-ponto" :style="{ backgroundColor: serie.cor }" />{{ serie.rotulo }}
         </dt>
         <dd>
-          {{ fmt(bons) }}
-          <span>{{ fmtPct(pctBons) }}%</span>
-        </dd>
-      </div>
-      <div>
-        <dt>
-          <span class="graf-ponto graf-ponto--ruim"></span>
-          {{ rotuloRuim }}
-        </dt>
-        <dd>
-          {{ fmt(ruins) }}
-          <span>{{ fmtPct(pctRuins) }}%</span>
+          {{ fmt(serie.quantidade) }}<span>{{ fmtPct(serie.percentual) }}%</span>
         </dd>
       </div>
     </dl>
   </section>
 </template>
-
 <style scoped>
 @import '../assets/css/resultados-indicadores.css';
 </style>

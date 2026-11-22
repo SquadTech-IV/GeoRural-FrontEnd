@@ -354,6 +354,9 @@
   margin: 0;
 }
 
+.pg-selo--neutro { color: var(--cor-texto-secundario); background: var(--cor-painel-secundario); }
+.pg-tabela tr[role='button']:focus-visible { outline: 2px solid var(--cor-roxo); outline-offset: -2px; }
+
 .graf-legenda div {
   min-width: 0;
 }

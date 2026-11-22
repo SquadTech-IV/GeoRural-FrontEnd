@@ -2,10 +2,10 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  titulo: { type: String, default: 'Distribuição do percentual de reserva legal' },
+  titulo: { type: String, default: 'Distribuição do indicador' },
   subtitulo: {
     type: String,
-    default: 'Quantos imóveis caem em cada faixa. Passe o mouse para ver o número.',
+    default: 'Quantidade de resultados por faixa no filtro aplicado.',
   },
   faixas: { type: Array, required: true },
   valores: { type: Array, required: true },
@@ -21,15 +21,18 @@ const maiorValor = computed(() => Math.max(...props.valores, 1))
     <p class="graf-titulo">{{ titulo }}</p>
     <p class="graf-sub">{{ subtitulo }}</p>
 
-    <div class="graf-colunas">
+    <p v-if="!valores.length" class="pg-vazio">Nenhum resultado para distribuir.</p>
+    <div v-else class="graf-colunas">
       <div
         v-for="(valor, idx) in valores"
         :key="faixas[idx]"
         class="graf-coluna"
-        :title="`${faixas[idx]}: ${fmt(valor)} imóveis`"
+        :title="`${faixas[idx]}: ${fmt(valor)} resultados`"
       >
         <b>{{ fmt(valor) }}</b>
-        <i :style="{ height: `${(valor / maiorValor) * 100}%` }"></i>
+        <i
+          :style="{ height: `${(valor / maiorValor) * 100}%`, minHeight: valor > 0 ? '2px' : '0' }"
+        ></i>
       </div>
     </div>
 
