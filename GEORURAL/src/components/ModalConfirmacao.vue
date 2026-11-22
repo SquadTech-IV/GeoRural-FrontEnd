@@ -23,6 +23,9 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  rotuloConfirmar: { type: String, default: 'Confirmar desativação' },
+  rotuloProcessando: { type: String, default: 'Desativando...' },
+  erro: { type: String, default: '' },
 })
 
 const emit = defineEmits(['cancelar', 'confirmar'])
@@ -169,6 +172,7 @@ onBeforeUnmount(() => {
         </div>
 
         <footer class="cadastros-modal-rodape">
+          <p v-if="erro" class="cadastros-erro" role="alert">{{ erro }}</p>
           <button
             ref="cancelarButton"
             type="button"
@@ -187,8 +191,8 @@ onBeforeUnmount(() => {
           >
             {{
               processando
-                ? 'Desativando...'
-                : 'Confirmar desativação'
+                ? rotuloProcessando
+                : rotuloConfirmar
             }}
           </button>
         </footer>
