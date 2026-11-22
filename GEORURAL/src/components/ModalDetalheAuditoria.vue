@@ -15,18 +15,31 @@ const props = defineProps({
 
 const emit = defineEmits(['fechar'])
 
-const operacaoInfo = computed(() => prepararDetalheAuditoria(props.evento))
+const operacaoInfo = computed(() =>
+  prepararDetalheAuditoria(props.evento),
+)
+
 const chaves = computed(() => operacaoInfo.value.chaves)
+
 const caixa = ref(null)
-let anterior = null
-let overflow = ''
+
+let elementoAnterior = null
+let overflowAnterior = ''
+let modalAtivo = false
+
 function restaurar() {
-  if (anterior) {
-    document.body.style.overflow = overflow
-    anterior.focus?.()
-    anterior = null
+  if (!modalAtivo) return
+
+  document.body.style.overflow = overflowAnterior
+  modalAtivo = false
+
+  if (elementoAnterior?.isConnected) {
+    elementoAnterior.focus?.()
   }
+
+  elementoAnterior = null
 }
+
 watch(
   () => props.evento,
   async (evento) => {
@@ -34,46 +47,76 @@ watch(
       restaurar()
       return
     }
-    if (!anterior) {
-      anterior = document.activeElement
-      overflow = document.body.style.overflow
+
+    if (!modalAtivo) {
+      elementoAnterior = document.activeElement
+      overflowAnterior = document.body.style.overflow
+      modalAtivo = true
     }
+
     document.body.style.overflow = 'hidden'
+
     await nextTick()
-    if (props.evento) caixa.value?.querySelector('button')?.focus()
+
+    if (props.evento) {
+      caixa.value?.querySelector('button')?.focus()
+    }
   },
   { immediate: true },
 )
+
 onBeforeUnmount(restaurar)
+
 function tratarTeclado(evento) {
   if (evento.key === 'Escape') {
     evento.preventDefault()
+    evento.stopPropagation()
     emit('fechar')
     return
   }
-  if (evento.key !== 'Tab') return
-  const botoes = [...caixa.value.querySelectorAll('button')].filter((botao) => !botao.disabled)
-  const primeiro = botoes[0],
-    ultimo = botoes.at(-1)
+
+  if (evento.key !== 'Tab' || !caixa.value) return
+
+  const botoes = [...caixa.value.querySelectorAll('button')]
+    .filter((botao) => !botao.disabled)
+
+  const primeiro = botoes[0]
+  const ultimo = botoes.at(-1)
+
+  if (!primeiro) {
+    evento.preventDefault()
+    caixa.value.focus()
+    return
+  }
+
   if (evento.shiftKey && document.activeElement === primeiro) {
     evento.preventDefault()
-    ultimo?.focus()
-  } else if (!evento.shiftKey && document.activeElement === ultimo) {
+    ultimo.focus()
+  } else if (
+    !evento.shiftKey &&
+    document.activeElement === ultimo
+  ) {
     evento.preventDefault()
-    primeiro?.focus()
+    primeiro.focus()
   }
 }
 
 function fmtDataHora(valor) {
   if (!valor) return '—'
-  const d = valor instanceof Date ? valor : new Date(valor)
-  if (Number.isNaN(d.getTime())) return String(valor)
-  return d.toLocaleString('pt-BR')
+
+  const data = valor instanceof Date ? valor : new Date(valor)
+
+  if (Number.isNaN(data.getTime())) {
+    return String(valor)
+  }
+
+  return data.toLocaleString('pt-BR')
 }
 
 function ehDiferente(chave) {
   return (
-    JSON.stringify(props.evento?.antigos?.[chave]) !== JSON.stringify(props.evento?.novos?.[chave])
+    JSON.stringify(props.evento?.antigos?.[chave]) !==
+    JSON.stringify(props.evento?.novos?.[chave])
   )
 }
 </script>
@@ -88,25 +131,47 @@ function ehDiferente(chave) {
     @keydown="tratarTeclado"
     @click.self="emit('fechar')"
   >
-    <div ref="caixa" class="pg-modal-caixa">
+    <div
+      ref="caixa"
+      class="pg-modal-caixa"
+      tabindex="-1"
+    >
       <header>
         <div>
           <h2 id="auditoria-detalhe-titulo">
             {{ operacaoInfo.rot }} · {{ evento.entidade }}
+
             <span
-              v-if="evento.registroId !== null && evento.registroId !== undefined"
+              v-if="
+                evento.registroId !== null &&
+                evento.registroId !== undefined
+              "
               class="pg-mono aud-titulo-id"
             >
               #{{ evento.registroId }}
             </span>
           </h2>
+
           <p>
-            <span class="pg-mono">aud_id {{ evento.id }}</span> · {{ evento.usuario?.nome }} ·
-            {{ fmtDataHora(evento.quando) }} ·
-            <span class="pg-mono">{{ evento.usuario?.ip }}</span>
+            <span class="pg-mono">
+              aud_id {{ evento.id }}
+            </span>
+            · {{ evento.usuario?.nome ?? '—' }}
+            · {{ fmtDataHora(evento.quando) }}
+            ·
+            <span class="pg-mono">
+              {{ evento.usuario?.ip ?? '—' }}
+            </span>
           </p>
         </div>
-        <button type="button" class="pg-botao" @click="emit('fechar')">Fechar</button>
+
+        <button
+          type="button"
+          class="pg-botao"
+          @click="emit('fechar')"
+        >
+          Fechar
+        </button>
       </header>
 
       <div class="aud-modal-meta">
@@ -114,25 +179,38 @@ function ehDiferente(chave) {
           <span>Operação</span>
           <strong>{{ evento.operacao }}</strong>
         </div>
+
         <div>
           <span>Responsável</span>
-          <strong>{{ evento.usuario?.nome }}</strong>
+          <strong>{{ evento.usuario?.nome ?? '—' }}</strong>
         </div>
+
         <div>
           <span>usu_id</span>
           <strong>{{ evento.usuario?.id ?? '—' }}</strong>
         </div>
+
         <div>
           <span>IP de origem</span>
-          <strong class="pg-mono">{{ evento.usuario?.ip ?? '—' }}</strong>
+          <strong class="pg-mono">
+            {{ evento.usuario?.ip ?? '—' }}
+          </strong>
         </div>
       </div>
 
-      <div v-if="!operacaoInfo.lados.length" class="aud-semlado">
-        <strong>Sem dados anteriores ou posteriores registrados para esta ação.</strong>
+      <div
+        v-if="!operacaoInfo.lados.length"
+        class="aud-semlado"
+      >
+        <strong>
+          Sem dados anteriores ou posteriores registrados para esta ação.
+        </strong>
       </div>
 
-      <div v-else-if="operacaoInfo.lados.length === 1" class="aud-modal-secao">
+      <div
+        v-else-if="operacaoInfo.lados.length === 1"
+        class="aud-modal-secao"
+      >
         <h3>
           {{
             operacaoInfo.lados[0] === 'novos'
@@ -143,58 +221,131 @@ function ehDiferente(chave) {
 
         <div class="aud-dtab aud-dtab--unico">
           <template
-            v-for="(valor, chave) in operacaoInfo.lados[0] === 'novos'
-              ? evento.novos
-              : evento.antigos"
+            v-for="(valor, chave) in (
+              operacaoInfo.lados[0] === 'novos'
+                ? evento.novos
+                : evento.antigos
+            )"
             :key="chave"
           >
-            <div class="aud-dk">{{ chave }}</div>
+            <div class="aud-dk">
+              {{ chave }}
+            </div>
+
             <div class="aud-dv aud-dv--dif">
-              <span v-if="valor === null" class="aud-nd">nulo</span>
-              <template v-else>{{ JSON.stringify(valor) }}</template>
+              <span
+                v-if="valor === null"
+                class="aud-nd"
+              >
+                nulo
+              </span>
+
+              <template v-else>
+                {{ JSON.stringify(valor) }}
+              </template>
             </div>
           </template>
         </div>
 
-        <div class="aud-semlado" style="margin-top: 12px">
+        <div
+          class="aud-semlado"
+          style="margin-top: 12px"
+        >
           <template v-if="operacaoInfo.lados[0] === 'novos'">
             <strong>Sem «antes».</strong>
             Não foram registrados dados anteriores para esta ação.
           </template>
+
           <template v-else>
-            <strong>Sem «depois».</strong> Não foram registrados dados posteriores para esta ação.
+            <strong>Sem «depois».</strong>
+            Não foram registrados dados posteriores para esta ação.
           </template>
         </div>
       </div>
 
-      <div v-else class="aud-modal-secao">
+      <div
+        v-else
+        class="aud-modal-secao"
+      >
         <h3>O que mudou</h3>
 
         <div class="aud-dtab">
-          <div class="aud-dh" />
+          <div class="aud-dh"></div>
           <div class="aud-dh">Antes</div>
           <div class="aud-dh">Depois</div>
 
-          <template v-for="chave in chaves" :key="chave">
-            <div class="aud-dk">{{ chave }}</div>
-
-            <div class="aud-dv aud-dv--a" :class="{ 'aud-dv--dif': ehDiferente(chave) }">
-              <span v-if="evento.antigos?.[chave] === undefined" class="aud-nd"> não existia </span>
-              <span v-else-if="evento.antigos?.[chave] === null" class="aud-nd"> nulo </span>
-              <template v-else>{{ JSON.stringify(evento.antigos[chave]) }}</template>
+          <template
+            v-for="chave in chaves"
+            :key="chave"
+          >
+            <div class="aud-dk">
+              {{ chave }}
             </div>
 
-            <div class="aud-dv aud-dv--b" :class="{ 'aud-dv--dif': ehDiferente(chave) }">
-              <span v-if="evento.novos?.[chave] === undefined" class="aud-nd"> não existia </span>
-              <span v-else-if="evento.novos?.[chave] === null" class="aud-nd"> nulo </span>
-              <template v-else>{{ JSON.stringify(evento.novos[chave]) }}</template>
+            <div
+              class="aud-dv aud-dv--a"
+              :class="{
+                'aud-dv--dif': ehDiferente(chave),
+              }"
+            >
+              <span
+                v-if="evento.antigos?.[chave] === undefined"
+                class="aud-nd"
+              >
+                não existia
+              </span>
+
+              <span
+                v-else-if="evento.antigos?.[chave] === null"
+                class="aud-nd"
+              >
+                nulo
+              </span>
+
+              <template v-else>
+                {{ JSON.stringify(evento.antigos[chave]) }}
+              </template>
+            </div>
+
+            <div
+              class="aud-dv aud-dv--b"
+              :class="{
+                'aud-dv--dif': ehDiferente(chave),
+              }"
+            >
+              <span
+                v-if="evento.novos?.[chave] === undefined"
+                class="aud-nd"
+              >
+                não existia
+              </span>
+
+              <span
+                v-else-if="evento.novos?.[chave] === null"
+                class="aud-nd"
+              >
+                nulo
+              </span>
+
+              <template v-else>
+                {{ JSON.stringify(evento.novos[chave]) }}
+              </template>
             </div>
           </template>
         </div>
       </div>
 
-      <div v-if="evento.usuario?.automatico" class="aud-consq">
-        <span class="aud-ci">A</span>
+      <div
+        v-if="evento.usuario?.automatico"
+        class="aud-consq"
+      >
+        <span
+          class="aud-ci"
+          aria-hidden="true"
+        >
+          A
+        </span>
+
         <div>
           <strong>Responsável registrado como AIRFLOW.</strong>
           A trilha não informa um identificador de usuário para este evento.
@@ -202,12 +353,21 @@ function ehDiferente(chave) {
       </div>
 
       <div
-        v-if="evento.entidade === 'VERSAO' && evento.novos?.acao === 'REPROVACAO'"
+        v-if="
+          evento.entidade === 'VERSAO' &&
+          evento.novos?.acao === 'REPROVACAO'
+        "
         class="aud-consq"
       >
-        <span class="aud-ci">!</span>
+        <span
+          class="aud-ci"
+          aria-hidden="true"
+        >
+          !
+        </span>
+
         <div>
-          <strong>Registo de reprovação.</strong>
+          <strong>Registro de reprovação.</strong>
           Os dados registrados assinalam uma reprovação na revisão da qualidade.
         </div>
       </div>
@@ -220,16 +380,34 @@ function ehDiferente(chave) {
         "
         class="aud-consq"
       >
-        <span class="aud-ci">!</span>
+        <span
+          class="aud-ci"
+          aria-hidden="true"
+        >
+          !
+        </span>
+
         <div>
           <strong>Mudança de perfil.</strong>
-          O responsável alterou o nível de acesso associado ao utilizador.
+          O responsável alterou o nível de acesso associado ao usuário.
         </div>
       </div>
 
       <div class="pg-modal-rodape">
-        <span class="pg-ajuda" style="margin: 0"> Registo imutável da trilha de auditoria. </span>
-        <button type="button" class="pg-botao" @click="emit('fechar')">Fechar</button>
+        <span
+          class="pg-ajuda"
+          style="margin: 0"
+        >
+          Registro imutável da trilha de auditoria.
+        </span>
+
+        <button
+          type="button"
+          class="pg-botao"
+          @click="emit('fechar')"
+        >
+          Fechar
+        </button>
       </div>
     </div>
   </div>

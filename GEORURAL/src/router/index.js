@@ -1,5 +1,5 @@
-import { createRouter, createWebHistory } from 'vue-router'
 import { watch } from 'vue'
+import { createRouter, createWebHistory } from 'vue-router'
 
 import { autenticacaoService } from '../services/autenticacaoService'
 import { criarGuardaAutenticacao } from '../services/guardaAutenticacaoService'
@@ -18,6 +18,16 @@ const router = createRouter({
         ocultarNavegacao: true,
         publica: true,
       },
+    },
+    {
+      path: '/operacao',
+      name: 'PainelOperacao',
+      component: () => import('../views/PaineldeOperacao.vue'),
+    },
+    {
+      path: '/usuarios',
+      name: 'GestaoUsuarios',
+      component: () => import('../views/Usuarios.vue'),
     },
     {
       path: '/quarentena',
@@ -61,6 +71,11 @@ const router = createRouter({
       component: () => import('../views/QualidadeDados.vue'),
     },
     {
+      path: '/indicadores',
+      name: 'Indicadores',
+      component: () => import('../views/Indicadores.vue'),
+    },
+    {
       path: '/mapa-indicadores/:car?',
       name: 'MapaIndicadores',
       component: () => import('../views/MapaIndicadores.vue'),
@@ -76,11 +91,6 @@ const router = createRouter({
         query: to.query,
         hash: to.hash,
       }),
-    },
-    {
-      path: '/operacao',
-      name: 'PainelOperacao',
-      component: () => import('../views/PaineldeOperacao.vue'),
     },
     {
       path: '/imoveis',

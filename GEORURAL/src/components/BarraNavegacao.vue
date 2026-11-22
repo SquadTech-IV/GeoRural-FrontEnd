@@ -316,6 +316,7 @@ function alternarTema() {
     </div>
 
     <footer class="sidebar-rodape">
+
       <button
         type="button"
         class="sidebar-tema"
@@ -340,6 +341,7 @@ function alternarTema() {
 
             <template v-else>
               <circle cx="12" cy="12" r="4" />
+
               <path
                 d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"
               />
@@ -356,3 +358,5 @@ function alternarTema() {
 </template>
 
 <style scoped src="../assets/css/navegacao.css"></style>
+
+
