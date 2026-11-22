@@ -23,6 +23,42 @@
   height: 100%;
 }
 
+.mapa-geografico-resultado {
+  padding: 14px;
+  border: 1px solid var(--cor-borda);
+  border-left: 4px solid;
+  border-radius: 12px;
+  background: var(--cor-painel);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  font-size: 12px;
+}
+.mapa-geografico-resultado h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.mapa-geografico-resultado p {
+  margin: 8px 0 0;
+  color: var(--cor-texto-secundario);
+  line-height: 1.5;
+}
+.mapa-geografico-resultado dl {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0 0;
+}
+.mapa-geografico-resultado dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+.mapa-geografico-resultado dd {
+  margin: 0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
 .mapa-geografico-painel-controles {
   position: absolute;
   top: 16px;

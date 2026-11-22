@@ -7,6 +7,7 @@ import {
   mapaIndicadoresService,
   criarVisaoGeral,
   criarCamadas,
+  criarResumosIndicadoresMapa,
   formatarNumero,
   detalharResultado,
   requisicaoCancelada,
@@ -30,6 +31,7 @@ const geojson = computed(() =>
   props.car ? (selecionado.value?.geojson ?? null) : criarVisaoGeral(imoveis.value),
 )
 const camadas = computed(() => criarCamadas(selecionado.value))
+const resumosIndicadores = computed(() => criarResumosIndicadoresMapa(selecionado.value))
 
 async function carregarLista() {
   consultaLista?.abort()
@@ -146,7 +148,11 @@ onBeforeUnmount(() => {
     </section>
 
     <div class="mapa-base-conteudo">
-      <MapaGeografico :geojson="geojson" :indicadores="camadas" />
+      <MapaGeografico
+        :geojson="geojson"
+        :indicadores="camadas"
+        :resumos-indicadores="resumosIndicadores"
+      />
     </div>
 
     <section v-if="selecionado" class="mapa-api-resultados" aria-labelledby="titulo-indicadores">
@@ -164,7 +170,7 @@ onBeforeUnmount(() => {
             </div>
           </dl>
           <p v-if="!detalharResultado(indicador).length">Resultado não informado</p>
-          <p>Situação: {{ indicador.situacao || 'Não informada' }}</p>
+          <p>Situação: {{ indicador.situacaoTexto }}</p>
           <p>Versão da regra: {{ indicador.versaoRegra || 'Não informada' }}</p>
           <p v-if="!camadas.some((camada) => camada.id === indicador.id)">
             Sem geometria disponível para exibição no mapa.
