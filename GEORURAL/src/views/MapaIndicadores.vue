@@ -172,7 +172,7 @@ onBeforeUnmount(() => {
           <p v-if="!detalharResultado(indicador).length">Resultado não informado</p>
           <p>Situação: {{ indicador.situacaoTexto }}</p>
           <p>Versão da regra: {{ indicador.versaoRegra || 'Não informada' }}</p>
-          <p v-if="!camadas.some((camada) => camada.id === indicador.id)">
+          <p v-if="!camadas.some((camada) => camada.sigla === indicador.sigla)">
             Sem geometria disponível para exibição no mapa.
           </p>
         </li>
