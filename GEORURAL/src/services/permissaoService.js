@@ -35,7 +35,7 @@ export function possuiPermissao(perfil, capacidade = 'consultar') {
 }
 
 export function permissaoRota(nome) {
-  if (['QuarentenaDados', 'AuditoriaDados'].includes(nome)) return 'qualidade'
+  if (['QuarentenaDados', 'AuditoriaDados', 'AuditoriaLinhagem'].includes(nome)) return 'qualidade'
   if (nome === 'Ingestao') return 'operar'
   if (nome === 'RegraNovaVersao') return 'gerir'
   return 'consultar'
@@ -73,6 +73,7 @@ export function perfisRequisicao(metodo, caminho) {
   if (
     verbo === 'GET' &&
     (/^\/api\/(?:v1\/)?(?:linhagem|qualidade)(?:\/|$)/.test(rota) ||
+      rota === '/api/v1/auditoria' ||
       /^\/api\/execucoes\/[^/]+\/qualidade$/.test(rota))
   )
     return QUALIDADE

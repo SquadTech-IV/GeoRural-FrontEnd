@@ -38,21 +38,9 @@ onUnmounted(() => {
   document.body.classList.remove('pagina-login')
 })
 
-function entrar() {
-  // Integre aqui sua API de autenticação.
-  // A opção "lembrar" está disponível para essa integração.
-  mensagem.value =
-    'Tela demonstrativa. Conecte sua API de autenticação para realizar o login.'
-}
-
 function recuperarSenha() {
   mensagem.value =
     'Entre em contato com a equipe responsável pelo GeoRural para recuperar seu acesso.'
-}
-
-function solicitarAcesso() {
-  mensagem.value =
-    'Para solicitar uma conta, entre em contato com a equipe responsável pelo projeto.'
 }
 </script>
 
@@ -212,23 +200,6 @@ function solicitarAcesso() {
             {{ mensagem }}
           </p>
         </form>
-
-        <div class="request-access">
-          <h3>Primeiro acesso?</h3>
-
-          <p>
-            Solicite uma conta à equipe responsável para utilizar
-            os recursos da plataforma.
-          </p>
-
-          <button
-            class="secondary-button"
-            type="button"
-            @click="solicitarAcesso"
-          >
-            Solicitar acesso
-          </button>
-        </div>
       </section>
     </section>
 
