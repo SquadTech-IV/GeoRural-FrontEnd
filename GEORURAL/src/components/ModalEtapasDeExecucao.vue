@@ -16,7 +16,6 @@ const carregando = ref(false)
 const erro = ref('')
 const erroReprocesso = ref('')
 const reprocessando = ref(new Set())
-const abriuCompleto = ref(false)
 
 let sequencia = 0
 function fmtData(valor) {
@@ -122,7 +121,6 @@ async function reprocessar(etapa) {
 }
 
 watch(() => props.execucao.dagRunId, () => {
-  abriuCompleto.value = false
   erroReprocesso.value = ''
   carregar()
 }, { immediate: true })
@@ -206,9 +204,9 @@ onBeforeUnmount(() => {
       <div class="pg-modal-rodape">
         <span class="pg-ajuda pg-ajuda--solta">Esta é a visão resumida da rodada.</span>
 
-        <button type="button" class="pg-botao pg-botao--principal" @click="abriuCompleto = true">
-          {{ abriuCompleto ? 'Abriria /auditoria' : 'Ver completo na linhagem e auditoria' }}
-        </button>
+        <RouterLink :to="{ name: 'AuditoriaDados' }" class="pg-botao pg-botao--principal">
+          Ver completo na linhagem e auditoria
+        </RouterLink>
       </div>
     </div>
   </div>

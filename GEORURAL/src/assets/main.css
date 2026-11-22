@@ -3,6 +3,7 @@
 @import './css/tema.css';
 @import './css/dropdowns.css';
 @import './css/toast.css';
+@import './css/auditoria-navegacao.css';
 
 #app {
   width: 100%;

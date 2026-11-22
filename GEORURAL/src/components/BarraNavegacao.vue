@@ -316,15 +316,6 @@ function alternarTema() {
     </div>
 
     <footer class="sidebar-rodape">
-      <div class="sidebar-usuario">
-        <strong>
-          {{ autenticacaoService.estado.nome }}
-        </strong>
-
-        <span>
-          {{ autenticacaoService.estado.perfil }}
-        </span>
-      </div>
 
       <button
         type="button"
@@ -350,6 +341,7 @@ function alternarTema() {
 
             <template v-else>
               <circle cx="12" cy="12" r="4" />
+
               <path
                 d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"
               />
@@ -367,22 +359,4 @@ function alternarTema() {
 
 <style scoped src="../assets/css/navegacao.css"></style>
 
-<style scoped>
-.sidebar-usuario {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 12px;
-}
 
-.sidebar-usuario strong {
-  color: var(--cor-texto);
-  font-size: 14px;
-  overflow-wrap: anywhere;
-}
-
-.sidebar-usuario span {
-  color: var(--cor-texto-secundario);
-  font-size: 13px;
-}
-</style>
