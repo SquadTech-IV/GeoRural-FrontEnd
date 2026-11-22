@@ -1,9 +1,24 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { watch } from 'vue'
+
+import { autenticacaoService } from '../services/autenticacaoService'
+import { criarGuardaAutenticacao } from '../services/guardaAutenticacaoService'
+import { caminhoRetornoSeguro } from '../services/permissaoService'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
 
   routes: [
+    {
+      path: '/',
+      name: 'Login',
+      alias: '/login',
+      component: () => import('../views/Login.vue'),
+      meta: {
+        ocultarNavegacao: true,
+        publica: true,
+      },
+    },
     {
       path: '/quarentena',
       name: 'QuarentenaDados',
@@ -53,7 +68,7 @@ const router = createRouter({
     },
     {
       path: '/resultado/:car',
-      redirect: to => ({
+      redirect: (to) => ({
         name: 'MapaIndicadores',
         params: {
           car: to.params.car,
@@ -83,7 +98,7 @@ const router = createRouter({
       component: () => import('../views/AuditoriaLinhagem.vue'),
     },
     {
-      path: '/',
+      path: '/regras',
       name: 'Regras',
       component: () => import('../views/Regras.vue'),
       children: [
@@ -105,11 +120,50 @@ const router = createRouter({
       ],
     },
     {
+      path: '/municipios',
+      name: 'ComparacaoMunicipios',
+      component: () => import('../views/ComparacaoMunicipios.vue'),
+    },
+    {
       path: '/rastreabilidade',
       name: 'Rastreabilidade',
       component: () => import('../views/RastreabilidadeDados.vue'),
     },
+    {
+      path: '/monitoramento',
+      name: 'MonitoramentoPlataforma',
+      component: () => import('../views/MonitoramentoPlataforma.vue'),
+    },
+    {
+      path: '/sem-acesso',
+      name: 'SemAcesso',
+      component: () => import('../views/SemAcesso.vue'),
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: { name: 'Imoveis' },
+    },
   ],
 })
+
+router.beforeEach(
+  criarGuardaAutenticacao(autenticacaoService),
+)
+
+watch(
+  () => autenticacaoService.estado.autenticado,
+  (autenticado) => {
+    const rotaAtual = router.currentRoute.value
+
+    if (!autenticado && !rotaAtual.meta.publica) {
+      void router.replace({
+        name: 'Login',
+        query: {
+          retorno: caminhoRetornoSeguro(rotaAtual.fullPath),
+        },
+      })
+    }
+  },
+)
 
 export default router

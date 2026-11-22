@@ -1,6 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { normalizarValor, validarParametros, prepararEdicao } from '../services/regraService'
+import { autenticacaoService } from '../services/autenticacaoService'
+import { possuiPermissao } from '../services/permissaoService'
 
 const props = defineProps({
   indicador: {
@@ -239,6 +241,7 @@ function limiteMaximo(parametro) {
 
               <div class="regras-parametro-valor">
                 <input
+                  :disabled="!possuiPermissao(autenticacaoService.estado.perfil, 'gerir')"
                   :id="`parametro-${parametro.id}`"
                   v-model="valores[parametro.id]"
                   :name="parametro.id"
@@ -283,6 +286,7 @@ function limiteMaximo(parametro) {
 
               <button
                 type="submit"
+                v-autorizado="'gerir'"
                 class="regras-botao regras-botao--principal"
                 :disabled="!podeSalvar"
               >

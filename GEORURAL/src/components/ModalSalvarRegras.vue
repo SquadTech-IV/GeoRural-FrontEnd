@@ -133,7 +133,7 @@ function confirmar() {
             </table>
           </div>
 
-          <form novalidate @submit.prevent="confirmar">
+          <form v-autorizado="'gerir'" novalidate @submit.prevent="confirmar">
             <div class="regras-campo">
               <label for="autor-versao"> Autor da alteração </label>
 

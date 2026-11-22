@@ -47,6 +47,7 @@ export function criarControleIngestao() {
 
   function notificar(tipo, texto) {
     if (destruido) return
+
     tipoMensagem.value = tipo
     mensagem.value = texto
   }
@@ -94,6 +95,7 @@ export function criarControleIngestao() {
 
     fontes.value = []
     conjuntos.value = []
+
     limparResultado()
 
     try {
@@ -153,28 +155,50 @@ export function criarControleIngestao() {
       )
 
       if (!fonte || !conjunto) {
-        throw new Error('Selecione uma fonte e um conjunto ativos.')
+        throw new Error(
+          'Selecione uma fonte e um conjunto ativos.',
+        )
       }
 
       if (!['upload', 'api'].includes(dados.metodo)) {
-        throw new Error('Selecione uma forma de entrada válida.')
+        throw new Error(
+          'Selecione uma forma de entrada válida.',
+        )
       }
 
       if (
         (dados.metodo === 'upload' && !conjunto.upload) ||
         (dados.metodo === 'api' && !conjunto.api)
       ) {
-        throw new Error('O conjunto não permite esta forma de entrada.')
+        throw new Error(
+          'O conjunto não permite esta forma de entrada.',
+        )
       }
 
       let identificadores = []
+      let arquivos = []
+
+      if (dados.metodo === 'upload') {
+        arquivos = Array.from(
+          dados.arquivos ||
+          (dados.arquivo ? [dados.arquivo] : []),
+        ).filter(Boolean)
+
+        if (!arquivos.length) {
+          throw new Error(
+            'Selecione pelo menos um arquivo para enviar.',
+          )
+        }
+      }
 
       if (dados.metodo === 'api') {
         if (
           String(consultaApi.value?.conjuntoId) !==
           String(conjunto.id)
         ) {
-          throw new Error('Consulte a disponibilidade deste conjunto primeiro.')
+          throw new Error(
+            'Consulte a disponibilidade deste conjunto primeiro.',
+          )
         }
 
         const disponiveis = consultaApi.value.resposta
@@ -192,7 +216,9 @@ export function criarControleIngestao() {
             ),
           )
         ) {
-          throw new Error('Selecione itens disponíveis para importar.')
+          throw new Error(
+            'Selecione itens disponíveis para importar.',
+          )
         }
       }
 
@@ -201,7 +227,7 @@ export function criarControleIngestao() {
       const resposta = dados.metodo === 'upload'
         ? await ingestaoService.enviarUpload(
             conjunto.id,
-            dados.arquivo,
+            arquivos,
           )
         : await ingestaoService.importar(
             conjunto.id,
@@ -210,24 +236,27 @@ export function criarControleIngestao() {
 
       if (destruido) return
 
-      configuracao.value = { ...dados }
+      configuracao.value = {
+        ...dados,
+        arquivos: dados.metodo === 'upload' ? arquivos : [],
+      }
+
       resultado.value = resposta
 
       if (dados.metodo === 'upload') {
-        const item = resposta[0]
+        const aceitos = resposta.filter(item => item.aceito).length
+        const recusados = resposta.length - aceitos
 
-        if (item.aceito) {
-          notificar('sucesso', 'Arquivo recebido pelo servidor.')
-        } else {
-          notificar(
-            'aviso',
-            'O servidor recusou o arquivo. Confira o formato e o conteúdo.',
-          )
-        }
+        notificar(
+          recusados > 0 ? 'aviso' : 'sucesso',
+          `${aceitos} arquivo(s) recebido(s) e ${recusados} recusado(s).`,
+        )
       } else {
         const falhas = resposta.itens
           .filter(item => item.status === 'FALHA')
-          .map(item => `${item.nome || item.identificador}: ${item.mensagem}`)
+          .map(item =>
+            `${item.nome || item.identificador}: ${item.mensagem}`,
+          )
 
         const resumo =
           `${resposta.importados} importado(s), ` +
@@ -245,7 +274,10 @@ export function criarControleIngestao() {
       chaveFormulario.value++
     } catch (erro) {
       if (!destruido && !consultaIngestaoCancelada(erro)) {
-        notificar('erro', mensagemErroIngestao(erro, enviando.value))
+        notificar(
+          'erro',
+          mensagemErroIngestao(erro, enviando.value),
+        )
       }
     } finally {
       if (!destruido) enviando.value = false
