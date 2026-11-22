@@ -12,9 +12,6 @@ import {
 const route = useRoute()
 const router = useRouter()
 
-const saindo = ref(false)
-const erroSaida = ref('')
-
 function carregarTema() {
   const temaAtual = document.documentElement.dataset.tema
 
@@ -80,6 +77,11 @@ const itens = [
     caminho: '/processar',
     titulo: 'Processar dados',
     icone: 'processar',
+  },
+  {
+    caminho: '/indicadores',
+    titulo: 'Indicadores',
+    icone: 'indicadores',
   },
   {
     caminho: '/municipios',
@@ -166,23 +168,6 @@ function alternarTema() {
     // A alteração permanece aplicada durante esta sessão.
   }
 }
-
-async function sair() {
-  if (saindo.value) return
-
-  saindo.value = true
-  erroSaida.value = ''
-
-  try {
-    await autenticacaoService.sair()
-    await router.replace({ name: 'Login' })
-  } catch {
-    erroSaida.value =
-      'Não foi possível concluir a saída. Tente novamente.'
-  } finally {
-    saindo.value = false
-  }
-}
 </script>
 
 <template>
@@ -249,6 +234,13 @@ async function sair() {
             <template v-else-if="item.icone === 'processar'">
               <path d="m9 5 11 7-11 7z" />
               <path d="M4 5v14" />
+            </template>
+
+            <template v-else-if="item.icone === 'indicadores'">
+              <path d="M4 19h16" />
+              <path d="M7 15v-4" />
+              <path d="M12 15V7" />
+              <path d="M17 15v-7" />
             </template>
 
             <template v-else-if="item.icone === 'municipios'">
@@ -337,23 +329,6 @@ async function sair() {
       <button
         type="button"
         class="sidebar-tema"
-        :disabled="saindo"
-        @click="sair"
-      >
-        {{ saindo ? 'Saindo...' : 'Sair da conta' }}
-      </button>
-
-      <p
-        v-if="erroSaida"
-        class="sidebar-erro"
-        role="alert"
-      >
-        {{ erroSaida }}
-      </p>
-
-      <button
-        type="button"
-        class="sidebar-tema"
         :aria-label="tituloTema"
         :title="tituloTema"
         @click="alternarTema"
@@ -375,7 +350,6 @@ async function sair() {
 
             <template v-else>
               <circle cx="12" cy="12" r="4" />
-
               <path
                 d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"
               />
@@ -410,12 +384,5 @@ async function sair() {
 .sidebar-usuario span {
   color: var(--cor-texto-secundario);
   font-size: 13px;
-}
-
-.sidebar-erro {
-  margin: 8px 12px;
-  color: var(--cor-erro);
-  font-size: 13px;
-  line-height: 1.5;
 }
 </style>
