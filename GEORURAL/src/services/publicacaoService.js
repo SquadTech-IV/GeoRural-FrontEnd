@@ -72,19 +72,20 @@ function adaptarQualidade(dados, id) {
     !Number.isFinite(dados.percentualAprovacao) ||
     dados.percentualAprovacao < 0 ||
     dados.percentualAprovacao > 100 ||
-    !Array.isArray(dados.regrasVioladas) ||
+    !Array.isArray(dados.regras) ||
     !Array.isArray(dados.motivosReprovacao) ||
     dados.motivosReprovacao.some(
       motivo => typeof motivo !== 'string',
     ) ||
-    dados.regrasVioladas.some(
+    dados.regras.some(
       regra =>
         !objeto(regra) ||
         typeof regra.nomeRegra !== 'string' ||
         typeof regra.tipo !== 'string' ||
         typeof regra.severidade !== 'string' ||
-        !Number.isSafeInteger(regra.quantidade) ||
-        regra.quantidade < 0,
+        typeof regra.aprovada !== 'boolean' ||
+        !Number.isSafeInteger(regra.registrosAfetados) ||
+        regra.registrosAfetados < 0,
     )
   ) {
     throw new Error(
@@ -95,6 +96,14 @@ function adaptarQualidade(dados, id) {
   return {
     ...dados,
     execucaoId: id,
+    regrasVioladas: dados.regras
+      .filter(regra => regra.aprovada === false)
+      .map(({ nomeRegra, tipo, severidade, registrosAfetados }) => ({
+        nomeRegra,
+        tipo,
+        severidade,
+        quantidade: registrosAfetados,
+      })),
   }
 }
 
