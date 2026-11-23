@@ -49,6 +49,11 @@ const itens = [
     icone: 'painel',
   },
   {
+    caminho: '/monitoramento',
+    titulo: 'Saúde da plataforma',
+    icone: 'monitoramento',
+  },
+  {
     caminho: '/zona-tratada',
     titulo: 'Zona tratada',
     icone: 'arquivos',
@@ -99,6 +104,11 @@ const itens = [
     icone: 'quarentena',
   },
   {
+    caminho: '/comparar-versoes',
+    titulo: 'Comparar versões',
+    icone: 'comparar',
+  },
+  {
     caminho: '/qualidade',
     titulo: 'Conferência dos resultados',
     icone: 'qualidade',
@@ -117,11 +127,6 @@ const itens = [
     caminho: '/rastreabilidade',
     titulo: 'Trajetória no datalake',
     icone: 'rastreabilidade',
-  },
-  {
-    caminho: '/monitoramento',
-    titulo: 'Saúde da plataforma',
-    icone: 'monitoramento',
   },
   {
     caminho: '/usuarios',
@@ -304,6 +309,12 @@ function alternarTema() {
               <path d="M21 21v-2a6 6 0 0 0-4-5.65" />
             </template>
 
+            <template v-else-if="item.icone === 'comparar'">
+              <path
+                d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"
+              />
+            </template>
+
             <template v-else>
               <path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z" />
               <path d="M9 3v15M15 6v15" />
@@ -316,7 +327,6 @@ function alternarTema() {
     </div>
 
     <footer class="sidebar-rodape">
-
       <button
         type="button"
         class="sidebar-tema"
@@ -358,5 +368,3 @@ function alternarTema() {
 </template>
 
 <style scoped src="../assets/css/navegacao.css"></style>
-
-
