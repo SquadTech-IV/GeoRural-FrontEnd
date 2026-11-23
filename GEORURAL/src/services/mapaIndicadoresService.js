@@ -1,10 +1,22 @@
 import api from './api'
 import { normalizarGeoJson } from './mapaRenderizacaoService'
-import { prepararCamadasIndicadores } from './camadasIndicadoresService'
+import { prepararCamadasIndicadores, obterEstiloIndicador } from './camadasIndicadoresService'
 
 const numeros = new Intl.NumberFormat('pt-BR', {
   maximumFractionDigits: 2,
 })
+
+const situacoesIsap = {
+  COM_SOBREPOSICAO: 'Com sobreposição',
+  SEM_SOBREPOSICAO: 'Sem sobreposição',
+  CAMADA_INDISPONIVEL: 'Camada indisponível',
+}
+
+export function apresentarSituacaoIndicador(indicador) {
+  return indicador.sigla === 'ISAP'
+    ? situacoesIsap[indicador.situacao] || indicador.situacao || 'Não informada'
+    : indicador.situacao || 'Não informada'
+}
 
 function colecao(valor) {
   const dado = normalizarGeoJson(valor)
@@ -18,29 +30,21 @@ function colecao(valor) {
 }
 
 export function normalizarImovel(dado) {
-  if (
-    !dado ||
-    typeof dado.codigoCar !== 'string' ||
-    !dado.codigoCar.trim()
-  ) {
+  if (!dado || typeof dado.codigoCar !== 'string' || !dado.codigoCar.trim()) {
     throw new Error('A API retornou um imóvel sem código CAR.')
   }
 
   if (!Array.isArray(dado.indicadores)) {
-    throw new Error(
-      'A API retornou uma lista de indicadores inválida.',
-    )
+    throw new Error('A API retornou uma lista de indicadores inválida.')
   }
 
   const siglas = new Set()
 
   const indicadores = dado.indicadores.map((indicador) => {
-    const sigla = indicador?.sigla?.trim()
+    const sigla = indicador?.sigla?.trim().toUpperCase()
 
     if (!sigla || siglas.has(sigla.toUpperCase())) {
-      throw new Error(
-        'A API retornou indicadores com siglas ausentes ou repetidas.',
-      )
+      throw new Error('A API retornou indicadores com siglas ausentes ou repetidas.')
     }
 
     siglas.add(sigla.toUpperCase())
@@ -49,8 +53,9 @@ export function normalizarImovel(dado) {
       ...indicador,
       id: sigla,
       sigla,
-      nome: indicador.nome || sigla,
+      nome: indicador.nome || obterEstiloIndicador(sigla).nome,
       geojson: colecao(indicador.features),
+      situacaoTexto: apresentarSituacaoIndicador({ ...indicador, sigla }),
     }
   })
 
@@ -81,89 +86,101 @@ export function normalizarImovel(dado) {
 export function criarVisaoGeral(imoveis) {
   return {
     type: 'FeatureCollection',
-    features: imoveis.flatMap(
-      (imovel) => imovel.geojson.features,
-    ),
+    features: imoveis.flatMap((imovel) => imovel.geojson.features),
   }
 }
 
 export function criarCamadas(imovel) {
-  return prepararCamadasIndicadores(
-    imovel?.indicadores ?? [],
-  )
+  return prepararCamadasIndicadores(imovel?.indicadores ?? [])
+}
+
+export function criarResumosIndicadoresMapa(imovel) {
+  if (!imovel) return []
+  const camadas = criarCamadas(imovel)
+  return imovel.indicadores
+    .filter((indicador) => indicador.sigla === 'ISAP')
+    .map((indicador) => ({
+      id: indicador.id,
+      titulo: `ISAP · ${indicador.nome}`,
+      cor: obterEstiloIndicador('ISAP').cor,
+      situacao: apresentarSituacaoIndicador(indicador),
+      valores: detalharResultado(indicador),
+      mensagem: camadas.some((camada) => camada.id === indicador.id)
+        ? ''
+        : 'Geometria da sobreposição indisponível.',
+    }))
 }
 
 export function formatarNumero(valor, unidade = '') {
-  if (
-    valor == null ||
-    valor === '' ||
-    !Number.isFinite(Number(valor))
-  ) {
+  if (valor == null || valor === '' || !Number.isFinite(Number(valor))) {
     return 'Não informado'
   }
 
-  return (
-    numeros.format(Number(valor)) +
-    (unidade ? ` ${unidade}` : '')
-  )
+  return numeros.format(Number(valor)) + (unidade ? ` ${unidade}` : '')
 }
 
 export function formatarResultado(indicador) {
   const valores = []
 
   if (indicador.valorPercentual != null) {
-    valores.push(
-      formatarNumero(indicador.valorPercentual, '%'),
-    )
+    valores.push(formatarNumero(indicador.valorPercentual, '%'))
   }
 
   if (indicador.valorHectares != null) {
-    valores.push(
-      formatarNumero(indicador.valorHectares, 'ha'),
-    )
+    valores.push(formatarNumero(indicador.valorHectares, 'ha'))
   }
 
   if (indicador.valorAbsoluto != null) {
     // A unidade do indicador descreve o percentual, não o valor absoluto.
-    const unidadeAbsoluta = indicador.unidade?.trim() === '%'
-      ? '(valor absoluto)'
-      : indicador.unidade
+    const unidadeAbsoluta =
+      indicador.unidade?.trim() === '%' ? '(valor absoluto)' : indicador.unidade
 
-    valores.push(
-      formatarNumero(
-        indicador.valorAbsoluto,
-        unidadeAbsoluta,
-      ),
-    )
+    valores.push(formatarNumero(indicador.valorAbsoluto, unidadeAbsoluta))
   }
 
-  return valores.length
-    ? valores.join(' · ')
-    : 'Resultado não informado'
+  return valores.length ? valores.join(' · ') : 'Resultado não informado'
 }
 
 export function detalharResultado(indicador) {
   const campos = []
+  const coberturaVegetal = indicador.sigla?.trim().toUpperCase() === 'ICV'
+  const areasProtegidas = indicador.sigla?.trim().toUpperCase() === 'ISAP'
 
   if (indicador.valorPercentual != null) {
     campos.push({ legenda: 'Percentual', valor: formatarNumero(indicador.valorPercentual) + '%' })
   }
 
   if (indicador.valorHectares != null) {
-    const deficitReserva = indicador.sigla?.toUpperCase() === 'IRL' && Number(indicador.valorHectares) < 0
+    const deficitReserva =
+      indicador.sigla?.toUpperCase() === 'IRL' && Number(indicador.valorHectares) < 0
     campos.push({
-      legenda: deficitReserva ? 'Déficit de Reserva Legal' : 'Área',
-      valor: formatarNumero(deficitReserva ? Math.abs(Number(indicador.valorHectares)) : indicador.valorHectares, 'ha'),
+      legenda: deficitReserva
+        ? 'Déficit de Reserva Legal'
+        : coberturaVegetal
+          ? 'Área de vegetação nativa'
+          : areasProtegidas
+            ? 'Área sobreposta'
+            : 'Área',
+      valor: formatarNumero(
+        deficitReserva ? Math.abs(Number(indicador.valorHectares)) : indicador.valorHectares,
+        'ha',
+      ),
     })
   }
 
-  if (indicador.valorAbsoluto != null) {
+  if (indicador.valorAbsoluto != null && (!areasProtegidas || indicador.valorHectares == null)) {
     const numero = Number(indicador.valorAbsoluto)
     campos.push({
-      legenda: 'Valor absoluto',
-      valor: indicador.valorAbsoluto !== '' && Number.isFinite(numero)
-        ? numero.toLocaleString('pt-BR', { maximumFractionDigits: 3 })
-        : 'Não informado',
+      legenda: coberturaVegetal
+        ? 'Saldo de vegetação nativa'
+        : areasProtegidas
+          ? 'Área sobreposta'
+          : 'Valor absoluto',
+      valor:
+        indicador.valorAbsoluto !== '' && Number.isFinite(numero)
+          ? numero.toLocaleString('pt-BR', { maximumFractionDigits: 3 }) +
+            (coberturaVegetal || areasProtegidas ? ' ha' : '')
+          : 'Não informado',
     })
   }
 
@@ -171,10 +188,7 @@ export function detalharResultado(indicador) {
 }
 
 export function requisicaoCancelada(erro) {
-  return (
-    erro?.code === 'ERR_CANCELED' ||
-    erro?.name === 'AbortError'
-  )
+  return erro?.code === 'ERR_CANCELED' || erro?.name === 'AbortError'
 }
 
 export function obterMensagemErro(erro) {
@@ -189,10 +203,7 @@ export function obterMensagemErro(erro) {
   }
 
   if (status >= 500) {
-    return (
-      'O servidor não conseguiu carregar os dados do mapa. ' +
-      'Tente novamente.'
-    )
+    return 'O servidor não conseguiu carregar os dados do mapa. ' + 'Tente novamente.'
   }
 
   if (erro?.code === 'ECONNABORTED') {
@@ -203,51 +214,47 @@ export function obterMensagemErro(erro) {
     return 'Não foi possível conectar ao backend.'
   }
 
-  const mensagem =
-    erro?.response?.data?.mensagem ||
-    erro?.response?.data?.message
+  const mensagem = erro?.response?.data?.mensagem || erro?.response?.data?.message
 
   return typeof mensagem === 'string' && mensagem.trim()
     ? mensagem
-    : erro?.message ||
-        'Não foi possível carregar os dados do mapa.'
+    : erro?.message || 'Não foi possível carregar os dados do mapa.'
 }
 
-export const mapaIndicadoresService = {
-  async listarMapa({ signal } = {}) {
-    const { data } = await api.get('/api/mapa', {
-      signal,
-    })
+export function criarMapaIndicadoresService(cliente = api) {
+  return {
+    async listarMapa({ signal } = {}) {
+      const { data } = await cliente.get('/api/mapa', {
+        signal,
+      })
 
-    if (!Array.isArray(data)) {
-      throw new Error(
-        'A API retornou uma listagem de imóveis inválida.',
-      )
-    }
+      if (!Array.isArray(data)) {
+        throw new Error('A API retornou uma listagem de imóveis inválida.')
+      }
 
-    return data.map(normalizarImovel)
-  },
+      return data.map(normalizarImovel)
+    },
 
-  async buscarImovel(car, { signal } = {}) {
-    if (typeof car !== 'string' || !car.trim()) {
-      throw new Error('Informe o código CAR do imóvel.')
-    }
+    async buscarImovel(car, { signal } = {}) {
+      if (typeof car !== 'string' || !car.trim()) {
+        throw new Error('Informe o código CAR do imóvel.')
+      }
 
-    const codigoCar = car.trim()
+      const codigoCar = car.trim()
 
-    const { data } = await api.get(
-      `/api/imoveis/${encodeURIComponent(codigoCar)}`,
-      { signal },
-    )
+      const { data } = await cliente.get(`/api/imoveis/${encodeURIComponent(codigoCar)}`, {
+        signal,
+      })
 
-    const imovel = normalizarImovel(data)
+      const imovel = normalizarImovel(data)
 
-    if (imovel.codigoCar !== codigoCar) {
-      throw new Error(
-        'A API retornou um imóvel diferente do solicitado.',
-      )
-    }
+      if (imovel.codigoCar !== codigoCar) {
+        throw new Error('A API retornou um imóvel diferente do solicitado.')
+      }
 
-    return imovel
-  },
+      return imovel
+    },
+  }
 }
+
+export const mapaIndicadoresService = criarMapaIndicadoresService()

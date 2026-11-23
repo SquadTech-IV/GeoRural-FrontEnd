@@ -454,6 +454,7 @@ defineExpose({
           class="cadastros-botao cadastros-botao--principal"
           :disabled="carregando || salvando"
           @click="abrirFormularioFonte"
+          v-autorizado="'gerir'"
         >
           <span aria-hidden="true">+</span>
           Nova fonte
@@ -615,6 +616,7 @@ defineExpose({
                         :disabled="salvando"
                         :aria-label="`Editar ${fonte.nome}`"
                         @click="editarFonte(fonte)"
+                        v-autorizado="'gerir'"
                       >
                         Editar
                       </button>
@@ -631,6 +633,7 @@ defineExpose({
                           `${fonte.ativo ? 'Desativar' : 'Reativar'} ${fonte.nome}`
                         "
                         @click="solicitarAlteracaoStatusFonte(fonte)"
+                        v-autorizado="'gerir'"
                       >
                         {{ fonte.ativo ? 'Desativar' : 'Reativar' }}
                       </button>
@@ -666,6 +669,7 @@ defineExpose({
           class="cadastros-botao cadastros-botao--principal"
           :disabled="carregando || carregandoConjuntos || salvando"
           @click="abrirFormularioConjunto()"
+          v-autorizado="'operar'"
         >
           <span aria-hidden="true">+</span>
           Novo conjunto
@@ -845,6 +849,7 @@ defineExpose({
                         "
                         :aria-label="`Editar ${conjunto.nome}`"
                         @click="editarConjunto(conjunto)"
+                        v-autorizado="'operar'"
                       >
                         Editar
                       </button>
@@ -864,6 +869,7 @@ defineExpose({
                           `${conjunto.ativo ? 'Desativar' : 'Reativar'} ${conjunto.nome}`
                         "
                         @click="solicitarAlteracaoStatusConjunto(conjunto)"
+                        v-autorizado="'gerir'"
                       >
                         {{ conjunto.ativo ? 'Desativar' : 'Reativar' }}
                       </button>

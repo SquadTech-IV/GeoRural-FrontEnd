@@ -18,7 +18,7 @@ const estilosIndicadores = {
     cor: '#0ea5e9',
   },
   ISAP: {
-    nome: 'Áreas protegidas',
+    nome: 'Sobreposição a áreas protegidas',
     cor: '#b45309',
   },
   IDESMAT: {
@@ -29,6 +29,13 @@ const estilosIndicadores = {
     nome: 'Focos de calor',
     cor: '#ef4444',
   },
+}
+
+export function obterEstiloIndicador(sigla) {
+  return estilosIndicadores[String(sigla ?? '').trim().toUpperCase()] ?? {
+    nome: sigla,
+    cor: '#8520bd',
+  }
 }
 
 function possuiCoordenadas(coordenadas) {
@@ -104,10 +111,7 @@ export function prepararCamadasIndicadores(indicadores) {
       continue
     }
 
-    const estilo = estilosIndicadores[sigla] ?? {
-      nome: sigla,
-      cor: '#8520bd',
-    }
+    const estilo = obterEstiloIndicador(sigla)
 
     camadas.push({
       id,

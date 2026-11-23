@@ -280,7 +280,7 @@ onBeforeUnmount(destruir)
               {{ quantidadeArquivosSelecionados }} arquivo(s) selecionado(s).
             </p>
 
-            <button type="button" class="botao-principal"
+            <button v-autorizado="'operar'" type="button" class="botao-principal"
               :disabled="!quantidadeArquivosSelecionados || enviando || carregando"
               @click="processarArquivosSelecionados">
               {{ enviando ? 'Processando...' : 'Processar selecionados' }}
@@ -468,7 +468,7 @@ onBeforeUnmount(destruir)
                 {{ baixando ? 'Gerando...' : 'Baixar original' }}
               </button>
 
-              <button type="button" class="botao-principal" :disabled="enviando || arquivoAtivoProcessado"
+              <button v-autorizado="'operar'" type="button" class="botao-principal" :disabled="enviando || arquivoAtivoProcessado"
                 @click="processarArquivoAtivo">
                 {{
                   enviando

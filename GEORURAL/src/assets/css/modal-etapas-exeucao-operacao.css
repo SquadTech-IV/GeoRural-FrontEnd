@@ -105,6 +105,7 @@
 }
 
 .pg-botao--principal {
+  text-decoration: none;
   border-color: var(--cor-roxo);
   background: var(--cor-roxo);
   color: #fff

@@ -5,6 +5,7 @@ import { createPinia } from 'pinia'
 
 import App from './App.vue'
 import router from './router'
+import autorizado from './directives/autorizado'
 
 let temaInicial = 'light'
 
@@ -21,6 +22,7 @@ try {
 document.documentElement.dataset.tema = temaInicial
 
 const app = createApp(App)
+app.directive('autorizado', autorizado)
 
 app.use(createPinia())
 app.use(router)
