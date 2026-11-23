@@ -304,7 +304,7 @@ defineExpose({
             <dd>{{ campo.valor }}</dd>
           </div>
         </dl>
-        <p v-if="!resumo.valores.length">Percentual e área não disponíveis.</p>
+        <p v-if="!resumo.valores.length">Resultado não disponível.</p>
         <p v-if="resumo.mensagem">{{ resumo.mensagem }}</p>
       </section>
       <div class="mapa-geografico-base">

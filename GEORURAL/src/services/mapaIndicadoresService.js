@@ -13,6 +13,18 @@ const situacoesIsap = {
 }
 
 export function apresentarSituacaoIndicador(indicador) {
+  if (indicador.sigla === 'IFC') {
+    return (
+      {
+        SEM_FOCO: 'Sem focos de calor',
+        SEM_FOCOS: 'Sem focos de calor',
+        COM_FOCOS: 'Com focos de calor',
+        AREA_INVALIDA: 'Área do imóvel inválida',
+      }[indicador.situacao] ||
+      indicador.situacao ||
+      'Não informada'
+    )
+  }
   return indicador.sigla === 'ISAP'
     ? situacoesIsap[indicador.situacao] || indicador.situacao || 'Não informada'
     : indicador.situacao || 'Não informada'
@@ -98,16 +110,20 @@ export function criarResumosIndicadoresMapa(imovel) {
   if (!imovel) return []
   const camadas = criarCamadas(imovel)
   return imovel.indicadores
-    .filter((indicador) => indicador.sigla === 'ISAP')
+    .filter((indicador) => ['ISAP', 'IFC'].includes(indicador.sigla))
     .map((indicador) => ({
       id: indicador.id,
-      titulo: `ISAP · ${indicador.nome}`,
-      cor: obterEstiloIndicador('ISAP').cor,
+      titulo: `${indicador.sigla} · ${indicador.nome}`,
+      cor: obterEstiloIndicador(indicador.sigla).cor,
       situacao: apresentarSituacaoIndicador(indicador),
       valores: detalharResultado(indicador),
       mensagem: camadas.some((camada) => camada.id === indicador.id)
         ? ''
-        : 'Geometria da sobreposição indisponível.',
+        : indicador.sigla === 'IFC'
+          ? Number(indicador.valorAbsoluto) === 0 && indicador.valorAbsoluto != null
+            ? 'Nenhum foco registrado no período apurado.'
+            : 'Localização dos focos indisponível no resultado do backend.'
+          : 'Geometria da sobreposição indisponível.',
     }))
 }
 
@@ -120,6 +136,13 @@ export function formatarNumero(valor, unidade = '') {
 }
 
 export function formatarResultado(indicador) {
+  if (indicador.sigla?.trim().toUpperCase() === 'IFC') {
+    return (
+      detalharResultado(indicador)
+        .map((campo) => campo.valor)
+        .join(' · ') || 'Resultado não informado'
+    )
+  }
   const valores = []
 
   if (indicador.valorPercentual != null) {
@@ -143,6 +166,20 @@ export function formatarResultado(indicador) {
 
 export function detalharResultado(indicador) {
   const campos = []
+  if (indicador.sigla?.trim().toUpperCase() === 'IFC') {
+    if (indicador.valorPercentual != null) {
+      campos.push({
+        legenda: 'Índice de focos de calor',
+        valor:
+          Number(indicador.valorPercentual).toLocaleString('pt-BR', { maximumFractionDigits: 4 }) +
+          ' focos/1.000 ha',
+      })
+    }
+    if (indicador.valorAbsoluto != null) {
+      campos.push({ legenda: 'Focos no período', valor: formatarNumero(indicador.valorAbsoluto) })
+    }
+    return campos
+  }
   const coberturaVegetal = indicador.sigla?.trim().toUpperCase() === 'ICV'
   const areasProtegidas = indicador.sigla?.trim().toUpperCase() === 'ISAP'
 
