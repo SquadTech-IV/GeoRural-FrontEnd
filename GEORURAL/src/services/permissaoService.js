@@ -157,7 +157,7 @@ export function perfisRequisicao(metodo, caminho) {
 
   if (
     verbo === 'GET' &&
-    /^\/api\/(?:v1\/(?:catalogo|indicadores|execucoes)|indicadores|imoveis|mapa|arquivos|inventario|perfis|datalake|conjuntos|fontes|versoes|trajetoria-conjuntos|zona-tratada|ingestao|pipeline)(?:\/|$)/.test(
+    /^\/api\/(?:v1\/(?:catalogo|indicadores|execucoes|iapp)|indicadores|imoveis|mapa|arquivos|inventario|perfis|datalake|conjuntos|fontes|versoes|trajetoria-conjuntos|zona-tratada|ingestao|pipeline)(?:\/|$)/.test(
       rota,
     )
   ) {
