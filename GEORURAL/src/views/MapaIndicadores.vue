@@ -7,8 +7,9 @@ import {
   mapaIndicadoresService,
   criarVisaoGeral,
   criarCamadas,
+  criarResumosIndicadoresMapa,
   formatarNumero,
-  formatarResultado,
+  detalharResultado,
   requisicaoCancelada,
   obterMensagemErro,
 } from '../services/mapaIndicadoresService'
@@ -30,6 +31,7 @@ const geojson = computed(() =>
   props.car ? (selecionado.value?.geojson ?? null) : criarVisaoGeral(imoveis.value),
 )
 const camadas = computed(() => criarCamadas(selecionado.value))
+const resumosIndicadores = computed(() => criarResumosIndicadoresMapa(selecionado.value))
 
 async function carregarLista() {
   consultaLista?.abort()
@@ -146,7 +148,11 @@ onBeforeUnmount(() => {
     </section>
 
     <div class="mapa-base-conteudo">
-      <MapaGeografico :geojson="geojson" :indicadores="camadas" />
+      <MapaGeografico
+        :geojson="geojson"
+        :indicadores="camadas"
+        :resumos-indicadores="resumosIndicadores"
+      />
     </div>
 
     <section v-if="selecionado" class="mapa-api-resultados" aria-labelledby="titulo-indicadores">
@@ -157,10 +163,16 @@ onBeforeUnmount(() => {
       <ul v-else class="mapa-api-lista">
         <li v-for="indicador in selecionado.indicadores" :key="indicador.id" class="mapa-api-card">
           <h3>{{ indicador.sigla }} · {{ indicador.nome }}</h3>
-          <strong>{{ formatarResultado(indicador) }}</strong>
-          <p>Situação: {{ indicador.situacao || 'Não informada' }}</p>
+          <dl class="mapa-api-valores">
+            <div v-for="campo in detalharResultado(indicador)" :key="campo.legenda">
+              <dt>{{ campo.legenda }}:</dt>
+              <dd>{{ campo.valor }}</dd>
+            </div>
+          </dl>
+          <p v-if="!detalharResultado(indicador).length">Resultado não informado</p>
+          <p>Situação: {{ indicador.situacaoTexto }}</p>
           <p>Versão da regra: {{ indicador.versaoRegra || 'Não informada' }}</p>
-          <p v-if="!camadas.some((camada) => camada.id === indicador.id)">
+          <p v-if="!camadas.some((camada) => camada.sigla === indicador.sigla)">
             Sem geometria disponível para exibição no mapa.
           </p>
         </li>

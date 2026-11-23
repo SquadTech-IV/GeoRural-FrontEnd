@@ -199,3 +199,27 @@
   font-size: 12px;
   line-height: 1.7;
 }
+
+.mapa-api-valores {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 16px;
+  font-size: 14px;
+}
+
+.mapa-api-valores > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.mapa-api-valores dt {
+  color: var(--cor-texto-secundario);
+}
+
+.mapa-api-valores dd {
+  margin: 0;
+  color: var(--cor-roxo);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}

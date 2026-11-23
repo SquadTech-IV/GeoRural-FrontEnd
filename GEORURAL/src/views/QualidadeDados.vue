@@ -1,97 +1,47 @@
 <script setup>
-import {
-  computed,
-  onBeforeUnmount,
-  onMounted,
-  watch,
-} from 'vue'
-
-import { useRoute } from 'vue-router'
+import { onBeforeUnmount, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 
 import BarraNavegacao from '../components/BarraNavegacao.vue'
-import FluxoPublicacaoVersao from '../components/FluxoPublicacaoVersao.vue'
-import ListaVersoesPublicadas from '../components/ListaVersoesPublicadas.vue'
 import ToastMensagem from '../components/ToastMensagem.vue'
+import { criarControleQualidade } from '../services/qualidadeControleService'
 
-import {
-  prepararConferenciaResultados,
-} from '../services/conferenciaResultadosService'
-
-import {
-  criarControleQualidade,
-} from '../services/qualidadeControleService'
-
-const route = useRoute()
+const router = useRouter()
+const controle = criarControleQualidade()
 
 const {
-  versoes,
-  carregandoVersoes,
-  carregarVersoes,
-  execucaoId,
-  versaoId,
-  motivoReprovacao,
-  resultado,
-  versaoSelecionada,
-  versaoConfirmada,
-  carregando,
-  publicando,
-  reprovando,
-  ocupado,
-  falhouConferencia,
-  versoesPublicadas,
+  fila,
+  versaoSelecionada: versao,
+  detalhe,
+  justificativa,
+  carregandoFila,
+  carregandoDetalhe,
+  enviando,
+  erroFila,
+  erroDetalhe,
   notificacoes,
-  fechar,
-  selecionarExecucao,
-  selecionarVersao,
-  consultar,
+  fecharNotificacao,
+  carregarFila,
+  escolherVersao,
   publicar,
-  registrarReprovacao,
+  devolver,
+  obterRotaQuarentena,
   destruir,
-} = criarControleQualidade()
+  fmt,
+  fmtData,
+} = controle
 
-const conferencia = computed(() =>
-  prepararConferenciaResultados(resultado.value),
-)
-
-const notificacaoAtual = computed(() =>
-  notificacoes.value[0] ?? null,
-)
-
-function fecharNotificacao() {
-  if (notificacaoAtual.value) {
-    fechar(notificacaoAtual.value.id)
-  }
+function irParaQuarentena() {
+  const destino = obterRotaQuarentena()
+  if (destino) router.push(destino)
 }
 
-watch(
-  [
-    () => route.query.execucaoId,
-    () => route.query.versaoId,
-  ],
-  ([execucao, versao]) => {
-    if (ocupado.value) return
-
-    selecionarExecucao(
-      typeof execucao === 'string' ? execucao : '',
-    )
-
-    selecionarVersao(
-      typeof versao === 'string' ? versao : '',
-    )
-
-    if (execucaoId.value) {
-      consultar()
-    }
-  },
-  { immediate: true },
-)
-
-onBeforeUnmount(destruir)
-onMounted(carregarVersoes)
+onMounted(() => carregarFila(false))
+onBeforeUnmount(() => destruir())
 </script>
 
 <template>
-  <div class="qualidade-layout">
+  <div>
     <BarraNavegacao />
 
     <main class="qualidade-pagina">
@@ -99,395 +49,451 @@ onMounted(carregarVersoes)
         <h1>Conferência dos resultados</h1>
 
         <p>
-          Consulte os resultados da validação e solicite
-          a publicação da versão.
+          Aqui ficam as versões que o pipeline terminou de gerar e que estão
+          esperando a sua decisão. Nada vira dado público antes de você publicar,
+          tenha o processamento sido disparado por você ou pelo Airflow.
         </p>
       </header>
 
-      <section
-        class="qualidade-card"
-        aria-labelledby="qualidade-consulta-titulo"
-      >
-        <h2 id="qualidade-consulta-titulo">
-          Selecionar execução e versão
-        </h2>
+      <p v-if="erroFila" class="qualidade-erro" role="alert">
+        {{ erroFila }}
+      </p>
 
-        <form
-          class="qualidade-consulta"
-          @submit.prevent="consultar"
+      <section class="qualidade-card" :aria-busy="carregandoFila">
+        <header class="qualidade-secao-cabecalho">
+          <h2>Esperando sua decisão</h2>
+          <span>{{ fila.length }} versão(ões)</span>
+        </header>
+
+        <p
+          v-if="carregandoFila && !fila.length"
+          class="qualidade-vazio-fila"
         >
-          <div class="qualidade-campo">
-            <label for="qualidade-execucao">
-              Identificador da execução
-            </label>
+          Carregando versões...
+        </p>
 
-            <input
-              id="qualidade-execucao"
-              :value="execucaoId"
-              type="text"
-              inputmode="numeric"
-              required
-              :disabled="publicando || reprovando"
-              placeholder="Código da execução"
-              @input="
-                selecionarExecucao($event.target.value)
-              "
-            />
-          </div>
+        <ul v-else-if="fila.length" class="qualidade-fila">
+          <li v-for="v in fila" :key="v.id">
+            <button
+              type="button"
+              class="qualidade-fila-item"
+              :class="{
+                'qualidade-fila-item--ativo': v.id === versao?.id,
+              }"
+              @click="escolherVersao(v.id)"
+            >
+              <span class="qualidade-fila-corpo">
+                <span class="qualidade-fila-titulo">
+                  Versão #{{ v.numero }} · {{ v.conjunto }}
 
-          <div class="qualidade-campo">
-            <label for="qualidade-versao">
-              Identificador da versão
-            </label>
+                  <span
+                    v-if="v.automatica"
+                    class="qualidade-origem qualidade-origem--automatico"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"
+                      />
+                    </svg>
+                    automático
+                  </span>
 
-            <input
-              id="qualidade-versao"
-              list="qualidade-versoes"
-              :value="versaoId"
-              type="text"
-              inputmode="numeric"
-              :disabled="publicando || reprovando"
-              placeholder="Código da versão"
-              @input="
-                selecionarVersao($event.target.value)
-              "
-            />
-            <datalist id="qualidade-versoes">
-              <option v-for="item in versoes" :key="item.id" :value="item.id">
-                {{ item.conjuntoNome }} · {{ item.numero }} · {{ item.situacao }}
-              </option>
-            </datalist>
-          </div>
+                  <span
+                    v-else
+                    class="qualidade-origem qualidade-origem--manual"
+                  >
+                    manual
+                  </span>
+                </span>
 
-          <button
-            class="qualidade-tentar"
-            type="submit"
-            :disabled="ocupado"
-          >
-            {{
-              carregando
-                ? 'Consultando...'
-                : 'Consultar qualidade'
-            }}
-          </button>
-        </form>
+                <span class="qualidade-fila-meta">
+                  {{ v.arquivo }} · gerada em {{ fmtData(v.geradaEm) }} ·
+                  {{ v.quem }}
+                </span>
+              </span>
 
-        <p class="qualidade-ajuda">
-          Informe os identificadores da execução e da
-          versão que deseja conferir. O servidor valida
-          a execução vinculada à versão ao publicar.
+              <dl class="qualidade-fila-numeros">
+                <div>
+                  <dt>Feições</dt>
+                  <dd>{{ fmt(v.aprovadas) }}</dd>
+                </div>
+
+                <div>
+                  <dt>Quarentena</dt>
+                  <dd>{{ fmt(v.rejeitadas) }}</dd>
+                </div>
+              </dl>
+
+              <span
+                class="qualidade-selo"
+                :class="`qualidade-selo--${v.conclusao.classe}`"
+              >
+                {{ v.conclusao.texto }}
+              </span>
+            </button>
+          </li>
+        </ul>
+
+        <p v-else class="qualidade-vazio-fila">
+          Nada esperando decisão. Quando o pipeline terminar uma versão,
+          ela aparece aqui.
         </p>
       </section>
 
-      <section
-        v-if="carregando"
-        class="qualidade-card qualidade-estado"
-        aria-busy="true"
-      >
-        <p role="status">
-          Carregando resultados da validação...
+      <template v-if="versao">
+        <p v-if="erroDetalhe" class="qualidade-erro" role="alert">
+          {{ erroDetalhe }}
         </p>
-      </section>
 
-      <section
-        v-else-if="falhouConferencia"
-        class="qualidade-card qualidade-estado"
-      >
-        <h2>Conferência dos resultados</h2>
-
-        <button
-          type="button"
-          class="qualidade-tentar"
-          @click="consultar"
-        >
-          Tentar consultar resultados novamente
-        </button>
-      </section>
-
-      <section
-        v-else-if="!conferencia"
-        class="qualidade-card qualidade-estado"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.6"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          aria-hidden="true"
-        >
-          <path
-            d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"
-          />
-          <path d="M14 3v6h6M8 13h8M8 17h5" />
-        </svg>
-
-        <h2>Nenhum resultado disponível</h2>
-
-        <p>
-          Informe a execução acima e clique em
-          Consultar qualidade.
+        <p v-if="carregandoDetalhe" class="qualidade-vazio-fila">
+          Carregando a conferência da versão...
         </p>
-      </section>
 
-      <template v-else>
-        <section
-          class="qualidade-card"
-          aria-labelledby="qualidade-resumo-titulo"
-        >
-          <header class="qualidade-resumo-cabecalho">
-            <div>
-              <h2 id="qualidade-resumo-titulo">
-                Resumo da validação
-              </h2>
+        <template v-else-if="detalhe">
+          <section class="qualidade-card">
+            <header class="qualidade-resumo-cabecalho">
+              <div>
+                <h2>
+                  Versão #{{ versao.numero }} — {{ versao.conjunto }}
+                </h2>
+                <p>
+                  {{ versao.arquivo }} · gerada em
+                  {{ fmtData(versao.geradaEm) }}
+                </p>
+              </div>
 
-              <p>
-                Execução {{ conferencia.execucaoId }}
+              <span
+                class="qualidade-selo"
+                :class="`qualidade-selo--${detalhe.conclusao.classe}`"
+              >
+                {{ detalhe.conclusao.texto }}
+              </span>
+            </header>
+
+            <dl class="qualidade-indicadores">
+              <div class="qualidade-indicador">
+                <dt>Feições recebidas</dt>
+                <dd>{{ fmt(detalhe.recebidas) }}</dd>
+              </div>
+
+              <div class="qualidade-indicador qualidade-indicador--sucesso">
+                <dt>Entraram na versão</dt>
+                <dd>{{ fmt(detalhe.entraram) }}</dd>
+              </div>
+
+              <div
+                class="qualidade-indicador"
+                :class="
+                  detalhe.quarentena
+                    ? 'qualidade-indicador--aviso'
+                    : 'qualidade-indicador--sucesso'
+                "
+              >
+                <dt>Foram para a quarentena</dt>
+                <dd>{{ fmt(detalhe.quarentena) }}</dd>
+              </div>
+
+              <div class="qualidade-indicador">
+                <dt>Imóveis calculados</dt>
+                <dd>
+                  {{
+                    detalhe.imoveisCalculados === null
+                      ? '—'
+                      : fmt(detalhe.imoveisCalculados)
+                  }}
+                </dd>
+              </div>
+            </dl>
+
+            <div class="qualidade-aprovacao">
+              <div class="qualidade-aprovacao-cabecalho">
+                <h3>Percentual de aprovação</h3>
+                <strong>{{ detalhe.percentualTexto }}%</strong>
+              </div>
+
+              <progress
+                class="qualidade-progresso"
+                :value="detalhe.percentual"
+                max="100"
+              ></progress>
+
+              <p v-if="detalhe.quarentena" class="qualidade-ajuda">
+                As {{ fmt(detalhe.quarentena) }} feições recusadas estão
+                na quarentena com o motivo gravado.
+
+                <button
+                  type="button"
+                  class="qualidade-link"
+                  @click="irParaQuarentena"
+                >
+                  Ver na quarentena
+                </button>
+              </p>
+
+              <p v-else class="qualidade-ajuda">
+                Nenhuma feição foi recusada nesta rodada.
               </p>
             </div>
 
-            <span
-              class="qualidade-selo"
-              :class="
-                `qualidade-selo--${conferencia.classeConclusao}`
-              "
-            >
-              {{ conferencia.conclusao }}
-            </span>
-          </header>
-
-          <dl class="qualidade-indicadores">
-            <div
-              v-for="indicador in conferencia.indicadores"
-              :key="indicador.chave"
-              class="qualidade-indicador"
-              :class="
-                `qualidade-indicador--${indicador.classe}`
-              "
-            >
-              <dt>{{ indicador.titulo }}</dt>
-              <dd>{{ indicador.valor }}</dd>
-            </div>
-          </dl>
-
-          <div class="qualidade-aprovacao">
-            <div
-              class="qualidade-aprovacao-cabecalho"
-            >
-              <h3>Percentual de aprovação</h3>
-
+            <div class="qualidade-rodada">
+              De onde veio esta versão:
               <strong>
-                {{ conferencia.percentualFormatado }}
+                {{
+                  versao.automatica
+                    ? 'processamento automático'
+                    : 'processamento manual'
+                }}
               </strong>
+              · {{ versao.quem }}
+
+              <template v-if="versao.dagRunId">
+                <br />
+                Identificador da execução no Airflow:
+                <code>{{ versao.dagRunId }}</code>
+              </template>
+
+              <br />
+              As seis etapas desta rodada estão em Linhagem e auditoria,
+              presas por esse mesmo identificador.
+            </div>
+          </section>
+
+          <section
+            v-if="detalhe.blocos.length"
+            class="qualidade-card"
+          >
+            <header class="qualidade-secao-cabecalho">
+              <h2>Indicadores desta versão</h2>
+              <span class="qualidade-selo qualidade-selo--neutro">
+                ainda não valem
+              </span>
+            </header>
+
+            <p class="qualidade-ajuda">
+              Estes números já foram calculados no processamento e estão
+              guardados como não vigentes. Publicar é o que faz eles
+              passarem a valer no mapa, nas consultas e na tela de imóveis.
+            </p>
+
+            <div class="qualidade-blocos">
+              <template v-for="b in detalhe.blocos" :key="b.titulo">
+                <article
+                  v-if="b.vazio"
+                  class="qualidade-bloco qualidade-bloco--vazio"
+                >
+                  <p style="margin: 0">
+                    <strong>{{ b.titulo }}</strong><br />
+                    Não foi recalculado nesta versão — continua valendo
+                    o resultado da versão anterior.
+                  </p>
+                </article>
+
+                <article v-else class="qualidade-bloco">
+                  <h3>{{ b.titulo }}</h3>
+
+                  <p class="qualidade-bloco-total">
+                    {{ fmt(b.total) }} imóveis calculados
+                  </p>
+
+                  <div class="qualidade-barra">
+                    <i
+                      class="qualidade-barra-bom"
+                      :style="{ width: `${b.pctBom}%` }"
+                    ></i>
+
+                    <i
+                      class="qualidade-barra-ruim"
+                      :style="{ width: `${100 - b.pctBom}%` }"
+                    ></i>
+                  </div>
+
+                  <dl class="qualidade-legenda">
+                    <div>
+                      <dt>
+                        <span
+                          class="qualidade-ponto qualidade-ponto--bom"
+                        ></span>
+                        {{ b.bom.rotulo }}
+                      </dt>
+                      <dd>{{ fmt(b.bom.valor) }}</dd>
+                    </div>
+
+                    <div>
+                      <dt>
+                        <span
+                          class="qualidade-ponto qualidade-ponto--ruim"
+                        ></span>
+                        {{ b.ruim.rotulo }}
+                      </dt>
+                      <dd>{{ fmt(b.ruim.valor) }}</dd>
+                    </div>
+                  </dl>
+
+                  <p
+                    v-if="b.comparacao"
+                    class="qualidade-comparacao"
+                  >
+                    Contra a versão #{{ b.comparacao.versaoAnterior }},
+                    que está valendo hoje:
+
+                    <span
+                      class="qualidade-delta"
+                      :class="
+                        b.comparacao.melhor
+                          ? 'qualidade-delta--melhor'
+                          : 'qualidade-delta--pior'
+                      "
+                    >
+                      {{ b.comparacao.frase }}
+                    </span>
+                  </p>
+
+                  <p v-else class="qualidade-comparacao">
+                    Primeira versão deste conjunto: não há com o que comparar.
+                  </p>
+                </article>
+              </template>
+            </div>
+          </section>
+
+          <section class="qualidade-card">
+            <header class="qualidade-secao-cabecalho">
+              <h2>Regras violadas</h2>
+              <span>
+                {{ detalhe.regrasQueFalharam.length }} regra(s)
+              </span>
+            </header>
+
+            <div
+              v-if="detalhe.regrasQueFalharam.length"
+              class="qualidade-tabela-container"
+            >
+              <table class="qualidade-tabela">
+                <thead>
+                  <tr>
+                    <th>Regra</th>
+                    <th>Tipo</th>
+                    <th>Severidade</th>
+                    <th class="num">Ocorrências</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  <tr
+                    v-for="r in detalhe.regrasQueFalharam"
+                    :key="r.nomeRegra"
+                  >
+                    <th scope="row">{{ r.nomeRegra }}</th>
+                    <td>{{ r.tipo }}</td>
+
+                    <td>
+                      <span
+                        class="qualidade-severidade"
+                        :class="
+                          r.severidade === 'BLOQUEIA'
+                            ? 'qualidade-severidade--bloqueia'
+                            : 'qualidade-severidade--avisa'
+                        "
+                      >
+                        {{ r.severidade }}
+                      </span>
+                    </td>
+
+                    <td class="num">
+                      {{ fmt(r.registrosAfetados) }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
 
-            <progress
-              v-if="conferencia.percentual !== null"
-              class="qualidade-progresso"
-              :value="conferencia.percentual"
-              max="100"
-              aria-label="Percentual de aprovação dos registros"
+            <p v-else class="qualidade-lista-vazia">
+              Nenhuma regra foi violada nesta versão.
+            </p>
+          </section>
+
+          <section class="qualidade-card">
+            <h2>Pontos de atenção</h2>
+
+            <ul
+              v-if="detalhe.motivos.length"
+              class="qualidade-motivos"
             >
-              {{ conferencia.percentualFormatado }}
-            </progress>
+              <li v-for="m in detalhe.motivos" :key="m">
+                {{ m }}
+              </li>
+            </ul>
+
+            <p v-else class="qualidade-lista-vazia">
+              Nada a ressalvar.
+            </p>
+          </section>
+
+          <section class="qualidade-card">
+            <h2>Publicar a versão #{{ versao.numero }}</h2>
 
             <p class="qualidade-ajuda">
-              Situação informada:
-              {{ conferencia.statusValidacao }}
+              Publicar é o que faz esta versão virar o dado vigente:
+              ela passa a valer no mapa, nos indicadores e nas consultas.
+              A versão que estava valendo antes não é apagada, só deixa
+              de ser a vigente.
             </p>
-          </div>
-        </section>
 
-        <section
-          class="qualidade-card"
-          aria-labelledby="qualidade-regras-titulo"
-        >
-          <header class="qualidade-secao-cabecalho">
-            <h2 id="qualidade-regras-titulo">
-              Regras violadas
-            </h2>
+            <div class="qualidade-decisao" style="margin-top: 14px">
+              <label for="justificativa">
+                Justificativa ou motivo da decisão
+              </label>
 
-            <span>
-              {{ conferencia.regras.length }} regra(s)
-            </span>
-          </header>
+              <textarea
+                id="justificativa"
+                v-model="justificativa"
+                :disabled="enviando"
+                placeholder="Informe a justificativa para publicar ou o motivo para devolver a versão."
+              ></textarea>
 
-          <p
-            v-if="!conferencia.regras.length"
-            class="qualidade-lista-vazia"
-          >
-            Nenhuma regra violada informada nesta
-            validação.
-          </p>
-
-          <div
-            v-else
-            class="qualidade-tabela-container"
-            role="region"
-            aria-label="Regras violadas na validação"
-            tabindex="0"
-          >
-            <table class="qualidade-tabela">
-              <caption class="qualidade-somente-leitor">
-                Regras violadas e quantidade de
-                ocorrências
-              </caption>
-
-              <thead>
-                <tr>
-                  <th scope="col">Regra</th>
-                  <th scope="col">Tipo</th>
-                  <th scope="col">Severidade</th>
-                  <th scope="col">Ocorrências</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                <tr
-                  v-for="(regra, indice) in conferencia.regras"
-                  :key="indice"
+              <div class="qualidade-decisao-acoes">
+                <button
+                  type="button"
+                  class="qualidade-botao qualidade-botao--recusar"
+                  :disabled="enviando"
+                  @click="devolver"
                 >
-                  <th scope="row">
-                    {{ regra.nome }}
-                  </th>
+                  {{ enviando ? 'Enviando...' : 'Devolver para correção' }}
+                </button>
 
-                  <td>{{ regra.tipo }}</td>
-
-                  <td>
-                    <span class="qualidade-severidade">
-                      {{ regra.severidade }}
-                    </span>
-                  </td>
-
-                  <td>{{ regra.quantidade }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section
-          class="qualidade-card"
-          aria-labelledby="qualidade-motivos-titulo"
-        >
-          <h2 id="qualidade-motivos-titulo">
-            Motivos de reprovação
-          </h2>
-
-          <ul
-            v-if="conferencia.motivos.length"
-            class="qualidade-motivos"
-          >
-            <li
-              v-for="(motivo, indice) in conferencia.motivos"
-              :key="indice"
-            >
-              {{ motivo }}
-            </li>
-          </ul>
-
-          <p v-else class="qualidade-lista-vazia">
-            Nenhum motivo de reprovação informado.
-          </p>
-        </section>
-
-        <FluxoPublicacaoVersao
-          :resultado="resultado"
-          :versao="versaoSelecionada"
-          :publicando="publicando || reprovando"
-          @confirmar="publicar"
-        />
-
-        <p class="qualidade-observacao">
-          A versão será apresentada como publicada
-          somente após a confirmação do servidor.
-        </p>
+                <button
+                  type="button"
+                  class="qualidade-botao qualidade-botao--principal"
+                  :disabled="enviando"
+                  @click="publicar"
+                >
+                  {{
+                    enviando
+                      ? 'Enviando...'
+                      : `Publicar versão #${versao.numero}`
+                  }}
+                </button>
+              </div>
+            </div>
+          </section>
+        </template>
       </template>
-
-      <section
-        v-if="versaoConfirmada"
-        class="qualidade-card"
-        aria-labelledby="qualidade-confirmacao-titulo"
-      >
-        <h2 id="qualidade-confirmacao-titulo">
-          Resposta confirmada pelo servidor
-        </h2>
-
-        <p class="qualidade-ajuda">
-          Versão {{ versaoConfirmada.numero }}
-          · Situação {{ versaoConfirmada.situacao }}
-          · Execução
-          {{ versaoConfirmada.execucaoId ?? 'Não informada' }}
-        </p>
-      </section>
-
-      <section
-        class="qualidade-card"
-        aria-labelledby="qualidade-reprovacao-titulo"
-      >
-        <details>
-          <summary id="qualidade-reprovacao-titulo">
-            Registrar justificativa de reprovação
-          </summary>
-
-          <form
-            class="qualidade-reprovacao"
-            @submit.prevent="registrarReprovacao"
-          >
-            <label for="qualidade-motivo">
-              Motivo
-            </label>
-
-            <textarea
-              id="qualidade-motivo"
-              v-model="motivoReprovacao"
-              required
-              :disabled="ocupado"
-              rows="3"
-            />
-
-            <p class="qualidade-ajuda">
-              A operação registra a justificativa na
-              auditoria. A situação da versão permanece
-              conforme a resposta do servidor.
-            </p>
-
-            <button
-              class="qualidade-tentar"
-              type="submit"
-              :disabled="ocupado || !versaoId.trim()"
-            >
-              {{
-                reprovando
-                  ? 'Registrando...'
-                  : 'Registrar justificativa'
-              }}
-            </button>
-          </form>
-        </details>
-      </section>
-
-      <ListaVersoesPublicadas
-        :versoes="versoesPublicadas"
-        titulo="Versões publicadas"
-        descricao="Versões vigentes e anteriores consultadas no servidor."
-        mensagem-vazia="Nenhuma versão publicada encontrada."
-      />
-      <button type="button" class="qualidade-tentar" :disabled="carregandoVersoes || ocupado" @click="carregarVersoes">
-        {{ carregandoVersoes ? 'Consultando versões...' : 'Atualizar versões' }}
-      </button>
     </main>
 
     <ToastMensagem
-      v-if="notificacaoAtual"
-      :key="notificacaoAtual.id"
-      :mensagem="notificacaoAtual.mensagem"
-      :tipo="notificacaoAtual.tipo"
-      :duracao="
-        notificacaoAtual.tipo === 'erro' ? 0 : 6000
-      "
-      @fechar="fecharNotificacao"
+      v-if="notificacoes.length"
+      :mensagem="notificacoes[0].mensagem"
+      :tipo="notificacoes[0].tipo"
+      :duracao="notificacoes[0].tipo === 'sucesso' ? 6000 : 0"
+      @fechar="fecharNotificacao(notificacoes[0].id)"
     />
   </div>
 </template>

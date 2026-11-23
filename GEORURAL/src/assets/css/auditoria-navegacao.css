@@ -1,0 +1,31 @@
+@media (max-width: 760px) {
+  body:has(> #app > :is(.aud-layout, .aud-historico-layout)) {
+    --sidebar-largura: 60px;
+  }
+
+  :is(.aud-layout, .aud-historico-layout)
+    > .sidebar
+    :is(.sidebar-cabecalho, .sidebar-conteudo, .sidebar-rodape) {
+    padding-inline: 6px;
+  }
+
+  :is(.aud-layout, .aud-historico-layout)
+    > .sidebar
+    :is(.sidebar-marca, .sidebar-link, .sidebar-tema) {
+    position: relative;
+    justify-content: center;
+    gap: 0;
+    padding-inline: 0;
+  }
+
+  :is(.aud-layout, .aud-historico-layout)
+    > .sidebar
+    :is(.sidebar-nome, .sidebar-link > span, .sidebar-tema-texto) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
