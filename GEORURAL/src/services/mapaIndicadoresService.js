@@ -28,9 +28,20 @@ const situacoesIfc = {
   AREA_INVALIDA: 'Área do imóvel inválida',
 }
 
+const situacoesIdesmat = {
+  COM_DESMATAMENTO: 'Com desmatamento',
+  SEM_DESMATAMENTO: 'Sem desmatamento',
+  COM_SUPRESSAO: 'Com supressão',
+  SEM_SUPRESSAO: 'Sem supressão',
+}
+
 export function apresentarSituacaoIndicador(indicador) {
   const sigla = indicador.sigla?.trim().toUpperCase()
   const situacao = indicador.situacao
+
+  if (sigla === 'IDESMAT') {
+    return situacoesIdesmat[situacao] || situacao || 'Não informada'
+  }
 
   if (sigla === 'IFC') {
     return situacoesIfc[situacao] || situacao || 'Não informada'
@@ -68,9 +79,7 @@ export function normalizarImovel(dado) {
   }
 
   if (!Array.isArray(dado.indicadores)) {
-    throw new Error(
-      'A API retornou uma lista de indicadores inválida.',
-    )
+    throw new Error('A API retornou uma lista de indicadores inválida.')
   }
 
   const siglas = new Set()
@@ -130,9 +139,7 @@ export function normalizarImovel(dado) {
 export function criarVisaoGeral(imoveis) {
   return {
     type: 'FeatureCollection',
-    features: imoveis.flatMap(
-      (imovel) => imovel.geojson.features,
-    ),
+    features: imoveis.flatMap((imovel) => imovel.geojson.features),
   }
 }
 
@@ -173,6 +180,14 @@ function mensagemGeometria(indicador, camadas) {
     return ''
   }
 
+  if (indicador.sigla === 'IDESMAT') {
+    return ['SEM_DESMATAMENTO', 'SEM_SUPRESSAO'].includes(
+      indicador.situacao,
+    )
+      ? 'Sem desmatamento registrado no resultado vigente.'
+      : 'Geometria do desmatamento indisponível no resultado do backend.'
+  }
+
   if (indicador.sigla === 'IFC') {
     const semFocos =
       indicador.valorAbsoluto != null &&
@@ -198,7 +213,7 @@ export function criarResumosIndicadoresMapa(imovel) {
 
   return imovel.indicadores
     .filter((indicador) =>
-      ['ISAP', 'IFC', 'IAPP'].includes(indicador.sigla),
+      ['ISAP', 'IDESMAT', 'IFC', 'IAPP'].includes(indicador.sigla),
     )
     .map((indicador) => ({
       id: indicador.id,
@@ -219,14 +234,13 @@ export function formatarNumero(valor, unidade = '') {
     return 'Não informado'
   }
 
-  return (
-    numeros.format(Number(valor)) +
-    (unidade ? ` ${unidade}` : '')
-  )
+  return numeros.format(Number(valor)) + (unidade ? ` ${unidade}` : '')
 }
 
 export function formatarResultado(indicador) {
-  if (indicador.sigla?.trim().toUpperCase() === 'IFC') {
+  const sigla = indicador.sigla?.trim().toUpperCase()
+
+  if (sigla === 'IFC' || sigla === 'IDESMAT') {
     return (
       detalharResultado(indicador)
         .map((campo) => campo.valor)
@@ -237,15 +251,11 @@ export function formatarResultado(indicador) {
   const valores = []
 
   if (indicador.valorPercentual != null) {
-    valores.push(
-      formatarNumero(indicador.valorPercentual, '%'),
-    )
+    valores.push(formatarNumero(indicador.valorPercentual, '%'))
   }
 
   if (indicador.valorHectares != null) {
-    valores.push(
-      formatarNumero(indicador.valorHectares, 'ha'),
-    )
+    valores.push(formatarNumero(indicador.valorHectares, 'ha'))
   }
 
   if (indicador.valorAbsoluto != null) {
@@ -257,10 +267,7 @@ export function formatarResultado(indicador) {
         : indicador.unidade
 
     valores.push(
-      formatarNumero(
-        indicador.valorAbsoluto,
-        unidadeAbsoluta,
-      ),
+      formatarNumero(indicador.valorAbsoluto, unidadeAbsoluta),
     )
   }
 
@@ -273,6 +280,26 @@ export function detalharResultado(indicador) {
   const campos = []
   const sigla = indicador.sigla?.trim().toUpperCase()
 
+  if (sigla === 'IDESMAT') {
+    if (indicador.valorPercentual != null) {
+      campos.push({
+        legenda: 'Percentual desmatado',
+        valor: formatarNumero(indicador.valorPercentual, '%'),
+      })
+    }
+
+    const area = indicador.valorHectares ?? indicador.valorAbsoluto
+
+    if (area != null) {
+      campos.push({
+        legenda: 'Área desmatada',
+        valor: formatarNumero(area, 'ha'),
+      })
+    }
+
+    return campos
+  }
+
   if (sigla === 'IFC') {
     if (indicador.valorPercentual != null) {
       const valor = Number(indicador.valorPercentual)
@@ -280,8 +307,7 @@ export function detalharResultado(indicador) {
       campos.push({
         legenda: 'Índice de focos de calor',
         valor:
-          indicador.valorPercentual !== '' &&
-          Number.isFinite(valor)
+          indicador.valorPercentual !== '' && Number.isFinite(valor)
             ? `${valor.toLocaleString('pt-BR', {
                 maximumFractionDigits: 4,
               })} focos/1.000 ha`
@@ -312,8 +338,7 @@ export function detalharResultado(indicador) {
 
   if (indicador.valorHectares != null) {
     const deficitReserva =
-      sigla === 'IRL' &&
-      Number(indicador.valorHectares) < 0
+      sigla === 'IRL' && Number(indicador.valorHectares) < 0
 
     campos.push({
       legenda: deficitReserva
@@ -336,10 +361,7 @@ export function detalharResultado(indicador) {
 
   if (
     indicador.valorAbsoluto != null &&
-    (
-      !areasProtegidas ||
-      indicador.valorHectares == null
-    )
+    (!areasProtegidas || indicador.valorHectares == null)
   ) {
     const numero = Number(indicador.valorAbsoluto)
 
@@ -352,16 +374,11 @@ export function detalharResultado(indicador) {
             ? 'Passivo ambiental de APP'
             : 'Valor absoluto',
       valor:
-        indicador.valorAbsoluto !== '' &&
-        Number.isFinite(numero)
+        indicador.valorAbsoluto !== '' && Number.isFinite(numero)
           ? numero.toLocaleString('pt-BR', {
               maximumFractionDigits: 3,
             }) +
-            (
-              coberturaVegetal || areasProtegidas || app
-                ? ' ha'
-                : ''
-            )
+            (coberturaVegetal || areasProtegidas || app ? ' ha' : '')
           : 'Não informado',
     })
   }
@@ -408,8 +425,7 @@ export function obterMensagemErro(erro) {
 
   return typeof mensagem === 'string' && mensagem.trim()
     ? mensagem
-    : erro?.message ||
-        'Não foi possível carregar os dados do mapa.'
+    : erro?.message || 'Não foi possível carregar os dados do mapa.'
 }
 
 export function criarMapaIndicadoresService(cliente = api) {
@@ -478,15 +494,11 @@ export function criarMapaIndicadoresService(cliente = api) {
           const calculado = resultado.status === 'CALCULADO'
 
           const geojson = colecao(
-            calculado
-              ? resultado.appVegetadaGeoJson
-              : null,
+            calculado ? resultado.appVegetadaGeoJson : null,
           )
 
           const geojsonPassivo = colecao(
-            calculado
-              ? resultado.passivoGeoJson
-              : null,
+            calculado ? resultado.passivoGeoJson : null,
           )
 
           Object.assign(indicador, {
