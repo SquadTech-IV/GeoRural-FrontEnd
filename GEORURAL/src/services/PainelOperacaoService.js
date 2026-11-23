@@ -55,9 +55,10 @@ export const operacaoService = {
   etapas(dagRunId) {
     return requisitar(async () => {
       const { data } = await api.get(
-        `/api/pipeline/execucoes/${encodeURIComponent(dagRunId)}/etapas`,
+        `/api/pipeline/execucoes/${encodeURIComponent(dagRunId)}`,
       )
-      return data
+      // a rota devolve a rodada inteira; aqui so interessam as etapas dela
+      return data?.etapas ?? []
     })
   },
 

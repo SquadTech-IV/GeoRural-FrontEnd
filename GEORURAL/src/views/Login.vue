@@ -1,6 +1,10 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import logo from '@/assets/LogoSquadTech.png'
+import { useRoute, useRouter } from 'vue-router'
+
+import { autenticacaoService } from '@/services/autenticacaoService'
+import { caminhoRetornoSeguro } from '@/services/permissaoService'
 
 defineOptions({
   name: 'LOGIN',
@@ -11,6 +15,10 @@ const senha = ref('')
 const lembrar = ref(false)
 const mostrarSenha = ref(false)
 const mensagem = ref('')
+const entrando = ref(false)
+
+const router = useRouter()
+const rota = useRoute()
 
 const recursos = [
   {
@@ -37,6 +45,28 @@ onMounted(() => {
 onUnmounted(() => {
   document.body.classList.remove('pagina-login')
 })
+
+// faz o login no Keycloak e leva para a rota de retorno
+async function entrar() {
+  if (entrando.value) {
+    return
+  }
+
+  mensagem.value = ''
+  entrando.value = true
+
+  try {
+    await autenticacaoService.entrar(email.value, senha.value)
+    await router.replace(caminhoRetornoSeguro(rota.query.retorno))
+  } catch (erro) {
+    // ERR_CANCELED e login substituido por outro; nao e erro para mostrar
+    if (erro?.code !== 'ERR_CANCELED') {
+      mensagem.value = erro?.message || 'Nao foi possivel entrar. Tente novamente.'
+    }
+  } finally {
+    entrando.value = false
+  }
+}
 
 function recuperarSenha() {
   mensagem.value =
@@ -187,8 +217,8 @@ function recuperarSenha() {
             </button>
           </div>
 
-          <button class="submit-button" type="submit">
-            Entrar na plataforma
+          <button class="submit-button" type="submit" :disabled="entrando">
+            {{ entrando ? 'Entrando...' : 'Entrar na plataforma' }}
           </button>
 
           <p
