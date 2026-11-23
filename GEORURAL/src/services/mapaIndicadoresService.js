@@ -13,6 +13,18 @@ const situacoesIsap = {
 }
 
 export function apresentarSituacaoIndicador(indicador) {
+  if (indicador.sigla === 'IDESMAT') {
+    return (
+      {
+        COM_DESMATAMENTO: 'Com desmatamento',
+        SEM_DESMATAMENTO: 'Sem desmatamento',
+        COM_SUPRESSAO: 'Com supressão',
+        SEM_SUPRESSAO: 'Sem supressão',
+      }[indicador.situacao] ||
+      indicador.situacao ||
+      'Não informada'
+    )
+  }
   return indicador.sigla === 'ISAP'
     ? situacoesIsap[indicador.situacao] || indicador.situacao || 'Não informada'
     : indicador.situacao || 'Não informada'
@@ -98,16 +110,20 @@ export function criarResumosIndicadoresMapa(imovel) {
   if (!imovel) return []
   const camadas = criarCamadas(imovel)
   return imovel.indicadores
-    .filter((indicador) => indicador.sigla === 'ISAP')
+    .filter((indicador) => ['ISAP', 'IDESMAT'].includes(indicador.sigla))
     .map((indicador) => ({
       id: indicador.id,
-      titulo: `ISAP · ${indicador.nome}`,
-      cor: obterEstiloIndicador('ISAP').cor,
+      titulo: `${indicador.sigla} · ${indicador.nome}`,
+      cor: obterEstiloIndicador(indicador.sigla).cor,
       situacao: apresentarSituacaoIndicador(indicador),
       valores: detalharResultado(indicador),
       mensagem: camadas.some((camada) => camada.id === indicador.id)
         ? ''
-        : 'Geometria da sobreposição indisponível.',
+        : indicador.sigla === 'IDESMAT'
+          ? ['SEM_DESMATAMENTO', 'SEM_SUPRESSAO'].includes(indicador.situacao)
+            ? 'Sem desmatamento registrado no resultado vigente.'
+            : 'Geometria do desmatamento indisponível no resultado do backend.'
+          : 'Geometria da sobreposição indisponível.',
     }))
 }
 
@@ -120,6 +136,13 @@ export function formatarNumero(valor, unidade = '') {
 }
 
 export function formatarResultado(indicador) {
+  if (indicador.sigla?.trim().toUpperCase() === 'IDESMAT') {
+    return (
+      detalharResultado(indicador)
+        .map((campo) => campo.valor)
+        .join(' · ') || 'Resultado não informado'
+    )
+  }
   const valores = []
 
   if (indicador.valorPercentual != null) {
@@ -143,6 +166,19 @@ export function formatarResultado(indicador) {
 
 export function detalharResultado(indicador) {
   const campos = []
+  if (indicador.sigla?.trim().toUpperCase() === 'IDESMAT') {
+    if (indicador.valorPercentual != null) {
+      campos.push({
+        legenda: 'Percentual desmatado',
+        valor: formatarNumero(indicador.valorPercentual) + '%',
+      })
+    }
+    const area = indicador.valorHectares ?? indicador.valorAbsoluto
+    if (area != null) {
+      campos.push({ legenda: 'Área desmatada', valor: formatarNumero(area, 'ha') })
+    }
+    return campos
+  }
   const coberturaVegetal = indicador.sigla?.trim().toUpperCase() === 'ICV'
   const areasProtegidas = indicador.sigla?.trim().toUpperCase() === 'ISAP'
 
