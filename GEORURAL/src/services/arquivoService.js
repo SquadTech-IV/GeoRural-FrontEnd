@@ -65,9 +65,8 @@ export const arquivoService = {
   },
 
   // Recebimento na zona bruta: um arquivo por requisição.
-  async enviar(arquivos, { conId, usuId, signal } = {}) {
+  async enviar(arquivos, { conId, signal } = {}) {
     const conjuntoId = validarId(conId)
-    const usuarioId = validarId(usuId)
 
     const itens =
       arquivos instanceof Blob
@@ -94,7 +93,6 @@ export const arquivoService = {
 
       formData.append('arquivo', arquivo)
       formData.append('conId', conjuntoId)
-      formData.append('usuId', usuarioId)
 
       const { data } = await api.post(
         '/api/arquivos/brutos/upload',

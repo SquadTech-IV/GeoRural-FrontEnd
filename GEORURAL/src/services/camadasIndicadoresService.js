@@ -14,11 +14,11 @@ const estilosIndicadores = {
     cor: '#0891b2',
   },
   IAPP: {
-    nome: 'APP conservada',
+    nome: 'APP vegetada',
     cor: '#0ea5e9',
   },
   ISAP: {
-    nome: 'Áreas protegidas',
+    nome: 'Sobreposição a áreas protegidas',
     cor: '#b45309',
   },
   IDESMAT: {
@@ -29,6 +29,14 @@ const estilosIndicadores = {
     nome: 'Focos de calor',
     cor: '#ef4444',
   },
+}
+
+export function obterEstiloIndicador(sigla, variante) {
+  if (sigla === 'IAPP' && variante === 'passivo') return { nome: 'Passivo ambiental de APP', cor: '#e85d04' }
+  return estilosIndicadores[String(sigla ?? '').trim().toUpperCase()] ?? {
+    nome: sigla,
+    cor: '#8520bd',
+  }
 }
 
 function possuiCoordenadas(coordenadas) {
@@ -104,14 +112,12 @@ export function prepararCamadasIndicadores(indicadores) {
       continue
     }
 
-    const estilo = estilosIndicadores[sigla] ?? {
-      nome: sigla,
-      cor: '#8520bd',
-    }
+    const estilo = obterEstiloIndicador(sigla, indicador.variante)
 
     camadas.push({
       id,
       sigla,
+      variante: indicador.variante,
       nome: indicador.nome || estilo.nome,
       cor: estilo.cor,
       geojson,

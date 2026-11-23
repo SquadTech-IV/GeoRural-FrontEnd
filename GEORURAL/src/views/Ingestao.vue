@@ -1,3 +1,4 @@
+
 <script setup>
 import {
   onBeforeUnmount,
@@ -33,6 +34,18 @@ const {
   conjuntoConfigurado,
   chaveFormulario,
 } = controle
+
+const resultadosUpload = () => {
+  if (!Array.isArray(resultado.value)) return []
+
+  return resultado.value
+}
+
+const totalAceitos = () =>
+  resultadosUpload().filter(item => item.aceito).length
+
+const totalRecusados = () =>
+  resultadosUpload().filter(item => !item.aceito).length
 
 watch(metodo, controle.limparResultado)
 
@@ -91,51 +104,87 @@ onBeforeUnmount(controle.destruir)
           Resultado do recebimento
         </h2>
 
-        <p>
-          {{
-            configuracao.metodo === 'upload'
-              ? resultado[0]?.aceito
-                ? 'O servidor confirmou o recebimento do arquivo.'
-                : 'O servidor recusou o arquivo.'
-              : `${resultado.importados} item(ns) importado(s), ${resultado.jaRecebidos} já recebido(s) e ${resultado.falhas} falha(s).`
-          }}
-        </p>
+        <template v-if="configuracao.metodo === 'upload'">
+          <p>
+            {{ totalAceitos() }} arquivo(s) recebido(s) e
+            {{ totalRecusados() }} recusado(s).
+          </p>
 
-        <dl>
-          <div>
-            <dt>Método de entrada</dt>
-            <dd>
-              {{ configuracao.metodo === 'api' ? 'API' : 'Upload' }}
-            </dd>
-          </div>
-
-          <div>
-            <dt>Fonte</dt>
-            <dd>{{ fonteConfigurada?.nome }}</dd>
-          </div>
-
-          <div>
-            <dt>Conjunto</dt>
-            <dd>{{ conjuntoConfigurado?.nome }}</dd>
-          </div>
-
-          <template v-if="configuracao.metodo === 'upload'">
+          <dl>
             <div>
-              <dt>Arquivo</dt>
-              <dd>{{ configuracao.arquivo?.name }}</dd>
+              <dt>Método de entrada</dt>
+              <dd>Upload</dd>
             </div>
 
             <div>
-              <dt>Formato</dt>
-              <dd>{{ configuracao.formato }}</dd>
+              <dt>Fonte</dt>
+              <dd>{{ fonteConfigurada?.nome }}</dd>
             </div>
 
             <div>
-              <dt>Abrangência</dt>
-              <dd>{{ configuracao.abrangencia }}</dd>
+              <dt>Conjunto</dt>
+              <dd>{{ conjuntoConfigurado?.nome }}</dd>
             </div>
-          </template>
-        </dl>
+
+            <div>
+              <dt>Total de arquivos</dt>
+              <dd>{{ configuracao.arquivos?.length || 0 }}</dd>
+            </div>
+          </dl>
+
+          <div class="ingestao-arquivos-resultado">
+            <h3>Arquivos enviados</h3>
+
+            <ul>
+              <li
+                v-for="(item, indice) in resultado"
+                :key="item.arquivoId ?? indice"
+              >
+                <span>
+                  {{ configuracao.arquivos?.[indice]?.name || 'Arquivo sem nome' }}
+                </span>
+
+                <span
+                  :class="item.aceito
+                    ? 'ingestao-status-aceito'
+                    : 'ingestao-status-recusado'"
+                >
+                  {{ item.aceito ? 'Recebido' : 'Recusado' }}
+                </span>
+              </li>
+            </ul>
+          </div>
+        </template>
+
+        <template v-else>
+          <p>
+            {{ resultado.importados }} item(ns) importado(s),
+            {{ resultado.jaRecebidos }} já recebido(s) e
+            {{ resultado.falhas }} falha(s).
+          </p>
+
+          <dl>
+            <div>
+              <dt>Método de entrada</dt>
+              <dd>API</dd>
+            </div>
+
+            <div>
+              <dt>Fonte</dt>
+              <dd>{{ fonteConfigurada?.nome }}</dd>
+            </div>
+
+            <div>
+              <dt>Conjunto</dt>
+              <dd>{{ conjuntoConfigurado?.nome }}</dd>
+            </div>
+
+            <div>
+              <dt>Total de itens</dt>
+              <dd>{{ resultado.total }}</dd>
+            </div>
+          </dl>
+        </template>
       </section>
     </main>
 

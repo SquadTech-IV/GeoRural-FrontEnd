@@ -235,6 +235,7 @@ onBeforeUnmount(() => {
           ref="formularioElement"
           novalidate
           @submit.prevent="salvar"
+          v-autorizado="'gerir'"
         >
           <div class="cadastros-modal-conteudo">
             <p

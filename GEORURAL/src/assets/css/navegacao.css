@@ -215,3 +215,16 @@
 .sidebar-conteudo::-webkit-scrollbar {
   display: none;
 }
+
+.sidebar-usuario {
+  display: grid;
+  gap: 4px;
+  padding: 8px 12px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.sidebar-usuario span {
+  color: var(--cor-texto-secundario);
+  font-size: 11px;
+}
