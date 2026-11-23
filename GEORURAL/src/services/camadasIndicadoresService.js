@@ -14,7 +14,7 @@ const estilosIndicadores = {
     cor: '#0891b2',
   },
   IAPP: {
-    nome: 'APP conservada',
+    nome: 'APP vegetada',
     cor: '#0ea5e9',
   },
   ISAP: {
@@ -31,7 +31,8 @@ const estilosIndicadores = {
   },
 }
 
-export function obterEstiloIndicador(sigla) {
+export function obterEstiloIndicador(sigla, variante) {
+  if (sigla === 'IAPP' && variante === 'passivo') return { nome: 'Passivo ambiental de APP', cor: '#e85d04' }
   return estilosIndicadores[String(sigla ?? '').trim().toUpperCase()] ?? {
     nome: sigla,
     cor: '#8520bd',
@@ -111,11 +112,12 @@ export function prepararCamadasIndicadores(indicadores) {
       continue
     }
 
-    const estilo = obterEstiloIndicador(sigla)
+    const estilo = obterEstiloIndicador(sigla, indicador.variante)
 
     camadas.push({
       id,
       sigla,
+      variante: indicador.variante,
       nome: indicador.nome || estilo.nome,
       cor: estilo.cor,
       geojson,

@@ -1,10 +1,19 @@
 import api from './api'
 import { normalizarGeoJson } from './mapaRenderizacaoService'
-import { prepararCamadasIndicadores, obterEstiloIndicador } from './camadasIndicadoresService'
+import {
+  prepararCamadasIndicadores,
+  obterEstiloIndicador,
+} from './camadasIndicadoresService'
 
 const numeros = new Intl.NumberFormat('pt-BR', {
   maximumFractionDigits: 2,
 })
+
+const situacoesIapp = {
+  CALCULADO: 'Calculado',
+  SEM_APP: 'Sem APP no imóvel',
+  CAMADA_INDISPONIVEL: 'Camada indisponível',
+}
 
 const situacoesIsap = {
   COM_SOBREPOSICAO: 'Com sobreposição',
@@ -12,22 +21,41 @@ const situacoesIsap = {
   CAMADA_INDISPONIVEL: 'Camada indisponível',
 }
 
+const situacoesIfc = {
+  SEM_FOCO: 'Sem focos de calor',
+  SEM_FOCOS: 'Sem focos de calor',
+  COM_FOCOS: 'Com focos de calor',
+  AREA_INVALIDA: 'Área do imóvel inválida',
+}
+
+const situacoesIdesmat = {
+  COM_DESMATAMENTO: 'Com desmatamento',
+  SEM_DESMATAMENTO: 'Sem desmatamento',
+  COM_SUPRESSAO: 'Com supressão',
+  SEM_SUPRESSAO: 'Sem supressão',
+}
+
 export function apresentarSituacaoIndicador(indicador) {
-  if (indicador.sigla === 'IDESMAT') {
-    return (
-      {
-        COM_DESMATAMENTO: 'Com desmatamento',
-        SEM_DESMATAMENTO: 'Sem desmatamento',
-        COM_SUPRESSAO: 'Com supressão',
-        SEM_SUPRESSAO: 'Sem supressão',
-      }[indicador.situacao] ||
-      indicador.situacao ||
-      'Não informada'
-    )
+  const sigla = indicador.sigla?.trim().toUpperCase()
+  const situacao = indicador.situacao
+
+  if (sigla === 'IDESMAT') {
+    return situacoesIdesmat[situacao] || situacao || 'Não informada'
   }
-  return indicador.sigla === 'ISAP'
-    ? situacoesIsap[indicador.situacao] || indicador.situacao || 'Não informada'
-    : indicador.situacao || 'Não informada'
+
+  if (sigla === 'IFC') {
+    return situacoesIfc[situacao] || situacao || 'Não informada'
+  }
+
+  if (sigla === 'IAPP') {
+    return situacoesIapp[situacao] || situacao || 'Não informada'
+  }
+
+  if (sigla === 'ISAP') {
+    return situacoesIsap[situacao] || situacao || 'Não informada'
+  }
+
+  return situacao || 'Não informada'
 }
 
 function colecao(valor) {
@@ -42,7 +70,11 @@ function colecao(valor) {
 }
 
 export function normalizarImovel(dado) {
-  if (!dado || typeof dado.codigoCar !== 'string' || !dado.codigoCar.trim()) {
+  if (
+    !dado ||
+    typeof dado.codigoCar !== 'string' ||
+    !dado.codigoCar.trim()
+  ) {
     throw new Error('A API retornou um imóvel sem código CAR.')
   }
 
@@ -53,13 +85,18 @@ export function normalizarImovel(dado) {
   const siglas = new Set()
 
   const indicadores = dado.indicadores.map((indicador) => {
-    const sigla = indicador?.sigla?.trim().toUpperCase()
+    const sigla =
+      typeof indicador?.sigla === 'string'
+        ? indicador.sigla.trim().toUpperCase()
+        : ''
 
-    if (!sigla || siglas.has(sigla.toUpperCase())) {
-      throw new Error('A API retornou indicadores com siglas ausentes ou repetidas.')
+    if (!sigla || siglas.has(sigla)) {
+      throw new Error(
+        'A API retornou indicadores com siglas ausentes ou repetidas.',
+      )
     }
 
-    siglas.add(sigla.toUpperCase())
+    siglas.add(sigla)
 
     return {
       ...indicador,
@@ -67,15 +104,19 @@ export function normalizarImovel(dado) {
       sigla,
       nome: indicador.nome || obterEstiloIndicador(sigla).nome,
       geojson: colecao(indicador.features),
-      situacaoTexto: apresentarSituacaoIndicador({ ...indicador, sigla }),
+      situacaoTexto: apresentarSituacaoIndicador({
+        ...indicador,
+        sigla,
+      }),
     }
   })
 
   const geometria = colecao(dado.geometria)
+  const codigoCar = dado.codigoCar.trim()
 
   return {
     id: dado.id,
-    codigoCar: dado.codigoCar.trim(),
+    codigoCar,
     municipio: dado.municipio ?? null,
     areaTotal: dado.areaTotal ?? null,
     geojson: {
@@ -85,7 +126,7 @@ export function normalizarImovel(dado) {
         properties: {
           ...feature.properties,
           imovelId: dado.id,
-          codigoCar: dado.codigoCar.trim(),
+          codigoCar,
           municipio: dado.municipio ?? null,
           areaTotal: dado.areaTotal ?? null,
         },
@@ -103,32 +144,93 @@ export function criarVisaoGeral(imoveis) {
 }
 
 export function criarCamadas(imovel) {
-  return prepararCamadasIndicadores(imovel?.indicadores ?? [])
+  return prepararCamadasIndicadores(
+    (imovel?.indicadores ?? []).flatMap((indicador) =>
+      indicador.sigla === 'IAPP'
+        ? [
+            {
+              ...indicador,
+              nome: 'APP vegetada',
+            },
+            {
+              id: 'IAPP-passivo',
+              sigla: 'IAPP',
+              variante: 'passivo',
+              nome: 'Passivo ambiental de APP',
+              geojson: indicador.geojsonPassivo,
+            },
+          ]
+        : [indicador],
+    ),
+  )
+}
+
+function mensagemGeometria(indicador, camadas) {
+  if (indicador.avisoGeometria) {
+    return indicador.avisoGeometria
+  }
+
+  const temCamada = camadas.some((camada) =>
+    indicador.sigla === 'IAPP'
+      ? camada.sigla === indicador.sigla
+      : camada.id === indicador.id,
+  )
+
+  if (temCamada) {
+    return ''
+  }
+
+  if (indicador.sigla === 'IDESMAT') {
+    return ['SEM_DESMATAMENTO', 'SEM_SUPRESSAO'].includes(
+      indicador.situacao,
+    )
+      ? 'Sem desmatamento registrado no resultado vigente.'
+      : 'Geometria do desmatamento indisponível no resultado do backend.'
+  }
+
+  if (indicador.sigla === 'IFC') {
+    const semFocos =
+      indicador.valorAbsoluto != null &&
+      indicador.valorAbsoluto !== '' &&
+      Number(indicador.valorAbsoluto) === 0
+
+    return semFocos
+      ? 'Nenhum foco registrado no período apurado.'
+      : 'Localização dos focos indisponível no resultado do backend.'
+  }
+
+  if (indicador.sigla === 'IAPP') {
+    return 'Geometria de APP indisponível.'
+  }
+
+  return 'Geometria da sobreposição indisponível.'
 }
 
 export function criarResumosIndicadoresMapa(imovel) {
   if (!imovel) return []
+
   const camadas = criarCamadas(imovel)
+
   return imovel.indicadores
-    .filter((indicador) => ['ISAP', 'IDESMAT'].includes(indicador.sigla))
+    .filter((indicador) =>
+      ['ISAP', 'IDESMAT', 'IFC', 'IAPP'].includes(indicador.sigla),
+    )
     .map((indicador) => ({
       id: indicador.id,
       titulo: `${indicador.sigla} · ${indicador.nome}`,
       cor: obterEstiloIndicador(indicador.sigla).cor,
       situacao: apresentarSituacaoIndicador(indicador),
       valores: detalharResultado(indicador),
-      mensagem: camadas.some((camada) => camada.id === indicador.id)
-        ? ''
-        : indicador.sigla === 'IDESMAT'
-          ? ['SEM_DESMATAMENTO', 'SEM_SUPRESSAO'].includes(indicador.situacao)
-            ? 'Sem desmatamento registrado no resultado vigente.'
-            : 'Geometria do desmatamento indisponível no resultado do backend.'
-          : 'Geometria da sobreposição indisponível.',
+      mensagem: mensagemGeometria(indicador, camadas),
     }))
 }
 
 export function formatarNumero(valor, unidade = '') {
-  if (valor == null || valor === '' || !Number.isFinite(Number(valor))) {
+  if (
+    valor == null ||
+    valor === '' ||
+    !Number.isFinite(Number(valor))
+  ) {
     return 'Não informado'
   }
 
@@ -136,13 +238,16 @@ export function formatarNumero(valor, unidade = '') {
 }
 
 export function formatarResultado(indicador) {
-  if (indicador.sigla?.trim().toUpperCase() === 'IDESMAT') {
+  const sigla = indicador.sigla?.trim().toUpperCase()
+
+  if (sigla === 'IFC' || sigla === 'IDESMAT') {
     return (
       detalharResultado(indicador)
         .map((campo) => campo.valor)
         .join(' · ') || 'Resultado não informado'
     )
   }
+
   const valores = []
 
   if (indicador.valorPercentual != null) {
@@ -154,41 +259,87 @@ export function formatarResultado(indicador) {
   }
 
   if (indicador.valorAbsoluto != null) {
-    // A unidade do indicador descreve o percentual, não o valor absoluto.
+    // A unidade do indicador descreve o percentual,
+    // não necessariamente o valor absoluto.
     const unidadeAbsoluta =
-      indicador.unidade?.trim() === '%' ? '(valor absoluto)' : indicador.unidade
+      indicador.unidade?.trim() === '%'
+        ? '(valor absoluto)'
+        : indicador.unidade
 
-    valores.push(formatarNumero(indicador.valorAbsoluto, unidadeAbsoluta))
+    valores.push(
+      formatarNumero(indicador.valorAbsoluto, unidadeAbsoluta),
+    )
   }
 
-  return valores.length ? valores.join(' · ') : 'Resultado não informado'
+  return valores.length
+    ? valores.join(' · ')
+    : 'Resultado não informado'
 }
 
 export function detalharResultado(indicador) {
   const campos = []
-  if (indicador.sigla?.trim().toUpperCase() === 'IDESMAT') {
+  const sigla = indicador.sigla?.trim().toUpperCase()
+
+  if (sigla === 'IDESMAT') {
     if (indicador.valorPercentual != null) {
       campos.push({
         legenda: 'Percentual desmatado',
-        valor: formatarNumero(indicador.valorPercentual) + '%',
+        valor: formatarNumero(indicador.valorPercentual, '%'),
       })
     }
+
     const area = indicador.valorHectares ?? indicador.valorAbsoluto
+
     if (area != null) {
-      campos.push({ legenda: 'Área desmatada', valor: formatarNumero(area, 'ha') })
+      campos.push({
+        legenda: 'Área desmatada',
+        valor: formatarNumero(area, 'ha'),
+      })
     }
+
     return campos
   }
-  const coberturaVegetal = indicador.sigla?.trim().toUpperCase() === 'ICV'
-  const areasProtegidas = indicador.sigla?.trim().toUpperCase() === 'ISAP'
+
+  if (sigla === 'IFC') {
+    if (indicador.valorPercentual != null) {
+      const valor = Number(indicador.valorPercentual)
+
+      campos.push({
+        legenda: 'Índice de focos de calor',
+        valor:
+          indicador.valorPercentual !== '' && Number.isFinite(valor)
+            ? `${valor.toLocaleString('pt-BR', {
+                maximumFractionDigits: 4,
+              })} focos/1.000 ha`
+            : 'Não informado',
+      })
+    }
+
+    if (indicador.valorAbsoluto != null) {
+      campos.push({
+        legenda: 'Focos no período',
+        valor: formatarNumero(indicador.valorAbsoluto),
+      })
+    }
+
+    return campos
+  }
+
+  const app = sigla === 'IAPP'
+  const coberturaVegetal = sigla === 'ICV'
+  const areasProtegidas = sigla === 'ISAP'
 
   if (indicador.valorPercentual != null) {
-    campos.push({ legenda: 'Percentual', valor: formatarNumero(indicador.valorPercentual) + '%' })
+    campos.push({
+      legenda: 'Percentual',
+      valor: formatarNumero(indicador.valorPercentual, '%'),
+    })
   }
 
   if (indicador.valorHectares != null) {
     const deficitReserva =
-      indicador.sigla?.toUpperCase() === 'IRL' && Number(indicador.valorHectares) < 0
+      sigla === 'IRL' && Number(indicador.valorHectares) < 0
+
     campos.push({
       legenda: deficitReserva
         ? 'Déficit de Reserva Legal'
@@ -196,26 +347,38 @@ export function detalharResultado(indicador) {
           ? 'Área de vegetação nativa'
           : areasProtegidas
             ? 'Área sobreposta'
-            : 'Área',
+            : app
+              ? 'APP vegetada'
+              : 'Área',
       valor: formatarNumero(
-        deficitReserva ? Math.abs(Number(indicador.valorHectares)) : indicador.valorHectares,
+        deficitReserva
+          ? Math.abs(Number(indicador.valorHectares))
+          : indicador.valorHectares,
         'ha',
       ),
     })
   }
 
-  if (indicador.valorAbsoluto != null && (!areasProtegidas || indicador.valorHectares == null)) {
+  if (
+    indicador.valorAbsoluto != null &&
+    (!areasProtegidas || indicador.valorHectares == null)
+  ) {
     const numero = Number(indicador.valorAbsoluto)
+
     campos.push({
       legenda: coberturaVegetal
         ? 'Saldo de vegetação nativa'
         : areasProtegidas
           ? 'Área sobreposta'
-          : 'Valor absoluto',
+          : app
+            ? 'Passivo ambiental de APP'
+            : 'Valor absoluto',
       valor:
         indicador.valorAbsoluto !== '' && Number.isFinite(numero)
-          ? numero.toLocaleString('pt-BR', { maximumFractionDigits: 3 }) +
-            (coberturaVegetal || areasProtegidas ? ' ha' : '')
+          ? numero.toLocaleString('pt-BR', {
+              maximumFractionDigits: 3,
+            }) +
+            (coberturaVegetal || areasProtegidas || app ? ' ha' : '')
           : 'Não informado',
     })
   }
@@ -224,7 +387,10 @@ export function detalharResultado(indicador) {
 }
 
 export function requisicaoCancelada(erro) {
-  return erro?.code === 'ERR_CANCELED' || erro?.name === 'AbortError'
+  return (
+    erro?.code === 'ERR_CANCELED' ||
+    erro?.name === 'AbortError'
+  )
 }
 
 export function obterMensagemErro(erro) {
@@ -239,7 +405,10 @@ export function obterMensagemErro(erro) {
   }
 
   if (status >= 500) {
-    return 'O servidor não conseguiu carregar os dados do mapa. ' + 'Tente novamente.'
+    return (
+      'O servidor não conseguiu carregar os dados do mapa. ' +
+      'Tente novamente.'
+    )
   }
 
   if (erro?.code === 'ECONNABORTED') {
@@ -250,7 +419,9 @@ export function obterMensagemErro(erro) {
     return 'Não foi possível conectar ao backend.'
   }
 
-  const mensagem = erro?.response?.data?.mensagem || erro?.response?.data?.message
+  const mensagem =
+    erro?.response?.data?.mensagem ||
+    erro?.response?.data?.message
 
   return typeof mensagem === 'string' && mensagem.trim()
     ? mensagem
@@ -265,7 +436,9 @@ export function criarMapaIndicadoresService(cliente = api) {
       })
 
       if (!Array.isArray(data)) {
-        throw new Error('A API retornou uma listagem de imóveis inválida.')
+        throw new Error(
+          'A API retornou uma listagem de imóveis inválida.',
+        )
       }
 
       return data.map(normalizarImovel)
@@ -278,14 +451,87 @@ export function criarMapaIndicadoresService(cliente = api) {
 
       const codigoCar = car.trim()
 
-      const { data } = await cliente.get(`/api/imoveis/${encodeURIComponent(codigoCar)}`, {
-        signal,
-      })
+      const { data } = await cliente.get(
+        `/api/imoveis/${encodeURIComponent(codigoCar)}`,
+        { signal },
+      )
 
       const imovel = normalizarImovel(data)
 
       if (imovel.codigoCar !== codigoCar) {
-        throw new Error('A API retornou um imóvel diferente do solicitado.')
+        throw new Error(
+          'A API retornou um imóvel diferente do solicitado.',
+        )
+      }
+
+      const indicador = imovel.indicadores.find(
+        (item) => item.sigla === 'IAPP',
+      )
+
+      if (indicador) {
+        try {
+          const { data: resultado } = await cliente.get(
+            '/api/v1/iapp/imoveis/car/' +
+              encodeURIComponent(codigoCar),
+            {
+              signal,
+              params: {
+                incluirGeoJson: true,
+              },
+            },
+          )
+
+          if (
+            resultado?.codigoCar !== codigoCar ||
+            String(resultado.imovelId) !== String(imovel.id) ||
+            resultado.vigente !== 'S'
+          ) {
+            throw new Error(
+              'O resultado IAPP não corresponde ao imóvel e à versão vigente.',
+            )
+          }
+
+          const calculado = resultado.status === 'CALCULADO'
+
+          const geojson = colecao(
+            calculado ? resultado.appVegetadaGeoJson : null,
+          )
+
+          const geojsonPassivo = colecao(
+            calculado ? resultado.passivoGeoJson : null,
+          )
+
+          Object.assign(indicador, {
+            situacao: resultado.status,
+            situacaoTexto: apresentarSituacaoIndicador({
+              sigla: 'IAPP',
+              situacao: resultado.status,
+            }),
+            valorPercentual: calculado
+              ? resultado.iappPct
+              : null,
+            valorHectares: calculado
+              ? resultado.appVegetadaHa
+              : null,
+            valorAbsoluto: calculado
+              ? resultado.passivoHa
+              : null,
+            versaoRegra: resultado.regraVersao,
+            geojson,
+            geojsonPassivo,
+          })
+        } catch (erro) {
+          if (
+            requisicaoCancelada(erro) ||
+            [401, 403].includes(erro?.response?.status)
+          ) {
+            throw erro
+          }
+
+          indicador.avisoGeometria =
+            'Não foi possível carregar as geometrias de APP. ' +
+            'Consulte o imóvel novamente para tentar.'
+        }
       }
 
       return imovel
@@ -293,4 +539,5 @@ export function criarMapaIndicadoresService(cliente = api) {
   }
 }
 
-export const mapaIndicadoresService = criarMapaIndicadoresService()
+export const mapaIndicadoresService =
+  criarMapaIndicadoresService()
