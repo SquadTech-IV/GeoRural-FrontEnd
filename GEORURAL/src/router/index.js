@@ -145,6 +145,11 @@ const router = createRouter({
       component: () => import('../views/RastreabilidadeDados.vue'),
     },
     {
+      path: '/api-consulta',
+      name: 'DocumentacaoApi',
+      component: () => import('@/views/DocumentacaoApi.vue'),
+    },
+    {
       path: '/monitoramento',
       name: 'MonitoramentoPlataforma',
       component: () => import('../views/MonitoramentoPlataforma.vue'),
@@ -156,7 +161,9 @@ const router = createRouter({
     },
     {
       path: '/:pathMatch(.*)*',
-      redirect: { name: 'Imoveis' },
+      redirect: {
+        name: 'Imoveis',
+      },
     },
   ],
 })
