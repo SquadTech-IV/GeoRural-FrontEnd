@@ -7,7 +7,7 @@ import {
   mapaIndicadoresService,
   criarVisaoGeral,
   criarCamadas,
-  criarResumosIndicadoresMapa,
+  indicadorTemResultado,
   formatarNumero,
   detalharResultado,
   requisicaoCancelada,
@@ -31,7 +31,19 @@ const geojson = computed(() =>
   props.car ? (selecionado.value?.geojson ?? null) : criarVisaoGeral(imoveis.value),
 )
 const camadas = computed(() => criarCamadas(selecionado.value))
-const resumosIndicadores = computed(() => criarResumosIndicadoresMapa(selecionado.value))
+// Os indicadores que chegaram a ser medidos aparecem como card. Os que nao tinham
+// o que medir -- sem APP no imovel, camada indisponivel -- viravam um card inteiro
+// dizendo "Resultado nao informado", e o imovel parecia ter os sete indicadores
+// quando tinha dois. Agora saem numa linha so, dizendo por que.
+const indicadoresMedidos = computed(
+  () => selecionado.value?.indicadores.filter(indicadorTemResultado) ?? [],
+)
+const indicadoresSemMedida = computed(
+  () => selecionado.value?.indicadores.filter((i) => !indicadorTemResultado(i)) ?? [],
+)
+const resumoSemMedida = computed(() =>
+  indicadoresSemMedida.value.map((i) => `${i.sigla} (${i.situacaoTexto})`).join(', '),
+)
 
 async function carregarLista() {
   consultaLista?.abort()
@@ -148,11 +160,9 @@ onBeforeUnmount(() => {
     </section>
 
     <div class="mapa-base-conteudo">
-      <MapaGeografico
-        :geojson="geojson"
-        :indicadores="camadas"
-        :resumos-indicadores="resumosIndicadores"
-      />
+      <!-- o painel de valores sobre o mapa repetia os mesmos
+           valores da lista abaixo. A legenda de camadas do mapa continua. -->
+      <MapaGeografico :geojson="geojson" :indicadores="camadas" />
     </div>
 
     <section v-if="selecionado" class="mapa-api-resultados" aria-labelledby="titulo-indicadores">
@@ -160,23 +170,31 @@ onBeforeUnmount(() => {
       <p v-if="!selecionado.indicadores.length" class="mapa-api-estado">
         Nenhum indicador vigente retornado para este imóvel.
       </p>
-      <ul v-else class="mapa-api-lista">
-        <li v-for="indicador in selecionado.indicadores" :key="indicador.id" class="mapa-api-card">
-          <h3>{{ indicador.sigla }} · {{ indicador.nome }}</h3>
-          <dl class="mapa-api-valores">
-            <div v-for="campo in detalharResultado(indicador)" :key="campo.legenda">
-              <dt>{{ campo.legenda }}:</dt>
-              <dd>{{ campo.valor }}</dd>
-            </div>
-          </dl>
-          <p v-if="!detalharResultado(indicador).length">Resultado não informado</p>
-          <p>Situação: {{ indicador.situacaoTexto }}</p>
-          <p>Versão da regra: {{ indicador.versaoRegra || 'Não informada' }}</p>
-          <p v-if="!camadas.some((camada) => camada.sigla === indicador.sigla)">
-            Sem geometria disponível para exibição no mapa.
-          </p>
-        </li>
-      </ul>
+      <template v-else>
+        <p v-if="!indicadoresMedidos.length" class="mapa-api-estado">
+          Nenhum indicador deste imóvel chegou a ser medido.
+        </p>
+        <ul v-else class="mapa-api-lista">
+          <li v-for="indicador in indicadoresMedidos" :key="indicador.id" class="mapa-api-card">
+            <h3>{{ indicador.sigla }} · {{ indicador.nome }}</h3>
+            <dl class="mapa-api-valores">
+              <div v-for="campo in detalharResultado(indicador)" :key="campo.legenda">
+                <dt>{{ campo.legenda }}:</dt>
+                <dd>{{ campo.valor }}</dd>
+              </div>
+            </dl>
+            <p>Situação: {{ indicador.situacaoTexto }}</p>
+            <p>Versão da regra: {{ indicador.versaoRegra || 'Não informada' }}</p>
+            <p v-if="!camadas.some((camada) => camada.sigla === indicador.sigla)">
+              Sem geometria disponível para exibição no mapa.
+            </p>
+          </li>
+        </ul>
+
+        <p v-if="resumoSemMedida" class="mapa-api-estado">
+          Sem dado de entrada para {{ resumoSemMedida }}.
+        </p>
+      </template>
     </section>
   </main>
 </template>

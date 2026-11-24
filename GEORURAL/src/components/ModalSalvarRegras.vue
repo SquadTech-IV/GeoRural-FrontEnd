@@ -6,6 +6,7 @@ import {
   validarConfirmacao,
   formatarValorParametro,
 } from '../services/regraService'
+import { autenticacaoService } from '../services/autenticacaoService'
 
 const props = defineProps({
   parametrosPendentes: {
@@ -28,19 +29,20 @@ const props = defineProps({
 
 const emit = defineEmits(['confirmar'])
 
-const autor = ref('')
 const motivo = ref('')
 const tentouConfirmar = ref(false)
 
 const dadosDisponiveis = computed(() =>
   dadosPendentesValidos(props.indicador, props.parametrosPendentes),
 )
-const erros = computed(() => validarConfirmacao(autor.value, motivo.value))
-const erroAutor = computed(() => erros.value.autor)
+// O autor nao e digitado: o backend grava quem esta logado e ignora o que o
+// cliente mandar. Aqui so mostramos o nome, para a pessoa ver o que vai assinar.
+const autorLogado = computed(() => autenticacaoService.estado.nome || 'Usuário logado')
+const erros = computed(() => validarConfirmacao(motivo.value))
 const erroMotivo = computed(() => erros.value.motivo)
 
 const podeConfirmar = computed(
-  () => dadosDisponiveis.value && !erroAutor.value && !erroMotivo.value && !props.salvando,
+  () => dadosDisponiveis.value && !erroMotivo.value && !props.salvando,
 )
 
 function parametroOriginal(id) {
@@ -59,7 +61,6 @@ function confirmar() {
   emit('confirmar', {
     indicadorId: props.parametrosPendentes.indicadorId,
     versaoBase: props.parametrosPendentes.versaoBase,
-    autor: autor.value.trim(),
     motivo: motivo.value.trim(),
     parametros: props.parametrosPendentes.parametros.map((parametro) => ({
       id: parametro.id,
@@ -139,17 +140,15 @@ function confirmar() {
 
               <input
                 id="autor-versao"
-                v-model="autor"
+                :value="autorLogado"
                 name="autor"
                 type="text"
-                required
-                :disabled="salvando"
-                :aria-invalid="tentouConfirmar && Boolean(erroAutor)"
-                :aria-describedby="tentouConfirmar && erroAutor ? 'erro-autor-versao' : undefined"
+                readonly
+                disabled
               />
 
-              <small v-if="tentouConfirmar && erroAutor" id="erro-autor-versao" class="regras-erro">
-                {{ erroAutor }}
+              <small class="regras-ajuda">
+                Registrado automaticamente com o seu usuário.
               </small>
             </div>
 

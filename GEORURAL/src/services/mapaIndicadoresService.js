@@ -4,58 +4,17 @@ import {
   prepararCamadasIndicadores,
   obterEstiloIndicador,
 } from './camadasIndicadoresService'
+import { rotularSituacao } from '../utils/situacoesIndicador'
 
 const numeros = new Intl.NumberFormat('pt-BR', {
   maximumFractionDigits: 2,
 })
 
-const situacoesIapp = {
-  CALCULADO: 'Calculado',
-  SEM_APP: 'Sem APP no imóvel',
-  CAMADA_INDISPONIVEL: 'Camada indisponível',
-}
-
-const situacoesIsap = {
-  COM_SOBREPOSICAO: 'Com sobreposição',
-  SEM_SOBREPOSICAO: 'Sem sobreposição',
-  CAMADA_INDISPONIVEL: 'Camada indisponível',
-}
-
-const situacoesIfc = {
-  SEM_FOCO: 'Sem focos de calor',
-  SEM_FOCOS: 'Sem focos de calor',
-  COM_FOCOS: 'Com focos de calor',
-  AREA_INVALIDA: 'Área do imóvel inválida',
-}
-
-const situacoesIdesmat = {
-  COM_DESMATAMENTO: 'Com desmatamento',
-  SEM_DESMATAMENTO: 'Sem desmatamento',
-  COM_SUPRESSAO: 'Com supressão',
-  SEM_SUPRESSAO: 'Sem supressão',
-}
-
+// os quatro mapas por sigla sairam daqui para utils/situacoesIndicador.js: os
+// codigos nao se repetem entre indicadores, entao o rotulo nao precisa da sigla --
+// e assim IRL e IAE, que cairam no codigo cru, tambem ganham rotulo
 export function apresentarSituacaoIndicador(indicador) {
-  const sigla = indicador.sigla?.trim().toUpperCase()
-  const situacao = indicador.situacao
-
-  if (sigla === 'IDESMAT') {
-    return situacoesIdesmat[situacao] || situacao || 'Não informada'
-  }
-
-  if (sigla === 'IFC') {
-    return situacoesIfc[situacao] || situacao || 'Não informada'
-  }
-
-  if (sigla === 'IAPP') {
-    return situacoesIapp[situacao] || situacao || 'Não informada'
-  }
-
-  if (sigla === 'ISAP') {
-    return situacoesIsap[situacao] || situacao || 'Não informada'
-  }
-
-  return situacao || 'Não informada'
+  return rotularSituacao(indicador?.situacao)
 }
 
 function colecao(valor) {
@@ -205,26 +164,6 @@ function mensagemGeometria(indicador, camadas) {
 
   return 'Geometria da sobreposição indisponível.'
 }
-
-export function criarResumosIndicadoresMapa(imovel) {
-  if (!imovel) return []
-
-  const camadas = criarCamadas(imovel)
-
-  return imovel.indicadores
-    .filter((indicador) =>
-      ['ISAP', 'IDESMAT', 'IFC', 'IAPP'].includes(indicador.sigla),
-    )
-    .map((indicador) => ({
-      id: indicador.id,
-      titulo: `${indicador.sigla} · ${indicador.nome}`,
-      cor: obterEstiloIndicador(indicador.sigla).cor,
-      situacao: apresentarSituacaoIndicador(indicador),
-      valores: detalharResultado(indicador),
-      mensagem: mensagemGeometria(indicador, camadas),
-    }))
-}
-
 export function formatarNumero(valor, unidade = '') {
   if (
     valor == null ||
@@ -274,6 +213,35 @@ export function formatarResultado(indicador) {
   return valores.length
     ? valores.join(' · ')
     : 'Resultado não informado'
+}
+
+// O mesmo numero gravado em valorHectares e em valorAbsoluto nao e dois
+// resultados: e o calculo guardando a mesma area nas duas colunas. Comparado com
+// tolerancia porque os dois lados chegam arredondados do banco.
+function repeteHectares(indicador) {
+  if (indicador.valorHectares == null || indicador.valorAbsoluto == null) return false
+
+  const hectares = Number(indicador.valorHectares)
+  const absoluto = Number(indicador.valorAbsoluto)
+
+  if (!Number.isFinite(hectares) || !Number.isFinite(absoluto)) return false
+
+  return Math.abs(hectares - absoluto) < 0.0001
+}
+
+// Um indicador so tem resultado quando algum valor chegou. Zero e resultado:
+// "0% de embargo" quer dizer que o calculo olhou e nao achou nada, e isso precisa
+// aparecer. Valor nenhum nao e resultado -- e o calculo sem ter o que medir, e a
+// tela mostrava isso como um card completo dizendo "Resultado nao informado",
+// enchendo a lista de indicador que o imovel nao tem.
+export function indicadorTemResultado(indicador) {
+  const chegou = (valor) => valor != null && valor !== ''
+
+  return (
+    chegou(indicador?.valorPercentual) ||
+    chegou(indicador?.valorHectares) ||
+    chegou(indicador?.valorAbsoluto)
+  )
 }
 
 export function detalharResultado(indicador) {
@@ -328,6 +296,8 @@ export function detalharResultado(indicador) {
   const app = sigla === 'IAPP'
   const coberturaVegetal = sigla === 'ICV'
   const areasProtegidas = sigla === 'ISAP'
+  const reservaLegal = sigla === 'IRL'
+  const embargo = sigla === 'IAE'
 
   if (indicador.valorPercentual != null) {
     campos.push({
@@ -337,52 +307,57 @@ export function detalharResultado(indicador) {
   }
 
   if (indicador.valorHectares != null) {
-    const deficitReserva =
-      sigla === 'IRL' && Number(indicador.valorHectares) < 0
-
     campos.push({
-      legenda: deficitReserva
-        ? 'Déficit de Reserva Legal'
+      legenda: reservaLegal
+        ? 'Reserva Legal declarada'
         : coberturaVegetal
           ? 'Área de vegetação nativa'
           : areasProtegidas
             ? 'Área sobreposta'
             : app
               ? 'APP vegetada'
-              : 'Área',
-      valor: formatarNumero(
-        deficitReserva
-          ? Math.abs(Number(indicador.valorHectares))
-          : indicador.valorHectares,
-        'ha',
-      ),
+              : embargo
+                ? 'Área embargada'
+                : 'Área',
+      valor: formatarNumero(indicador.valorHectares, 'ha'),
     })
   }
 
-  if (
-    indicador.valorAbsoluto != null &&
-    (!areasProtegidas || indicador.valorHectares == null)
-  ) {
+  // O saldo da Reserva Legal esta em valorAbsoluto, nao em valorHectares: no IRL
+  // o valorHectares e a area declarada da reserva, que nunca e negativa. O teste
+  // antigo procurava o deficit ali, entao o rotulo "Deficit de Reserva Legal"
+  // nunca aparecia e o saldo caia no generico, saindo como
+  // "Valor absoluto: -36,316" -- sem unidade e sem dizer o que era.
+  //
+  // E o absoluto so aparece quando acrescenta algo. No ICV, no ISAP e no IAE ele
+  // repete o valorHectares, e a tela mostrava o mesmo numero duas vezes com dois
+  // rotulos diferentes -- no ICV um deles dizendo "Saldo", que nao e o que aquele
+  // numero e. Antes isso estava tratado so para o ISAP, sigla por sigla.
+  if (indicador.valorAbsoluto != null && !repeteHectares(indicador)) {
     const numero = Number(indicador.valorAbsoluto)
+    const valido = indicador.valorAbsoluto !== '' && Number.isFinite(numero)
+    const emHectares = reservaLegal || coberturaVegetal || areasProtegidas || app
 
     campos.push({
-      legenda: coberturaVegetal
-        ? 'Saldo de vegetação nativa'
-        : areasProtegidas
-          ? 'Área sobreposta'
-          : app
-            ? 'Passivo ambiental de APP'
-            : 'Valor absoluto',
-      valor:
-        indicador.valorAbsoluto !== '' && Number.isFinite(numero)
-          ? numero.toLocaleString('pt-BR', {
-              maximumFractionDigits: 3,
-            }) +
-            (coberturaVegetal || areasProtegidas || app ? ' ha' : '')
-          : 'Não informado',
+      legenda: reservaLegal
+        ? numero < 0
+          ? 'Déficit de Reserva Legal'
+          : 'Excedente de Reserva Legal'
+        : coberturaVegetal
+          ? 'Saldo de vegetação nativa'
+          : areasProtegidas
+            ? 'Área sobreposta'
+            : app
+              ? 'Passivo ambiental de APP'
+              : 'Valor absoluto',
+      valor: valido
+        ? (reservaLegal ? Math.abs(numero) : numero).toLocaleString('pt-BR', {
+            maximumFractionDigits: 3,
+          }) +
+          (emHectares ? ' ha' : '')
+        : 'Não informado',
     })
   }
-
   return campos
 }
 

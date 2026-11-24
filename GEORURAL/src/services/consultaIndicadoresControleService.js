@@ -94,7 +94,13 @@ export function criarControleConsultaIndicadores(servico = consultaIndicadoresSe
         erro.value = mensagemErroConsultaIndicadores(indicadores.reason)
         return
       }
-      catalogo.value = indicadores.value
+      // So entra no seletor o indicador que tem resultado calculado: a tela nao
+      // oferece os sete quando quatro deles nunca receberam dado. O campo
+      // 'resultados' vem do catalogo (contagem em RESULTADO_INDICADOR).
+      // Se nenhum tiver resultado (banco novo), mostra todos -- seletor vazio
+      // deixaria a tela inutilizavel.
+      const comResultado = indicadores.value.filter((i) => Number(i?.resultados ?? 0) > 0)
+      catalogo.value = comResultado.length ? comResultado : indicadores.value
       if (!catalogo.value.some((i) => i.sigla === indicador.value))
         indicador.value =
           catalogo.value.find((i) => i.sigla === 'IRL')?.sigla || catalogo.value[0]?.sigla || ''

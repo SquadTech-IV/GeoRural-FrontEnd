@@ -46,13 +46,15 @@ function apresentarSituacao(valor) {
 }
 
 function montarEtapas(registros) {
+  // o back manda uma linha por etapa do fluxo, com as tentativas dentro dela
+  const porNome = new Map((registros ?? []).map((r) => [r.etapa, r]))
+
   return ETAPAS.map((nome, i) => {
-    const doBack = registros.filter((r) => r.etapa === nome)
-    const ultima = doBack.at(-1)
+    const daRodada = porNome.get(nome)
+    const manual = nome === 'PUBLICACAO'
 
-    if (!ultima) {
-      const manual = nome === 'PUBLICACAO'
-
+    // etapa que nao foi alcancada vem com situacao e ultima nulas
+    if (!daRodada || !daRodada.alcancada) {
       return {
         ordem: i + 1,
         nome,
@@ -63,11 +65,14 @@ function montarEtapas(registros) {
       }
     }
 
+    // duracao e mensagem ficam na ultima tentativa, nao na etapa
+    const ultima = daRodada.ultima ?? {}
+
     return {
       ordem: i + 1,
       nome,
-      situacao: ultima.situacao,
-      tentativa: doBack.length,
+      situacao: daRodada.situacao,
+      tentativa: daRodada.tentativas ?? 0,
       duracao: fmtDuracao(ultima.duracaoSeg),
       mensagem: ultima.mensagem || '—',
     }

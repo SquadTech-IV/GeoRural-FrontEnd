@@ -26,19 +26,27 @@ export function formatarData(valor) {
 }
 
 function normalizarVersaoFila(v) {
+  // VersaoResumoResponse ja traz sigla e nome de cada indicador da versao; a tela
+  // nunca usava. E o que diz, de relance, se a versao tem algo para publicar.
+  const indicadores = Array.isArray(v.indicadores) ? v.indicadores : []
   const rejeitadas = Number(v.registrosEmQuarentena ?? v.rejeitadas ?? 0)
   const aprovadas = Number(v.registrosAprovados ?? v.aprovadas ?? 0)
   const automatica = Boolean(v.automatica ?? v.dagRunId)
 
   return {
     ...v,
+    indicadores,
+    siglas: indicadores.map((i) => i?.sigla).filter(Boolean),
     id: String(v.id),
     numero: v.numero ?? v.id,
-    conjunto: v.conjunto ?? v.nomeConjunto ?? 'Conjunto principal',
+    // Os nomes vinham errados e caiam todos no valor padrao: o back manda conjuntoNome,
+    // dataCriacao, arquivoNome e responsavel -- nao nomeConjunto, criadoEm, nomeArquivo
+    // nem autor. Era por isso que a linha saia como "— · gerada em — · Operador".
+    conjunto: v.conjunto ?? v.conjuntoNome ?? v.nomeConjunto ?? 'Conjunto principal',
     automatica,
-    arquivo: v.arquivo ?? v.nomeArquivo ?? '—',
-    geradaEm: v.geradaEm ?? v.criadoEm ?? null,
-    quem: v.quem ?? v.autor ?? (automatica ? 'Airflow' : 'Operador'),
+    arquivo: v.arquivo ?? v.arquivoNome ?? v.nomeArquivo ?? '—',
+    geradaEm: v.geradaEm ?? v.dataCriacao ?? v.criadoEm ?? null,
+    quem: v.quem ?? v.responsavel ?? v.autor ?? (automatica ? 'Airflow' : 'Operador'),
     aprovadas,
     rejeitadas,
     conclusao: v.conclusao ?? {
@@ -67,6 +75,9 @@ export function criarControleQualidade() {
   const erroFila = ref('')
   const erroDetalhe = ref('')
 
+  // filtro OPCIONAL, desligado por padrao: esconder versao sem indicador tambem
+  // esconderia a rodada que falhou em calcular, que e justamente a que precisa de olho.
+  const apenasComIndicador = ref(false)
   const versoesPublicadas = ref([])
   const versoes = ref([])
   const carregandoVersoes = ref(false)
@@ -81,10 +92,24 @@ export function criarControleQualidade() {
   const ocupado = computed(() => carregando.value || publicando.value || reprovando.value)
   const enviando = computed(() => publicando.value || reprovando.value)
 
-  const fila = computed(() =>
+  const filaCompleta = computed(() =>
     versoes.value
       .filter((v) => v.situacao === 'RASCUNHO' || !v.situacao)
-      .map(normalizarVersaoFila),
+      .map(normalizarVersaoFila)
+      // Da mais antiga para a mais nova. Publicando de cima para baixo, a ultima a ser
+      // publicada e a mais nova -- que e o estado correto. Na ordem inversa, publicar a
+      // fila inteira deixava a versao MAIS VELHA como oficial.
+      .sort((a, b) => Number(a.numero ?? 0) - Number(b.numero ?? 0)),
+  )
+
+  const fila = computed(() =>
+    apenasComIndicador.value
+      ? filaCompleta.value.filter((v) => v.siglas.length > 0)
+      : filaCompleta.value,
+  )
+
+  const semIndicador = computed(
+    () => filaCompleta.value.filter((v) => v.siglas.length === 0).length,
   )
 
   const versaoSelecionada = computed(() => {
@@ -172,7 +197,9 @@ export function criarControleQualidade() {
     carregandoDetalhe.value = true
 
     try {
-      const [detalheIndicadores] = await Promise.all([
+      // allSettled, nao all: o painel de indicadores e a conferencia de qualidade sao
+      // independentes. Com Promise.all a falha de um descartava o resultado do outro.
+      const [indicadores] = await Promise.allSettled([
         qualidadeIndicadoresService.carregarDetalhe(item, { signal: atual.signal }),
         item.execucaoId
           ? (selecionarExecucao(item.execucaoId), consultar())
@@ -180,7 +207,14 @@ export function criarControleQualidade() {
       ])
 
       if (destruido || atual.signal.aborted || consultaDetalhe !== atual) return
-      detalhe.value = detalheIndicadores
+
+      if (indicadores.status === 'fulfilled') {
+        detalhe.value = indicadores.value
+      } else if (!requisicaoIndicadoresCancelada(indicadores.reason)) {
+        detalhe.value = null
+        erroDetalhe.value = indicadores.reason?.message
+          || 'Erro ao carregar os detalhes da versão.'
+      }
     } catch (erro) {
       if (
         destruido ||
@@ -250,7 +284,15 @@ export function criarControleQualidade() {
       const alvo = versaoSelecionada.value
       const textoJustificativa = justificativa.value.trim()
 
-      if (detalhe.value?.regrasQueFalharam?.some((r) => r.severidade === 'BLOQUEIA')) {
+      // A fonte das regras e o relatorio de qualidade, nao o painel de indicadores.
+      // O back manda todas as avaliadas com o campo "aprovada": filtra pelas que
+      // falharam, senao regra bloqueante que PASSOU impediria a publicacao.
+      const bloqueantes = [
+        ...(resultado.value?.regras ?? []).filter((r) => r.aprovada !== true),
+        ...(detalhe.value?.regrasQueFalharam ?? []),
+      ].filter((r) => r?.severidade === 'BLOQUEIA')
+
+      if (bloqueantes.length > 0) {
         throw new Error('Não é possível publicar uma versão com regras bloqueantes violadas.')
       }
 
@@ -359,6 +401,8 @@ export function criarControleQualidade() {
 
   return {
     fila,
+    semIndicador,
+    apenasComIndicador,
     versaoSelecionada,
     detalhe,
     justificativa,

@@ -14,6 +14,7 @@ export const OPERACOES_AUDITORIA = {
   DESATIVACAO: 'Desativou',
   REATIVACAO: 'Reativou',
   REENVIO_CONVITE: 'Reenviou convite',
+  ATUALIZACAO_SITUACAO: 'Mudou a situação',
   ACESSO_NEGADO: 'Acesso negado',
 }
 export const ENTIDADES_AUDITORIA = [

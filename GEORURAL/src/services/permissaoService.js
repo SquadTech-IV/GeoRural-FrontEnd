@@ -45,30 +45,46 @@ export function possuiPermissao(perfil, capacidade = 'consultar') {
   return capacidades[capacidade]?.includes(perfil) ?? false
 }
 
+// Capacidade exigida por tela. Derivado da matriz do SecurityConfig do back:
+// cada tela recebe a regra da acao principal que ela executa, para a tela nunca
+// aparecer oferecendo algo que a API vai recusar com 403.
+const CAPACIDADE_POR_ROTA = {
+  // administrar - so ADMIN
+  GestaoUsuarios: 'administrar',          // /api/usuarios/** e hasRole(ADMIN)
+
+  // gerir - ADMIN e GESTOR
+  Cadastros: 'gerir',              // POST/PUT/DELETE /api/fontes e GESTAO
+  Regras: 'gerir',                 // POST /api/indicadores/** e GESTAO
+  RegraNovaVersao: 'gerir',
+  RegraDetalheVersao: 'gerir',
+  RegraCompararVersoes: 'gerir',
+
+  // operar - ADMIN, GESTOR e OPERADOR
+  Ingestao: 'operar',              // POST /api/ingestao/** e OPERACAO_E_INGESTAO
+  ProcessarDados: 'operar',        // POST /api/arquivos/*/processar
+  PainelOperacao: 'operar',        // POST /api/pipeline/etapas/**
+
+  // qualidade - ADMIN, GESTOR, OPERADOR e AUDITOR (bloqueia ANALISTA)
+  QuarentenaDados: 'qualidade',    // GET /api/v1/qualidade/**
+  QualidadeDados: 'qualidade',
+  AuditoriaDados: 'qualidade',     // GET /api/linhagem/**
+  AuditoriaLinhagem: 'qualidade',  // GET /api/v1/auditoria
+
+  // consultar - os cinco perfis; todas sao leitura liberada a TODOS_PERFIS no back
+  ArquivosRecebidos: 'consultar',
+  DetalheArquivoRecebido: 'consultar',
+  ZonaTratadaDados: 'consultar',
+  Indicadores: 'consultar',
+  MapaIndicadores: 'consultar',
+  CompararVersoes: 'consultar',
+  Imoveis: 'consultar',
+  ComparacaoMunicipios: 'consultar',
+  Rastreabilidade: 'consultar',
+  SemAcesso: 'consultar',
+}
+
 export function permissaoRota(nome) {
-  if (nome === 'GestaoUsuarios') {
-    return 'administrar'
-  }
-
-  if (
-    [
-      'QuarentenaDados',
-      'AuditoriaDados',
-      'AuditoriaLinhagem',
-    ].includes(nome)
-  ) {
-    return 'qualidade'
-  }
-
-  if (nome === 'Ingestao') {
-    return 'operar'
-  }
-
-  if (nome === 'RegraNovaVersao') {
-    return 'gerir'
-  }
-
-  return 'consultar'
+  return CAPACIDADE_POR_ROTA[nome] ?? 'consultar'
 }
 
 export function perfisRequisicao(metodo, caminho) {

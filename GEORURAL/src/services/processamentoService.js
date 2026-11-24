@@ -136,21 +136,36 @@ export function apresentarStatus(valor) {
   const codigo = original.toUpperCase()
 
   const estados = {
-    AGUARDANDO: { texto: 'Aguardando', classe: 'pendente' },
-    PENDENTE: { texto: 'Pendente', classe: 'pendente' },
-    EM_PROCESSAMENTO: { texto: 'Em processamento', classe: 'processando' },
-    PROCESSANDO: { texto: 'Processando', classe: 'processando' },
+    // os sete valores de ARQUIVO_BRUTO.arq_status
+    RECEBENDO: { texto: 'Recebendo', classe: 'processando' },
+    RECEBIDO: { texto: 'Recebido', classe: 'pendente' },
+    VALIDANDO: { texto: 'Validando', classe: 'processando' },
+    APROVADO: { texto: 'Aprovado na validação', classe: 'pendente' },
+    REJEITADO: { texto: 'Rejeitado', classe: 'erro' },
     PROCESSADO: { texto: 'Processado', classe: 'sucesso' },
-    CONCLUIDO: { texto: 'Concluído', classe: 'sucesso' },
-    SUCESSO: { texto: 'Sucesso', classe: 'sucesso' },
-    ERRO: { texto: 'Erro', classe: 'erro' },
     FALHA: { texto: 'Falha', classe: 'erro' },
+
+    // os quatro de EXECUCAO_PIPELINE.exe_status, usados nas etapas
+    EM_ANDAMENTO: { texto: 'Em andamento', classe: 'processando' },
+    CONCLUIDA: { texto: 'Concluída', classe: 'sucesso' },
+    COM_RESSALVA: { texto: 'Com ressalva', classe: 'pendente' },
     FALHOU: { texto: 'Falhou', classe: 'erro' },
+
+    // usados pela tela de etapas e pelas movimentacoes de zona
+    PENDENTE: { texto: 'Aguardando', classe: 'pendente' },
+    NAO_RODOU: { texto: 'Não rodou', classe: 'pendente' },
+    CONCLUIDO: { texto: 'Concluído', classe: 'sucesso' },
   }
 
-  return estados[codigo] ?? {
-    texto: original || 'Não informado',
-    classe: 'pendente',
+  if (estados[codigo]) {
+    return estados[codigo]
+  }
+
+  // valor que o front nao conhece nao pode virar legenda: 'APROVADO' cru era lido
+  // como aprovacao em arquivo que tinha falhado
+  return {
+    texto: original ? `Situação não reconhecida (${original})` : 'Não informado',
+    classe: 'erro',
   }
 }
 

@@ -1,9 +1,21 @@
 import api from './api'
+import { rotularSituacao, classeDaSituacao } from '../utils/situacoesIndicador'
 
-const ROTAS = {
-  lista: '/api/qualidade/indicadores',
-  resultados: (versaoId) => `/api/qualidade/indicadores/versoes/${versaoId}`,
-}
+// Uma chamada so, numa rota que existe.
+//
+// Antes este arquivo chamava /api/qualidade/indicadores e
+// /api/qualidade/indicadores/versoes/{id}. Nenhuma das duas existe no back (toda a
+// qualidade dele vive em /api/v1/qualidade/...), entao as duas davam 404 -- e a
+// primeira nao tinha catch, de modo que o 404 derrubava o painel inteiro da tela
+// em vez de degradar.
+//
+// GET /api/versoes/{id}/indicadores (VersaoIndicadorController) devolve mais do que
+// as duas tentavam montar: a contagem por situacao desta versao e da que esta
+// vigente, ja pronta para comparar.
+const ROTA = (versaoId) => `/api/versoes/${versaoId}/indicadores`
+
+// situacao que diz "nao deu para apurar", nao "apurou e esta ruim"
+const INDISPONIVEL = 'CAMADA_INDISPONIVEL'
 
 export function requisicaoIndicadoresCancelada(erro) {
   return (
@@ -11,20 +23,13 @@ export function requisicaoIndicadoresCancelada(erro) {
   )
 }
 
-function validarLista(dados) {
-  if (!Array.isArray(dados)) {
-    throw new Error('O backend retornou uma lista de indicadores inválida.')
-  }
-  return dados
-}
-
 export function mensagemErroIndicadores(erro) {
   if (requisicaoIndicadoresCancelada(erro)) return ''
 
   const status = erro?.response?.status
-  if (status === 404) return 'O serviço de indicadores publicados não foi encontrado.'
+  if (status === 404) return 'Versão não encontrada para consultar os indicadores.'
   if (status === 401 || status === 403) {
-    return 'Você não tem permissão para consultar os indicadores publicados.'
+    return 'Você não tem permissão para consultar os indicadores desta versão.'
   }
   if (erro?.isAxiosError && !erro.response) {
     return 'Não foi possível acessar o backend. Verifique a conexão e tente novamente.'
@@ -43,104 +48,162 @@ export function mensagemErroIndicadores(erro) {
   if (mensagemServidor) return mensagemServidor
   if (typeof erro?.message === 'string' && erro.message.trim()) return erro.message.trim()
 
-  return 'Não foi possível consultar os indicadores publicados.'
+  return 'Não foi possível consultar os indicadores desta versão.'
 }
 
-async function obter(rota, params, signal) {
-  const { data } = await api.get(rota, { params, signal, timeout: 30000 })
-  return data
+function numero(valor) {
+  const n = Number(valor ?? 0)
+  return Number.isFinite(n) ? n : 0
 }
 
-async function executar(operacao) {
-  try {
-    return await operacao()
-  } catch (erro) {
-    if (requisicaoIndicadoresCancelada(erro)) throw erro
-    throw new Error(mensagemErroIndicadores(erro), { cause: erro })
+// Separa as situacoes do indicador em boa, ruim e indiferente usando a mesma
+// classificacao do resto do front (utils/situacoesIndicador), que espelha o v_boa
+// do agregar_municipio no PKG_CALCULO.
+function somarPorVeredito(situacoes) {
+  let bom = 0
+  let ruim = 0
+  let indisponivel = 0
+  let bomAntes = 0
+  let total = 0
+  let totalAntes = 0
+
+  for (const s of situacoes) {
+    const codigo = String(s?.situacao ?? '').toUpperCase()
+    const qtd = numero(s?.quantidade)
+    const qtdAntes = numero(s?.quantidadeComparada)
+    const classe = classeDaSituacao(codigo)
+
+    total += qtd
+    totalAntes += qtdAntes
+    if (codigo === INDISPONIVEL) indisponivel += qtd
+    if (classe === 'sucesso') {
+      bom += qtd
+      bomAntes += qtdAntes
+    } else if (classe === 'erro') {
+      ruim += qtd
+    }
+  }
+
+  return { bom, ruim, indisponivel, bomAntes, total, totalAntes }
+}
+
+// O IAPP grava CALCULADO/SEM_APP/CAMADA_INDISPONIVEL, que sao estados da apuracao e
+// nao veredito: nao existe conforme nem nao conforme para contar. Nesses casos o
+// bloco passa a mostrar cobertura de apuracao, com rotulo proprio, em vez de pintar
+// de vermelho um resultado que nao e ruim.
+function montarBloco(ind) {
+  const nome = ind?.nome || ind?.sigla || 'Indicador'
+  const soma = somarPorVeredito(Array.isArray(ind?.situacoes) ? ind.situacoes : [])
+  const calculados = numero(ind?.calculados) || soma.total
+  const temVeredito = soma.bom + soma.ruim > 0
+
+  const bom = temVeredito ? soma.bom : calculados - soma.indisponivel
+  const ruim = temVeredito ? soma.ruim : soma.indisponivel
+  const base = bom + ruim
+  const pctBom = base > 0 ? Math.round((bom / base) * 100) : 0
+
+  const antes = numero(ind?.calculadosComparados)
+  const pctAntes = soma.totalAntes > 0 ? Math.round((soma.bomAntes / soma.totalAntes) * 100) : null
+
+  return {
+    titulo: nome,
+    sigla: ind?.sigla ?? null,
+    vazio: calculados === 0,
+    total: calculados,
+    pctBom,
+    bom: {
+      rotulo: temVeredito ? 'Conformes' : 'Apurados',
+      valor: bom,
+    },
+    ruim: {
+      rotulo: temVeredito ? 'Não conformes' : 'Camada indisponível',
+      valor: ruim,
+    },
+    // o que mudou em relacao a versao que esta vigente hoje
+    comparacao:
+      antes > 0 || pctAntes != null
+        ? {
+            calculadosAntes: antes,
+            pctBomAntes: pctAntes,
+            delta: pctAntes == null ? null : pctBom - pctAntes,
+          }
+        : null,
+    situacoes: (Array.isArray(ind?.situacoes) ? ind.situacoes : []).map((s) => ({
+      codigo: s?.situacao ?? null,
+      rotulo: rotularSituacao(s?.situacao),
+      classe: classeDaSituacao(s?.situacao),
+      quantidade: numero(s?.quantidade),
+      quantidadeComparada: numero(s?.quantidadeComparada),
+    })),
   }
 }
 
-function calcularDetalheVersao(versaoItem, indicadoresPublicados, resultadosImoveis) {
-  const aprovadas = Number(versaoItem.aprovadas ?? 0)
-  const rejeitadas = Number(versaoItem.rejeitadas ?? 0)
-  const recebidas = Number(versaoItem.recebidas ?? aprovadas + rejeitadas)
+function montarDetalhe(versaoItem, resposta) {
+  const aprovadas = numero(versaoItem?.aprovadas)
+  const rejeitadas = numero(versaoItem?.rejeitadas)
+  const recebidas = numero(versaoItem?.recebidas) || aprovadas + rejeitadas
 
   const percentual = recebidas > 0 ? Math.round((aprovadas / recebidas) * 100) : 100
 
-  const indicadoresDaVersao = indicadoresPublicados.filter(
-    (ind) => String(ind.versaoId) === String(versaoItem.id),
-  )
+  const indicadores = Array.isArray(resposta?.indicadores) ? resposta.indicadores : []
+  const blocos = indicadores.map(montarBloco)
 
-  const blocos = indicadoresDaVersao.map((ind) => {
-    const bom = Number(ind.conformes ?? ind.aprovados ?? 0)
-    const ruim = Number(ind.naoConformes ?? ind.reprovados ?? 0)
-    const total = bom + ruim
-    const pctBom = total > 0 ? Math.round((bom / total) * 100) : 0
+  // quantos imoveis a versao calculou: o maior entre os indicadores, porque cada um
+  // cobre o conjunto de imoveis cuja camada veio no arquivo
+  const imoveisCalculados = blocos.length ? Math.max(...blocos.map((b) => b.total)) : null
 
-    return {
-      titulo: ind.nome || ind.indicador || 'Indicador',
-      vazio: total === 0,
-      total,
-      pctBom,
-      bom: { rotulo: 'Conformes', valor: bom },
-      ruim: { rotulo: 'Não conformes', valor: ruim },
-      comparacao: ind.comparacao ?? null,
-    }
-  })
-
-  const regrasQueFalharam = Array.isArray(versaoItem.regrasQueFalharam)
+  const regrasQueFalharam = Array.isArray(versaoItem?.regrasQueFalharam)
     ? versaoItem.regrasQueFalharam
     : []
 
   const temBloqueio = regrasQueFalharam.some((r) => r.severidade === 'BLOQUEIA')
 
-  const conclusao = versaoItem.conclusao ?? {
-    classe: temBloqueio ? 'erro' : rejeitadas > 0 ? 'aviso' : 'sucesso',
-    texto: temBloqueio
-      ? 'Bloqueada por regras'
-      : rejeitadas > 0
-        ? 'Atenção na quarentena'
-        : 'Pronta para publicar',
-  }
+  const conclusao =
+    versaoItem?.conclusao ?? {
+      classe: temBloqueio ? 'erro' : rejeitadas > 0 ? 'aviso' : 'sucesso',
+      texto: temBloqueio
+        ? 'Bloqueada por regras'
+        : rejeitadas > 0
+          ? 'Atenção na quarentena'
+          : 'Pronta para publicar',
+    }
 
   return {
     conclusao,
     recebidas,
     entraram: aprovadas,
     quarentena: rejeitadas,
-    imoveisCalculados: resultadosImoveis.length > 0 ? resultadosImoveis.length : null,
+    imoveisCalculados: imoveisCalculados || null,
     percentual,
     percentualTexto: percentual.toLocaleString('pt-BR'),
     blocos,
     regrasQueFalharam,
-    motivos: Array.isArray(versaoItem.motivos) ? versaoItem.motivos : [],
+    motivos: Array.isArray(versaoItem?.motivos) ? versaoItem.motivos : [],
+    versaoComparadaId: resposta?.versaoComparadaId ?? null,
+    versaoComparadaNumero: resposta?.versaoComparadaNumero ?? null,
   }
 }
 
 export const qualidadeIndicadoresService = {
-  listar(indicador, { signal } = {}) {
-    return executar(async () =>
-      validarLista(await obter(ROTAS.lista, { indicador: indicador || 'TODOS' }, signal)),
-    )
+  // contagem por situacao desta versao, ja comparada com a vigente
+  async indicadoresDaVersao(versaoId, { signal } = {}) {
+    const { data } = await api.get(ROTA(versaoId), { signal, timeout: 30000 })
+    return data
   },
 
-  resultados(versaoId, indicador, { signal } = {}) {
-    return executar(async () =>
-      validarLista(
-        await obter(ROTAS.resultados(versaoId), { indicador: indicador || 'TODOS' }, signal),
-      ),
-    )
-  },
+  async carregarDetalhe(versaoItem, { signal } = {}) {
+    const id = versaoItem?.id
+    if (id == null) return montarDetalhe(versaoItem, null)
 
-  carregarDetalhe(versaoItem, { signal } = {}) {
-    return executar(async () => {
-      const [indicadoresPublicados, resultadosImoveis] = await Promise.all([
-        this.listar('TODOS', { signal }),
-        this.resultados(versaoItem.id, 'TODOS', { signal }).catch(() => []),
-      ])
-
-      return calcularDetalheVersao(versaoItem, indicadoresPublicados, resultadosImoveis)
-    })
+    try {
+      return montarDetalhe(versaoItem, await this.indicadoresDaVersao(id, { signal }))
+    } catch (erro) {
+      if (requisicaoIndicadoresCancelada(erro)) throw erro
+      // a versao pode nao ter indicador calculado ainda: isso nao e falha do painel,
+      // mostra o resto do detalhe e deixa a lista de blocos vazia
+      if (erro?.response?.status === 404) return montarDetalhe(versaoItem, null)
+      throw new Error(mensagemErroIndicadores(erro), { cause: erro })
+    }
   },
 }
 

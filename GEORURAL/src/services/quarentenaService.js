@@ -35,24 +35,29 @@ function inteiro(valor, padrao, minimo, maximo) {
   return numero
 }
 
+// O back devolve o envelope de paginacao em portugues (PaginaResponse: itens,
+// pagina, tamanho, totalItens, totalPaginas). Este validador conferia os nomes
+// do Spring Data em ingles (content, number, size, totalElements, totalPages),
+// que nenhuma rota do projeto devolve. A primeira checagem falhava sempre,
+// entao a tela de quarentena nunca carregou, em nenhuma situacao.
 export function validarPaginaQuarentena(dados, pagina) {
   if (
     !dados ||
-    !Array.isArray(dados.content) ||
-    !Number.isSafeInteger(dados.number) ||
-    dados.number !== pagina ||
-    !Number.isSafeInteger(dados.totalElements) ||
-    dados.totalElements < 0 ||
-    !Number.isSafeInteger(dados.totalPages) ||
-    dados.totalPages < 0 ||
-    !Number.isSafeInteger(dados.size) ||
-    dados.size < 1 ||
-    dados.content.length > dados.size ||
-    dados.content.length > dados.totalElements ||
+    !Array.isArray(dados.itens) ||
+    !Number.isSafeInteger(dados.pagina) ||
+    dados.pagina !== pagina ||
+    !Number.isSafeInteger(dados.totalItens) ||
+    dados.totalItens < 0 ||
+    !Number.isSafeInteger(dados.totalPaginas) ||
+    dados.totalPaginas < 0 ||
+    !Number.isSafeInteger(dados.tamanho) ||
+    dados.tamanho < 1 ||
+    dados.itens.length > dados.tamanho ||
+    dados.itens.length > dados.totalItens ||
     (
-      dados.totalPages > 0 &&
-      dados.number >= dados.totalPages &&
-      dados.content.length > 0
+      dados.totalPaginas > 0 &&
+      dados.pagina >= dados.totalPaginas &&
+      dados.itens.length > 0
     )
   ) {
     throw new Error('O backend retornou uma página de quarentena inválida.')
@@ -87,7 +92,7 @@ export const quarentenaService = {
 
       validarPaginaQuarentena(data, params.page)
 
-      data.content.forEach(item => {
+      data.itens.forEach(item => {
         validarIdQuarentena(item?.id)
       })
 
@@ -118,7 +123,7 @@ export const quarentenaService = {
 
       validarPaginaQuarentena(data, params.page)
 
-      data.content.forEach(item => {
+      data.itens.forEach(item => {
         validarIdQuarentena(item?.quarentenaId)
 
         if (validarIdQuarentena(item?.execucaoId) !== params.execucaoId) {

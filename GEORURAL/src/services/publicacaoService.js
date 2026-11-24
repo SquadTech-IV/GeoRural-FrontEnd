@@ -72,6 +72,7 @@ function adaptarQualidade(dados, id) {
     !Number.isFinite(dados.percentualAprovacao) ||
     dados.percentualAprovacao < 0 ||
     dados.percentualAprovacao > 100 ||
+    // O backend retorna "regras" em QualidadeResponse.
     !Array.isArray(dados.regras) ||
     !Array.isArray(dados.motivosReprovacao) ||
     dados.motivosReprovacao.some(
@@ -84,6 +85,7 @@ function adaptarQualidade(dados, id) {
         typeof regra.tipo !== 'string' ||
         typeof regra.severidade !== 'string' ||
         typeof regra.aprovada !== 'boolean' ||
+        // RegraAvaliadaResponse usa "registrosAfetados".
         !Number.isSafeInteger(regra.registrosAfetados) ||
         regra.registrosAfetados < 0,
     )
@@ -176,7 +178,12 @@ function alterar(versaoId, acao, motivo) {
     try {
       const corpo = acao === 'reprovar'
         ? { motivo: motivo.trim() }
-        : { justificativa: typeof motivo === 'string' ? motivo.trim() : '' }
+        : {
+            justificativa:
+              typeof motivo === 'string'
+                ? motivo.trim()
+                : '',
+          }
 
       const { data } = await api.post(
         `/api/versoes/${id}/${acao}`,
@@ -194,11 +201,24 @@ function alterar(versaoId, acao, motivo) {
 export const publicacaoService = {
   listarVersoes({ situacao, signal } = {}) {
     return executar(async () => {
-      const { data } = await api.get('/api/versoes', { params: { situacao }, signal })
-      if (!Array.isArray(data)) throw new Error('O backend retornou uma lista de versões inválida.')
-      return data.map(item => ({ ...item, id: validarIdPublicacao(item.versaoId ?? item.id) }))
+      const { data } = await api.get('/api/versoes', {
+        params: { situacao },
+        signal,
+      })
+
+      if (!Array.isArray(data)) {
+        throw new Error(
+          'O backend retornou uma lista de versões inválida.',
+        )
+      }
+
+      return data.map(item => ({
+        ...item,
+        id: validarIdPublicacao(item.versaoId ?? item.id),
+      }))
     }, 'versoes')
   },
+
   consultarQualidade(execucaoId, { signal } = {}) {
     return executar(async () => {
       const id = validarIdPublicacao(execucaoId)

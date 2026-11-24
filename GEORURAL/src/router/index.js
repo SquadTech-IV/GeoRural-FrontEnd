@@ -150,11 +150,6 @@ const router = createRouter({
       component: () => import('@/views/DocumentacaoApi.vue'),
     },
     {
-      path: '/monitoramento',
-      name: 'MonitoramentoPlataforma',
-      component: () => import('../views/MonitoramentoPlataforma.vue'),
-    },
-    {
       path: '/sem-acesso',
       name: 'SemAcesso',
       component: () => import('../views/SemAcesso.vue'),

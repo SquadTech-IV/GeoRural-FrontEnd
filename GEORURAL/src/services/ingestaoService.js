@@ -183,15 +183,18 @@ export const ingestaoService = {
       })
 
       const { data } = await api.post(
-        '/api/ingestao/upload',
+        '/api/ingestao/lote',
         corpo,
         { timeout: 120000 },
       )
 
+      // /lote responde { totais, itens }; itens e a mesma lista da rota antiga
+      const itens = Array.isArray(data) ? data : data?.itens
+
       if (
-        !Array.isArray(data) ||
-        data.length !== arquivos.length ||
-        data.some(item =>
+        !Array.isArray(itens) ||
+        itens.length !== arquivos.length ||
+        itens.some(item =>
           !item ||
           typeof item.aceito !== 'boolean' ||
           String(item.conjuntoId) !== id ||
@@ -203,7 +206,7 @@ export const ingestaoService = {
         )
       }
 
-      return data
+      return itens
     }, true)
   },
 

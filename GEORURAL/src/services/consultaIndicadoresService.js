@@ -1,4 +1,5 @@
 import api from './api'
+import { apresentarSituacao } from '../utils/situacoesIndicador'
 
 export function consultaIndicadoresCancelada(erro) {
   return erro?.code === 'ERR_CANCELED' || erro?.name === 'AbortError'
@@ -41,16 +42,10 @@ export function formatarValorConsulta(valor, unidade = '') {
     : n.toLocaleString('pt-BR', { maximumFractionDigits: 3 }) +
         (unidade === '%' ? '%' : unidade ? ` ${unidade}` : '')
 }
+// rotulo e cor vem do mapa compartilhado: a lista que estava aqui so conhecia
+// IRL, IAE e ISAP, e ICV, IDESMAT e IFC apareciam cinza com o codigo cru na tela
 export function apresentarSituacaoConsulta(situacao) {
-  const codigo = String(situacao ?? '').toUpperCase()
-  return {
-    texto: codigo ? codigo.replace(/_/g, ' ') : 'Não informada',
-    classe: ['CONFORME', 'SEM_EMBARGO', 'SEM_SOBREPOSICAO'].includes(codigo)
-      ? 'sucesso'
-      : ['DEFICIT', 'COM_EMBARGO', 'COM_SOBREPOSICAO', 'NAO_CONFORME'].includes(codigo)
-        ? 'erro'
-        : 'neutro',
-  }
+  return apresentarSituacao(situacao)
 }
 export function normalizarResultadoConsulta(dado) {
   if (!dado || typeof dado.codigoCar !== 'string' || !dado.codigoCar.trim() || !dado.indicador)
