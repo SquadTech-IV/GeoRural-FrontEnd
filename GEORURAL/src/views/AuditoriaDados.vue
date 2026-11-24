@@ -123,6 +123,27 @@ function valorSub(res) {
     if (!ha) return 'reserva legal do imóvel'
     return `${ha} de reserva legal${area ? ` · imóvel de ${area}` : ''}`
   }
+  // Os cinco abaixo caiam no texto generico porque o seletor so oferecia IAE e IRL
+  // e ninguem chegava neles pela tela.
+  if (sigla === 'ICV' && ha) {
+    return `${ha} de vegetação nativa${area ? ` · imóvel de ${area}` : ''}`
+  }
+  if (sigla === 'ISAP') {
+    if (res.valorHectares === 0 || res.valorPercentual === 0) {
+      return 'sem sobreposição com áreas protegidas'
+    }
+    return `${ha ?? '—'} sobrepostos a áreas protegidas${area ? ` · imóvel de ${area}` : ''}`
+  }
+  if (sigla === 'IDESMAT') {
+    if (res.valorHectares === 0 || res.valorPercentual === 0) {
+      return 'sem desmatamento no período'
+    }
+    return `${ha ?? '—'} desmatados${area ? ` · imóvel de ${area}` : ''}`
+  }
+  if (sigla === 'IAPP' && ha) {
+    return `${ha} de APP vegetada${area ? ` · imóvel de ${area}` : ''}`
+  }
+
   return [ha, area ? `imóvel de ${area}` : null].filter(Boolean).join(' · ')
 }
 
@@ -326,6 +347,11 @@ onBeforeUnmount(() => {
             <option value="TODOS">Todos os indicadores</option>
             <option value="IAE">IAE — Área embargada</option>
             <option value="IRL">IRL — Reserva legal</option>
+            <option value="ICV">ICV — Cobertura vegetal</option>
+            <option value="IAPP">IAPP — Área de preservação permanente</option>
+            <option value="ISAP">ISAP — Sobreposição a áreas protegidas</option>
+            <option value="IDESMAT">IDESMAT — Desmatamento</option>
+            <option value="IFC">IFC — Focos de calor</option>
           </select>
         </div>
 

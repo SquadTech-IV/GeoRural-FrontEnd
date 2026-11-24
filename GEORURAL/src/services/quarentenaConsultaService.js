@@ -23,7 +23,7 @@ function normalizar(valor) {
 }
 
 function extrairLista(resposta) {
-  return Array.isArray(resposta) ? resposta : resposta.content
+  return Array.isArray(resposta) ? resposta : resposta.itens
 }
 
 function prepararExecucoes(lista) {
@@ -271,8 +271,8 @@ export function criarConsultaQuarentena() {
         return
       }
 
-      totalPaginasExecucoes.value = resposta.totalPages
-      totalExecucoes.value = resposta.totalElements
+      totalPaginasExecucoes.value = resposta.totalPaginas
+      totalExecucoes.value = resposta.totalItens
       execucoes.value = prepararExecucoes(extrairLista(resposta))
     } catch (erro) {
       if (
@@ -336,8 +336,8 @@ export function criarConsultaQuarentena() {
         return
       }
 
-      totalPaginasRegistros.value = resposta.totalPages
-      totalRegistros.value = resposta.totalElements
+      totalPaginasRegistros.value = resposta.totalPaginas
+      totalRegistros.value = resposta.totalItens
 
       const lista = extrairLista(resposta)
 
@@ -345,8 +345,8 @@ export function criarConsultaQuarentena() {
 
       listaParcial.value =
         !Array.isArray(resposta) &&
-        Number.isSafeInteger(resposta.totalElements) &&
-        resposta.totalElements > lista.length
+        Number.isSafeInteger(resposta.totalItens) &&
+        resposta.totalItens > lista.length
 
       consultado.value = true
     } catch (erro) {

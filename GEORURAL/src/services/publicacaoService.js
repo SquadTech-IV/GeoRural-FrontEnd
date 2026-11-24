@@ -72,19 +72,22 @@ function adaptarQualidade(dados, id) {
     !Number.isFinite(dados.percentualAprovacao) ||
     dados.percentualAprovacao < 0 ||
     dados.percentualAprovacao > 100 ||
-    !Array.isArray(dados.regrasVioladas) ||
+    // O back manda este campo como "regras" (QualidadeResponse), nao
+    // "regrasVioladas": o nome trocado reprovava o relatorio inteiro aqui.
+    !Array.isArray(dados.regras) ||
     !Array.isArray(dados.motivosReprovacao) ||
     dados.motivosReprovacao.some(
       motivo => typeof motivo !== 'string',
     ) ||
-    dados.regrasVioladas.some(
+    dados.regras.some(
       regra =>
         !objeto(regra) ||
         typeof regra.nomeRegra !== 'string' ||
         typeof regra.tipo !== 'string' ||
         typeof regra.severidade !== 'string' ||
-        !Number.isSafeInteger(regra.quantidade) ||
-        regra.quantidade < 0,
+        // e "registrosAfetados" no RegraAvaliadaResponse, nao "quantidade"
+        !Number.isSafeInteger(regra.registrosAfetados) ||
+        regra.registrosAfetados < 0,
     )
   ) {
     throw new Error(

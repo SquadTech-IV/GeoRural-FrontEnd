@@ -143,11 +143,10 @@ export function prepararEdicao(indicador, valores) {
   }
 }
 
-export function validarConfirmacao(autor, motivo) {
+// O autor nao e mais digitado: o backend grava quem esta logado. Validar um
+// campo que o usuario nao preenche mais so travaria o botao.
+export function validarConfirmacao(motivo) {
   return {
-    autor: normalizarValor(autor)
-      ? ''
-      : 'Informe o autor da alteração.',
     motivo: normalizarValor(motivo)
       ? ''
       : 'Informe o motivo da alteração.',
@@ -290,10 +289,10 @@ export function montarPayload(dados, indicador) {
     throw new Error('Revise os parâmetros do indicador.')
   }
 
-  const erros = validarConfirmacao(dados.autor, dados.motivo)
+  const erros = validarConfirmacao(dados.motivo)
 
-  if (erros.autor || erros.motivo) {
-    throw new Error(erros.autor || erros.motivo)
+  if (erros.motivo) {
+    throw new Error(erros.motivo)
   }
 
   if (dados.versaoBase !== indicador.versaoVigente) {
@@ -324,7 +323,6 @@ export function montarPayload(dados, indicador) {
   prepararEdicao(indicador, Object.fromEntries(entradas))
 
   return {
-    autor: dados.autor.trim(),
     motivo: dados.motivo.trim(),
     parametros: indicador.parametros.map((parametro) => ({
       nome: parametro.nome,

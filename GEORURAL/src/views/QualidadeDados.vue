@@ -11,6 +11,8 @@ const controle = criarControleQualidade()
 
 const {
   fila,
+  semIndicador,
+  apenasComIndicador,
   versaoSelecionada: versao,
   detalhe,
   justificativa,
@@ -62,8 +64,27 @@ onBeforeUnmount(() => destruir())
       <section class="qualidade-card" :aria-busy="carregandoFila">
         <header class="qualidade-secao-cabecalho">
           <h2>Esperando sua decisão</h2>
-          <span>{{ fila.length }} versão(ões)</span>
+
+          <span class="qualidade-fila-controles">
+            <span>{{ fila.length }} versão(ões)</span>
+
+            <label v-if="semIndicador">
+              <input
+                v-model="apenasComIndicador"
+                type="checkbox"
+              />
+              só com indicador ({{ semIndicador }} sem)
+            </label>
+          </span>
         </header>
+
+        <p
+          v-if="fila.length > 1"
+          class="qualidade-nota-ordem"
+        >
+          Da mais antiga para a mais nova. Publique a mais nova: a última que
+          você publicar é a que fica valendo.
+        </p>
 
         <p
           v-if="carregandoFila && !fila.length"
@@ -118,6 +139,17 @@ onBeforeUnmount(() => destruir())
                   {{ v.arquivo }} · gerada em {{ fmtData(v.geradaEm) }} ·
                   {{ v.quem }}
                 </span>
+
+                <span v-if="v.siglas.length" class="qualidade-siglas">
+                  <span
+                    v-for="sigla in v.siglas"
+                    :key="sigla"
+                  >{{ sigla }}</span>
+                </span>
+
+                <span v-else class="qualidade-siglas qualidade-siglas--vazio">
+                  nenhum indicador calculado
+                </span>
               </span>
 
               <dl class="qualidade-fila-numeros">
@@ -143,8 +175,8 @@ onBeforeUnmount(() => destruir())
         </ul>
 
         <p v-else class="qualidade-vazio-fila">
-          Nada esperando decisão. Quando o pipeline terminar uma versão,
-          ela aparece aqui.
+          Nada em rascunho esperando decisão. Toda versão já foi publicada ou
+          devolvida. Processe um arquivo para gerar uma versão nova.
         </p>
       </section>
 
@@ -499,3 +531,47 @@ onBeforeUnmount(() => destruir())
 </template>
 
 <style scoped src="../assets/css/qualidade-dados.css"></style>
+
+<style scoped>
+.qualidade-fila-controles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.qualidade-fila-controles label {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  font-size: 0.78rem;
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+.qualidade-nota-ordem {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  opacity: 0.8;
+}
+
+.qualidade-siglas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-top: 0.35rem;
+}
+
+.qualidade-siglas span {
+  padding: 0.05rem 0.4rem;
+  border: 1px solid currentColor;
+  border-radius: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.qualidade-siglas--vazio {
+  font-size: 0.72rem;
+  opacity: 0.65;
+}
+</style>
