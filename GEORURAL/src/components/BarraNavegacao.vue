@@ -49,11 +49,6 @@ const itens = [
     icone: 'painel',
   },
   {
-    caminho: '/monitoramento',
-    titulo: 'Saúde da plataforma',
-    icone: 'monitoramento',
-  },
-  {
     caminho: '/zona-tratada',
     titulo: 'Zona tratada',
     icone: 'arquivos',
@@ -296,10 +291,6 @@ function alternarTema() {
               <path
                 d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z"
               />
-            </template>
-
-            <template v-else-if="item.icone === 'monitoramento'">
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
             </template>
 
             <template v-else-if="item.icone === 'usuarios'">

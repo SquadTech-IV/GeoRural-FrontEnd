@@ -51,7 +51,6 @@ export function possuiPermissao(perfil, capacidade = 'consultar') {
 const CAPACIDADE_POR_ROTA = {
   // administrar - so ADMIN
   GestaoUsuarios: 'administrar',          // /api/usuarios/** e hasRole(ADMIN)
-  MonitoramentoPlataforma: 'administrar', // expoe rotas, mensagens de erro e IP de origem
 
   // gerir - ADMIN e GESTOR
   Cadastros: 'gerir',              // POST/PUT/DELETE /api/fontes e GESTAO
