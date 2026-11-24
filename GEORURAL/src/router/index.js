@@ -145,13 +145,20 @@ const router = createRouter({
       component: () => import('../views/RastreabilidadeDados.vue'),
     },
     {
+      path: '/api-consulta',
+      name: 'DocumentacaoApi',
+      component: () => import('@/views/DocumentacaoApi.vue'),
+    },
+    {
       path: '/sem-acesso',
       name: 'SemAcesso',
       component: () => import('../views/SemAcesso.vue'),
     },
     {
       path: '/:pathMatch(.*)*',
-      redirect: { name: 'Imoveis' },
+      redirect: {
+        name: 'Imoveis',
+      },
     },
   ],
 })

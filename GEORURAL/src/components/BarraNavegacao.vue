@@ -124,6 +124,11 @@ const itens = [
     icone: 'rastreabilidade',
   },
   {
+    caminho: '/api-consulta',
+    titulo: 'API de consulta',
+    icone: 'api',
+  },
+  {
     caminho: '/usuarios',
     titulo: 'Gestão de usuários',
     icone: 'usuarios',
@@ -237,10 +242,15 @@ function alternarTema() {
             </template>
 
             <template v-else-if="item.icone === 'indicadores'">
-              <path d="M4 19h16" />
-              <path d="M7 15v-4" />
-              <path d="M12 15V7" />
-              <path d="M17 15v-7" />
+              <path d="M3 3v18h18" />
+              <path d="M18 17V9" />
+              <path d="M13 17V5" />
+              <path d="M8 17v-3" />
+            </template>
+
+            <template v-else-if="item.icone === 'api'">
+              <polyline points="16 18 22 12 16 6" />
+              <polyline points="8 6 2 12 8 18" />
             </template>
 
             <template v-else-if="item.icone === 'municipios'">
@@ -342,7 +352,6 @@ function alternarTema() {
 
             <template v-else>
               <circle cx="12" cy="12" r="4" />
-
               <path
                 d="M12 2v2M12 20v2M2 12h2M20 12h2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"
               />
