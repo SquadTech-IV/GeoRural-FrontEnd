@@ -4,58 +4,17 @@ import {
   prepararCamadasIndicadores,
   obterEstiloIndicador,
 } from './camadasIndicadoresService'
+import { rotularSituacao } from '../utils/situacoesIndicador'
 
 const numeros = new Intl.NumberFormat('pt-BR', {
   maximumFractionDigits: 2,
 })
 
-const situacoesIapp = {
-  CALCULADO: 'Calculado',
-  SEM_APP: 'Sem APP no imóvel',
-  CAMADA_INDISPONIVEL: 'Camada indisponível',
-}
-
-const situacoesIsap = {
-  COM_SOBREPOSICAO: 'Com sobreposição',
-  SEM_SOBREPOSICAO: 'Sem sobreposição',
-  CAMADA_INDISPONIVEL: 'Camada indisponível',
-}
-
-const situacoesIfc = {
-  SEM_FOCO: 'Sem focos de calor',
-  SEM_FOCOS: 'Sem focos de calor',
-  COM_FOCOS: 'Com focos de calor',
-  AREA_INVALIDA: 'Área do imóvel inválida',
-}
-
-const situacoesIdesmat = {
-  COM_DESMATAMENTO: 'Com desmatamento',
-  SEM_DESMATAMENTO: 'Sem desmatamento',
-  COM_SUPRESSAO: 'Com supressão',
-  SEM_SUPRESSAO: 'Sem supressão',
-}
-
+// os quatro mapas por sigla sairam daqui para utils/situacoesIndicador.js: os
+// codigos nao se repetem entre indicadores, entao o rotulo nao precisa da sigla --
+// e assim IRL e IAE, que cairam no codigo cru, tambem ganham rotulo
 export function apresentarSituacaoIndicador(indicador) {
-  const sigla = indicador.sigla?.trim().toUpperCase()
-  const situacao = indicador.situacao
-
-  if (sigla === 'IDESMAT') {
-    return situacoesIdesmat[situacao] || situacao || 'Não informada'
-  }
-
-  if (sigla === 'IFC') {
-    return situacoesIfc[situacao] || situacao || 'Não informada'
-  }
-
-  if (sigla === 'IAPP') {
-    return situacoesIapp[situacao] || situacao || 'Não informada'
-  }
-
-  if (sigla === 'ISAP') {
-    return situacoesIsap[situacao] || situacao || 'Não informada'
-  }
-
-  return situacao || 'Não informada'
+  return rotularSituacao(indicador?.situacao)
 }
 
 function colecao(valor) {
